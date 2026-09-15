@@ -68,6 +68,24 @@ const emptyStoreConfig: StorePublicConfig = {
   deliveryConfig: { mode: 'NONE' },
   status: 'INACTIVE',
 };
+
+function normalizeStoreConfig(data: Partial<StorePublicConfig>): StorePublicConfig {
+  return {
+    ...emptyStoreConfig,
+    ...data,
+    units: Array.isArray(data.units) ? data.units : [],
+    hours: Array.isArray(data.hours) ? data.hours : [],
+    fulfillmentModes: Array.isArray(data.fulfillmentModes)
+      ? data.fulfillmentModes
+      : [],
+    paymentMethods: Array.isArray(data.paymentMethods) ? data.paymentMethods : [],
+    deliveryConfig: {
+      ...emptyStoreConfig.deliveryConfig,
+      ...(data.deliveryConfig ?? {}),
+    },
+  };
+}
+
 const CatalogContext = createContext<CatalogState>({
   catalog: emptyCatalog,
   config: emptyStoreConfig,
@@ -144,7 +162,9 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         doc(db, 'storePublicConfig', 'main'),
         (snap) => {
           if (snap.exists() && snap.data().brandId === TEIKO_BRAND_ID) {
-            next.config = snap.data() as StorePublicConfig;
+            next.config = normalizeStoreConfig(
+              snap.data() as Partial<StorePublicConfig>,
+            );
             publish();
           } else
             setState((old) => ({

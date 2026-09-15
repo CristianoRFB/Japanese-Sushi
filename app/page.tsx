@@ -166,7 +166,7 @@ export default function Home() {
             <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[#d9c4cf]" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar sushi, sashimi, temaki…" className="h-12 w-full rounded-full border border-white/15 bg-[#28121f] pl-12 pr-5 text-base text-[#fff7ea] outline-none placeholder:text-[#d9c4cf] focus:border-[#d9b66f]" />
           </label>
-          <nav aria-label="Categorias do cardápio" className="sticky top-[72px] z-20 -mx-4 mt-3 flex gap-2 overflow-x-auto border-y border-white/10 bg-[#180e16]/95 px-4 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-1">
+          <nav aria-label="Categorias do cardápio" className="teiko-scrollbar-none sticky top-[72px] z-20 -mx-4 mt-3 flex gap-2 overflow-x-auto border-y border-white/10 bg-[#180e16]/95 px-4 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-1">
             {visibleCategories.map((category) => <a key={category.id} href={`#categoria-${category.id}`} className="shrink-0 rounded-full border border-[#d9b66f]/25 bg-[#28121f] px-4 py-3 text-sm font-bold text-[#d9b66f] transition hover:border-[#d9b66f]">{category.name}</a>)}
           </nav>
         </div>

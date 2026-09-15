@@ -71,6 +71,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 img, svg, video, canvas { max-width: 100%; }
 
+.teiko-scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-inline: contain;
+}
+
+.teiko-scrollbar-none::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 @media (max-width: 639px) {
   h1 { overflow-wrap: anywhere; }
   button, a { max-width: 100%; }
