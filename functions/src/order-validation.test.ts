@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createOrderSchema } from './index.js';
 
-const valid = { clientRequestId: '8bc68d79-8242-4def-8eb1-3d22a6f56d37', customer: { name: 'Cliente Teste', whatsapp: '5517999999999' }, items: [{ productId: 'p', sizeId: 's', quantity: 1, selections: [] }], fulfillment: { mode: 'PICKUP' }, payment: { method: 'PIX', needsChange: false }, clientPreviewTotalCents: 1 };
+const valid = { clientRequestId: '8bc68d79-8242-4def-8eb1-3d22a6f56d37', unitId: 'santa-fe-do-sul', customer: { name: 'Cliente Teste', whatsapp: '5517999999999' }, items: [{ productId: 'p', sizeId: 's', quantity: 1, selections: [] }], fulfillment: { mode: 'PICKUP' }, payment: { method: 'PIX', needsChange: false }, clientPreviewTotalCents: 1 };
 describe('validação da Function createOrder', () => {
   it('aceita payload mínimo válido', () => expect(createOrderSchema.safeParse(valid).success).toBe(true));
   it('rejeita delivery sem endereço', () => expect(createOrderSchema.safeParse({ ...valid, fulfillment: { mode: 'DELIVERY' } }).success).toBe(false));

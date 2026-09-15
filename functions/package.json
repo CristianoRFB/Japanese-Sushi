@@ -1,13 +1,15 @@
 {
-  "name": "acai-mais-sabor-functions",
+  "name": "teiko-sushi-functions",
   "private": true,
   "type": "module",
   "main": "lib/functions/src/index.js",
-  "engines": { "node": "22" },
+  "engines": {
+    "node": "22"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run --config vitest.config.ts --exclude src/create-order.integration.test.ts",
-    "test:integration": "vitest run --config vitest.config.ts src/create-order.integration.test.ts",
+    "test": "vitest run --config vitest.config.ts --exclude src/create-order.e2e.test.ts",
+    "test:e2e": "vitest run --config vitest.config.ts src/create-order.e2e.test.ts",
     "seed:emulator": "node scripts/seed-emulator.mjs"
   },
   "dependencies": {

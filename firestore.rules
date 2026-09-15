@@ -2,46 +2,167 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function userRole() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : null; }
+    function brand(data) { return data.brandId == 'teiko'; }
+    function userData() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
+        : null;
+    }
+    function activeUser() { return userData() != null && userData().active == true && brand(userData()); }
+    function userRole() { return activeUser() ? userData().role : null; }
     function isStaff() { return userRole() == 'staff' || userRole() == 'admin'; }
     function isAdmin() { return userRole() == 'admin'; }
+    function isOwner(data) { return signedIn() && data.ownerUid == request.auth.uid; }
+    function publicConfig() { return get(/databases/$(database)/documents/storePublicConfig/main).data; }
+    function validUnit() { return request.resource.data.unitId == publicConfig().defaultUnitId; }
+    function validOrderTransition() {
+      return (resource.data.status == 'NEW' && request.resource.data.status in ['CONFIRMED', 'CANCELLED'])
+        || (resource.data.status == 'CONFIRMED' && request.resource.data.status in ['PREPARING', 'CANCELLED'])
+        || (resource.data.status == 'PREPARING' && request.resource.data.status in ['READY', 'CANCELLED'])
+        || (resource.data.status == 'READY' && request.resource.data.status in ['OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED'])
+        || (resource.data.status == 'OUT_FOR_DELIVERY' && request.resource.data.status == 'COMPLETED');
+    }
+    function validReservationTransition() {
+      return (resource.data.status == 'REQUESTED' && request.resource.data.status in ['CONFIRMED', 'REFUSED', 'CANCELLED'])
+        || (resource.data.status == 'CONFIRMED' && request.resource.data.status in ['COMPLETED', 'CANCELLED']);
+    }
+    function validAdminOrderEdit() {
+      return isStaff()
+        && brand(resource.data)
+        && brand(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['customerApproval', 'proposedChanges', 'editReason', 'updatedAt', 'statusHistory'])
+        && request.resource.data.customerApproval == 'PENDING'
+        && request.resource.data.proposedChanges is map
+        && request.resource.data.proposedChanges.state == 'PENDING'
+        && request.resource.data.proposedChanges.items is list
+        && request.resource.data.proposedChanges.pricing is map;
+    }
+    function validCustomerOrderDecision() {
+      return isOwner(resource.data)
+        && resource.data.customerApproval == 'PENDING'
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.brandId == resource.data.brandId
+        && request.resource.data.customerApproval in ['ACCEPTED', 'DECLINED']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['items', 'pricing', 'customerApproval', 'proposedChanges', 'updatedAt', 'statusHistory', 'status', 'cancelledAt', 'cancellationReason'])
+        && (request.resource.data.customerApproval == 'ACCEPTED'
+          ? request.resource.data.status == resource.data.status
+          : request.resource.data.status == 'CANCELLED' && resource.data.status in ['NEW', 'CONFIRMED']);
+    }
 
     match /storePublicConfig/{id} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow read: if resource.data.brandId == 'teiko';
+      allow create: if isAdmin() && brand(request.resource.data);
+      allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data);
+      allow delete: if isAdmin() && brand(resource.data);
     }
     match /storePrivateConfig/{id} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() && brand(resource.data);
+      allow write: if isAdmin() && brand(request.resource.data);
     }
     match /categories/{id} {
-      allow read: if isStaff() || resource.data.active == true;
-      allow create, update, delete: if isAdmin();
+      allow read: if brand(resource.data) && (isStaff() || resource.data.active == true);
+      allow create: if isAdmin() && brand(request.resource.data);
+      allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data);
+      allow delete: if isAdmin() && brand(resource.data);
     }
     match /products/{id} {
-      allow read: if isStaff() || resource.data.active == true;
-      allow create, update, delete: if isAdmin();
+      allow read: if brand(resource.data) && (isStaff() || resource.data.active == true);
+      allow create: if isAdmin() && brand(request.resource.data);
+      allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data);
+      allow delete: if isAdmin() && brand(resource.data);
     }
     match /modifierGroups/{id} {
-      allow read: if isStaff() || resource.data.active == true;
-      allow create, update, delete: if isAdmin();
+      allow read: if brand(resource.data) && (isStaff() || resource.data.active == true);
+      allow create: if isAdmin() && brand(request.resource.data);
+      allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data);
+      allow delete: if isAdmin() && brand(resource.data);
     }
     match /modifiers/{id} {
-      allow read: if isStaff() || resource.data.active == true;
-      allow create, update, delete: if isAdmin();
+      allow read: if brand(resource.data) && (isStaff() || resource.data.active == true);
+      allow create: if isAdmin() && brand(request.resource.data);
+      allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data);
+      allow delete: if isAdmin() && brand(resource.data);
     }
+    match /promotions/{id} {
+      allow read: if brand(resource.data) && (isStaff() || resource.data.active == true);
+      allow create: if isAdmin() && brand(request.resource.data);
+      allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data);
+      allow delete: if isAdmin() && brand(resource.data);
+    }
+
     match /orders/{id} {
-      allow read: if isStaff();
-      allow create, update, delete: if false;
+      allow get: if (isStaff() && brand(resource.data)) || isOwner(resource.data);
+      allow list: if (isStaff() && brand(resource.data)) || isOwner(resource.data);
+      allow create: if signedIn()
+        && brand(request.resource.data)
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'NEW'
+        && validUnit()
+        && request.resource.data.keys().hasAll(['brandId', 'ownerUid', 'clientRequestId', 'publicCode', 'orderNumber', 'createdAt', 'updatedAt', 'unitId', 'customer', 'items', 'fulfillment', 'payment', 'pricing', 'status', 'customerApproval', 'source', 'notes', 'statusHistory'])
+        && request.resource.data.keys().hasOnly(['brandId', 'ownerUid', 'clientRequestId', 'publicCode', 'orderNumber', 'createdAt', 'updatedAt', 'unitId', 'customer', 'items', 'fulfillment', 'payment', 'pricing', 'status', 'customerApproval', 'proposedChanges', 'editReason', 'source', 'notes', 'statusHistory'])
+        && request.resource.data.publicCode is string
+        && request.resource.data.publicCode.size() >= 20
+        && request.resource.data.publicCode.size() <= 80
+        && request.resource.data.orderNumber is string
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 30
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.pricing.currency == 'BRL'
+        && request.resource.data.pricing.totalCents is int
+        && request.resource.data.pricing.totalCents >= 0
+        && request.resource.data.pricing.totalCents <= 10000000;
+      allow update: if (
+          isStaff()
+          && brand(resource.data)
+          && brand(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'statusHistory', 'cancelledAt', 'cancellationReason'])
+          && validOrderTransition()
+        ) || validAdminOrderEdit() || validCustomerOrderDecision();
+      allow delete: if false;
     }
+
+    match /reservations/{id} {
+      allow get: if (isStaff() && brand(resource.data)) || isOwner(resource.data);
+      allow list: if (isStaff() && brand(resource.data)) || isOwner(resource.data);
+      allow create: if signedIn()
+        && brand(request.resource.data)
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'REQUESTED'
+        && validUnit()
+        && request.resource.data.keys().hasAll(['brandId', 'ownerUid', 'clientRequestId', 'unitId', 'name', 'whatsapp', 'date', 'time', 'people', 'notes', 'status', 'createdAt', 'updatedAt', 'statusHistory'])
+        && request.resource.data.keys().hasOnly(['brandId', 'ownerUid', 'clientRequestId', 'unitId', 'name', 'whatsapp', 'date', 'time', 'people', 'notes', 'status', 'createdAt', 'updatedAt', 'statusHistory'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.whatsapp is string
+        && request.resource.data.whatsapp.size() >= 8
+        && request.resource.data.whatsapp.size() <= 30
+        && request.resource.data.date is string
+        && request.resource.data.date.matches('^2026-((0[13578]|1[02])-(0[1-9]|[12]\\d|3[01])|(0[469]|11)-(0[1-9]|[12]\\d|30)|02-(0[1-9]|1\\d|2[0-8]))$')
+        && request.resource.data.time is string
+        && request.resource.data.time.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
+        && request.resource.data.people is int
+        && request.resource.data.people >= 1
+        && request.resource.data.people <= 30
+        && request.resource.data.notes is string
+        && request.resource.data.notes.size() <= 500
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+      allow update: if isStaff()
+        && brand(resource.data)
+        && brand(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'statusHistory'])
+        && validReservationTransition();
+      allow delete: if false;
+    }
+
     match /users/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow write: if isAdmin();
-    }
-    match /orderRequests/{id} { allow read, write: if false; }
-    match /integrationConfig/{id} { allow read, write: if false; }
-    match /orders/{id}/integrationAttempts/{attempt} {
-      allow read: if isStaff();
-      allow write: if false;
+      allow read: if signedIn() && brand(resource.data) && (request.auth.uid == uid || isAdmin());
+      allow create: if isAdmin() && brand(request.resource.data);
+      allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data);
+      allow delete: if isAdmin() && brand(resource.data);
     }
     match /{document=**} { allow read, write: if false; }
   }

@@ -8,8 +8,8 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Açaí + Sabor | Monte do seu jeito',
-  description: 'Monte seu açaí, acompanhe o preço e envie seu pedido direto para a loja.',
+  title: 'Teiko Sushi | Santa Fé do Sul',
+  description: 'Cardápio, pedidos e reservas da Teiko Sushi.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

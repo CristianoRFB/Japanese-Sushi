@@ -44,10 +44,13 @@ export default function SettingsPage() {
       if (deliveryMode === 'FIXED' && (!Number.isSafeInteger(fixedFeeCents) || fixedFeeCents < 0)) throw new Error('Taxa fixa inválida.');
 
       const payload: StorePublicConfig & { updatedAt: unknown } = {
+        brandId: 'teiko',
         storeName: String(data.get('storeName')).trim(),
         instagramHandle: String(data.get('instagramHandle')).trim(),
         address: String(data.get('address')).trim(),
         city: String(data.get('city')).trim(),
+        defaultUnitId: currentConfig.defaultUnitId,
+        units: currentConfig.units,
         phoneDisplay: String(data.get('phoneDisplay')).trim(),
         whatsappNumber: String(data.get('whatsappNumber')).replace(/\D/g, ''),
         whatsappEnabled: data.get('whatsappEnabled') === 'on',
@@ -84,9 +87,10 @@ export default function SettingsPage() {
   }
 
   if (!config) return <AdminShell adminOnly><p>Carregando configurações…</p></AdminShell>;
+  const currentConfig = config;
 
   return <AdminShell adminOnly>
-    <div><p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#a62c63]">Loja</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">Configurações</h1><p className="mt-2 text-sm text-[#826a75]">Dados públicos, recebimento, pagamento e horário.</p></div>
+    <div><p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#b13b6b]">Loja</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">Configurações</h1><p className="mt-2 text-sm text-[#765665]">Dados públicos, recebimento, pagamento e horário.</p></div>
     <form onSubmit={save} className="mt-7 max-w-4xl space-y-5">
       <SettingsSection title="Identificação">
         <div className="grid gap-4 sm:grid-cols-2"><AdminField label="Nome da loja" name="storeName" required defaultValue={config.storeName} /><AdminField label="Instagram" name="instagramHandle" defaultValue={config.instagramHandle} /><AdminField label="Endereço" name="address" defaultValue={config.address} /><AdminField label="Cidade/UF" name="city" defaultValue={config.city} /><AdminField label="Telefone exibido" name="phoneDisplay" defaultValue={config.phoneDisplay} /><AdminField label="WhatsApp (55 + DDD + número)" name="whatsappNumber" defaultValue={config.whatsappNumber} /></div>
@@ -104,20 +108,20 @@ export default function SettingsPage() {
       </SettingsSection>
 
       <SettingsSection title="Delivery">
-        <div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-bold">Estratégia<select name="deliveryMode" defaultValue={config.deliveryConfig.mode} className="mt-2 h-11 w-full rounded-xl border bg-[#fffaf5] px-3 font-normal"><option value="NONE">Sem delivery</option><option value="CONFIRM">Taxa confirmada depois</option><option value="FIXED">Taxa fixa</option><option value="ZONES">Por bairro/zona</option></select></label><AdminField label="Taxa fixa (centavos)" name="fixedFeeCents" type="number" min="0" defaultValue={config.deliveryConfig.fixedFeeCents ?? 0} /></div>
+        <div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-bold">Estratégia<select name="deliveryMode" defaultValue={config.deliveryConfig.mode} className="mt-2 h-11 w-full rounded-xl border bg-[#fff8ef] px-3 font-normal"><option value="NONE">Sem delivery</option><option value="CONFIRM">Taxa confirmada depois</option><option value="FIXED">Taxa fixa</option><option value="ZONES">Por bairro/zona</option></select></label><AdminField label="Taxa fixa (centavos)" name="fixedFeeCents" type="number" min="0" defaultValue={config.deliveryConfig.fixedFeeCents ?? 0} /></div>
         <div className="mt-4"><AdminTextarea label="Zonas (JSON; usado no modo ZONES)" name="zones" defaultValue={JSON.stringify(config.deliveryConfig.zones ?? [], null, 2)} rows={7} /></div>
       </SettingsSection>
 
       <SettingsSection title="Horários">
-        <p className="text-xs text-[#826a75]">Timezone fixa: America/Sao_Paulo. O fechamento é exclusivo: às 21:50 a loja já aparece fechada.</p>
+        <p className="text-xs text-[#765665]">Timezone fixa: America/Sao_Paulo. O fechamento é exclusivo: às 21:50 a loja já aparece fechada.</p>
         <div className="mt-4"><AdminTextarea label="7 dias em JSON (0=domingo, 6=sábado)" name="hours" defaultValue={JSON.stringify(config.hours ?? fallbackHours, null, 2)} rows={15} /></div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2"><AdminTextarea label="Feriados em JSON (AAAA-MM-DD)" name="holidayDates" defaultValue={JSON.stringify(config.holidayDates ?? [], null, 2)} rows={8} /><AdminTextarea label="Janelas dos feriados em JSON" name="holidayHours" defaultValue={JSON.stringify(config.holidayHours ?? defaultHolidayHours, null, 2)} rows={8} /></div>
       </SettingsSection>
 
       <SettingsSection title="Privacidade"><AdminTextarea label="Aviso operacional (revisar juridicamente antes do lançamento)" name="privacyNotice" defaultValue={config.privacyNotice} /></SettingsSection>
-      {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      {message && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p>}
-      <Button type="submit" className="h-12 rounded-full bg-[#82204f] px-6 font-black text-white"><Save /> Salvar configurações</Button>
+      {error && <p role="alert" className="rounded-xl bg-[#f8e9ef] p-3 text-sm text-[#c13a43]">{error}</p>}
+      {message && <p role="status" className="rounded-xl bg-[#d9ed55]/25 p-3 text-sm text-[#65741f]">{message}</p>}
+      <Button type="submit" className="h-12 rounded-full bg-[#8c234f] px-6 font-black text-white"><Save /> Salvar configurações</Button>
     </form>
   </AdminShell>;
 }

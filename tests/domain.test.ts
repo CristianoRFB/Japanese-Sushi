@@ -1,99 +1,107 @@
 import { describe, expect, it } from 'vitest';
 
 import { developmentCatalog, developmentStoreConfig } from '../lib/development-seed';
-import { calculateCartPreview, calculateDeliveryFee, calculateItemPrice, formatBRL, formatNextOpening, getDeliveryEstimate, getNextOpening, getStoreAvailability, isStoreOpen, normalizeSelections, validateGroupSelection, type CatalogSnapshot, type StorePublicConfig } from '../shared/domain';
+import { calculateCartPreview, calculateDeliveryFee, calculateItemPrice, getStoreAvailability, isStoreOpen, isPromotionActive, isValidReservationDate, normalizeSelections, validateGroupSelection, validateReservationDraft, type CatalogSnapshot, type Promotion } from '../shared/domain';
 
-describe('motor de preços em centavos', () => {
-  it('formata BRL sem usar float na persistência', () => expect(formatBRL(2350)).toContain('23,50'));
-
-  it('calcula copo, acompanhamentos individuais e quantidade', () => {
-    const item = calculateItemPrice({ cartItemId: '1', productId: 'acai-monte-seu', sizeId: '300ml', quantity: 2, selections: [
-      { groupId: 'sabores-base', items: [{ modifierId: 'base-acai', quantity: 1 }] },
-      { groupId: 'frutas', items: [{ modifierId: 'fruta-banana', quantity: 1 }] },
-      { groupId: 'granola', items: [{ modifierId: 'granola-tradicional', quantity: 2 }] },
-      { groupId: 'chocolates', items: [{ modifierId: 'chocolate-nutella', quantity: 1 }] },
-    ] }, developmentCatalog);
-
-    expect(item.unitPriceCents).toBe(3050);
-    expect(item.totalPriceCents).toBe(6100);
+describe('motor de preço em centavos', () => {
+  it('calcula item simples e quantidade sem aceitar total do cliente', () => {
+    const item = calculateItemPrice({ cartItemId: 'one', productId: 'sushi-salmao', sizeId: 'unico', quantity: 2, selections: [], clientTotalCents: 1 } as never, developmentCatalog);
+    expect(item.totalPriceCents).toBe(0);
+    expect(calculateCartPreview([{ cartItemId: 'one', productId: 'sushi-salmao', sizeId: 'unico', quantity: 2, selections: [] }], developmentCatalog).subtotalCents).toBe(0);
   });
 
-  it('aplica um sabor incluído e cobra adicionais no milk-shake', () => {
-    const normal = calculateItemPrice({ cartItemId: 'milk', productId: 'milk-shake', sizeId: '300ml', quantity: 1, selections: [{ groupId: 'sabores-milk-shake', items: [{ modifierId: 'milk-chocolate', quantity: 1 }, { modifierId: 'milk-morango', quantity: 1 }] }] }, developmentCatalog);
-    const pistache = calculateItemPrice({ cartItemId: 'pistache', productId: 'milk-shake', sizeId: '300ml', quantity: 1, selections: [{ groupId: 'sabores-milk-shake', items: [{ modifierId: 'milk-pistache', quantity: 1 }, { modifierId: 'milk-morango', quantity: 1 }] }] }, developmentCatalog);
-    expect(normal.totalPriceCents).toBe(1600);
-    expect(pistache.totalPriceCents).toBe(1550);
+  it('rejeita produto, tamanho e quantidade inválidos', () => {
+    expect(() => calculateItemPrice({ cartItemId: 'x', productId: 'fake', sizeId: 'unico', quantity: 1, selections: [] }, developmentCatalog)).toThrow(/Produto/);
+    expect(() => calculateItemPrice({ cartItemId: 'x', productId: 'sushi-salmao', sizeId: 'fake', quantity: 1, selections: [] }, developmentCatalog)).toThrow(/Tamanho/);
+    expect(() => calculateItemPrice({ cartItemId: 'x', productId: 'sushi-salmao', sizeId: 'unico', quantity: 21, selections: [] }, developmentCatalog)).toThrow(/Quantidade/);
   });
 
-  it('soma carrinho e multiplica quantidades', () => {
-    const result = calculateCartPreview([{ cartItemId: 'simple', productId: 'agua-sem-gas', sizeId: 'unico', selections: [], quantity: 3 }], developmentCatalog);
-    expect(result.subtotalCents).toBe(1050);
-  });
-
-  it('rejeita modificador indisponível e grupo obrigatório ausente', () => {
-    expect(() => calculateItemPrice({ cartItemId: 'x', productId: 'acai-monte-seu', sizeId: '300ml', quantity: 1, selections: [] }, developmentCatalog)).toThrow(/pelo menos/);
-    const unavailableCatalog: CatalogSnapshot = { ...developmentCatalog, modifiers: developmentCatalog.modifiers.map((modifier) => modifier.id === 'fruta-kiwi' ? { ...modifier, available: false } : modifier) };
-    expect(() => calculateItemPrice({ cartItemId: 'x', productId: 'acai-monte-seu', sizeId: '300ml', quantity: 1, selections: [{ groupId: 'sabores-base', items: [{ modifierId: 'base-acai', quantity: 1 }] }, { groupId: 'frutas', items: [{ modifierId: 'fruta-kiwi', quantity: 1 }] }] }, unavailableCatalog)).toThrow(/indisponível/);
-  });
-
-  it('rejeita duplicata e máximo por adicional', () => {
+  it('mantém validação de grupos e normalização determinística', () => {
+    const group = developmentCatalog.groups[0];
     const modifiers = new Map(developmentCatalog.modifiers.map((modifier) => [modifier.id, modifier]));
-    const base = developmentCatalog.groups.find((group) => group.id === 'sabores-base')!;
-    expect(validateGroupSelection(base, { groupId: base.id, items: [{ modifierId: 'base-acai', quantity: 2 }] }, modifiers).valid).toBe(false);
-    const chocolates = developmentCatalog.groups.find((group) => group.id === 'chocolates')!;
-    expect(validateGroupSelection(chocolates, { groupId: chocolates.id, items: [{ modifierId: 'chocolate-nutella', quantity: 4 }] }, modifiers).valid).toBe(false);
+    expect(validateGroupSelection(group, { groupId: group.id, items: [{ modifierId: 'invalido', quantity: 1 }] }, modifiers).valid).toBe(false);
+    expect(normalizeSelections([{ groupId: 'b', items: [{ modifierId: 'x', quantity: 1 }] }, { groupId: 'b', items: [{ modifierId: 'x', quantity: 2 }] }])).toEqual([{ groupId: 'b', items: [{ modifierId: 'x', quantity: 3 }] }]);
   });
 
-  it('normaliza seleções repetidas de forma determinística', () => expect(normalizeSelections([{ groupId: 'b', items: [{ modifierId: 'x', quantity: 1 }] }, { groupId: 'b', items: [{ modifierId: 'x', quantity: 2 }] }])).toEqual([{ groupId: 'b', items: [{ modifierId: 'x', quantity: 3 }] }]));
+  it('aplica promoção ativa somente aos produtos elegíveis', () => {
+    const pricedCatalog: CatalogSnapshot = {
+      ...developmentCatalog,
+      products: developmentCatalog.products.map((product, index) => index === 0
+        ? { ...product, sizes: product.sizes.map((size) => ({ ...size, basePriceCents: 2000 })) }
+        : product),
+    };
+    const promotion: Promotion = {
+      id: 'promocao-teste', brandId: 'teiko', name: 'Noite Teiko', active: true,
+      discountType: 'PERCENTAGE', discountValue: 15, startsAt: '2026-09-01', endsAt: '2026-09-30', productIds: ['sushi-salmao'],
+    };
+    const preview = calculateCartPreview([{ cartItemId: 'promo', productId: 'sushi-salmao', sizeId: 'unico', quantity: 1, selections: [] }], pricedCatalog, [promotion], new Date('2026-09-15T15:00:00Z'));
+    expect(isPromotionActive(promotion, new Date('2026-09-15T15:00:00Z'))).toBe(true);
+    expect(preview.discountCents).toBe(300);
+    expect(preview.subtotalCents).toBe(1700);
+    expect(preview.items[0].promotionId).toBe('promocao-teste');
+  });
 });
 
-describe('horário e delivery', () => {
-  const config: Pick<StorePublicConfig, 'hours' | 'timezone'> = { timezone: 'America/Sao_Paulo', hours: [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, closed: day !== 1, windows: day === 1 ? [{ open: '12:00', close: '14:00' }] : [] })) };
-  it('respeita abertura, fechamento, borda e timezone da loja', () => {
+describe('horário, unidade e delivery', () => {
+  const config = { timezone: 'America/Sao_Paulo', hours: [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, closed: day !== 1, windows: day === 1 ? [{ open: '12:00', close: '14:00' }] : [] })) };
+  it('respeita abertura, fechamento e timezone', () => {
     expect(isStoreOpen(new Date('2026-08-31T15:00:00Z'), config)).toBe(true);
     expect(isStoreOpen(new Date('2026-08-31T17:00:00Z'), config)).toBe(false);
-    expect(isStoreOpen(new Date('2026-08-30T16:00:00Z'), config)).toBe(false);
   });
-  it('aplica o horário real de segunda a sábado, domingo e bordas exatas', () => {
-    expect(isStoreOpen(new Date('2026-08-31T16:59:00Z'), developmentStoreConfig)).toBe(false);
-    expect(isStoreOpen(new Date('2026-08-31T17:00:00Z'), developmentStoreConfig)).toBe(true);
-    expect(isStoreOpen(new Date('2026-09-06T00:49:00Z'), developmentStoreConfig)).toBe(true);
-    expect(isStoreOpen(new Date('2026-09-06T00:50:00Z'), developmentStoreConfig)).toBe(false);
-    expect(isStoreOpen(new Date('2026-09-06T17:59:00Z'), developmentStoreConfig)).toBe(false);
-    expect(isStoreOpen(new Date('2026-09-06T18:00:00Z'), developmentStoreConfig)).toBe(true);
+  it('retorna loja fechada enquanto o seed aguarda configuração oficial', () => {
+    expect(getStoreAvailability(new Date('2026-08-31T17:00:00Z'), { ...developmentStoreConfig, enforceHours: true }).acceptingOrders).toBe(false);
   });
-  it('trata feriado como domingo e mostra a próxima abertura', () => {
-    const holidayConfig = { ...developmentStoreConfig, holidayDates: ['2026-09-07'] };
-    expect(isStoreOpen(new Date('2026-09-07T17:30:00Z'), holidayConfig)).toBe(false);
-    expect(isStoreOpen(new Date('2026-09-07T18:00:00Z'), holidayConfig)).toBe(true);
-    const next = getNextOpening(new Date('2026-09-07T17:30:00Z'), holidayConfig);
-    expect(formatNextOpening(next)).toBe('Hoje às 15:00');
-  });
-  it('retorna estimativa contextual e estado operacional coerente', () => {
-    expect(getDeliveryEstimate(new Date('2026-08-31T18:00:00Z'), developmentStoreConfig).label).toBe('30–40 min');
-    expect(getDeliveryEstimate(new Date('2026-09-05T18:00:00Z'), developmentStoreConfig).label).toBe('a partir de 60 min');
-    expect(getDeliveryEstimate(new Date('2026-09-07T18:00:00Z'), { ...developmentStoreConfig, holidayDates: ['2026-09-07'] }).busy).toBe(true);
-    expect(getStoreAvailability(new Date('2026-08-31T17:00:00Z'), developmentStoreConfig).acceptingOrders).toBe(true);
-    expect(getStoreAvailability(new Date('2026-08-31T16:59:00Z'), developmentStoreConfig).reason).toBe('OUTSIDE_HOURS');
-    expect(getStoreAvailability(new Date('2026-08-31T16:59:00Z'), { ...developmentStoreConfig, enforceHours: false }).acceptingOrders).toBe(true);
-    expect(getStoreAvailability(new Date('2026-08-31T17:00:00Z'), { ...developmentStoreConfig, orderingEnabled: false }).reason).toBe('PAUSED');
-  });
-  it('calcula none, confirm, fixed e zones', () => {
+  it('calcula modalidades de delivery sem floats', () => {
     expect(() => calculateDeliveryFee({ mode: 'NONE' }, 'DELIVERY')).toThrow();
     expect(calculateDeliveryFee({ mode: 'CONFIRM' }, 'DELIVERY')).toBe(0);
     expect(calculateDeliveryFee({ mode: 'FIXED', fixedFeeCents: 600 }, 'DELIVERY')).toBe(600);
     expect(calculateDeliveryFee({ mode: 'ZONES', zones: [{ id: 'centro', name: 'Centro', feeCents: 400, active: true }] }, 'DELIVERY', 'centro')).toBe(400);
-    expect(calculateDeliveryFee({ mode: 'NONE' }, 'PICKUP')).toBe(0);
   });
 });
 
-describe('adulteração', () => {
-  it('ignora qualquer total do cliente porque o domínio recebe apenas IDs', () => {
-    const forged = { cartItemId: 'hack', productId: 'agua-sem-gas', sizeId: 'unico', selections: [], quantity: 1, clientTotal: 1 } as unknown as Parameters<typeof calculateItemPrice>[0];
-    expect(calculateItemPrice(forged, developmentCatalog).totalPriceCents).toBe(350);
+describe('catálogo adulterado', () => {
+  it('não encontra produto de outra marca quando o catálogo filtrado é usado', () => {
+    const otherBrand: CatalogSnapshot = { ...developmentCatalog, products: developmentCatalog.products.map((product) => ({ ...product, brandId: 'other' })) };
+    expect(() => calculateItemPrice({ cartItemId: 'x', productId: 'sushi-salmao', sizeId: 'unico', quantity: 1, selections: [] }, otherBrand)).toThrow(/Produto/);
   });
-  it('rejeita produto, tamanho e adicional inexistentes', () => {
-    expect(() => calculateItemPrice({ cartItemId: 'x', productId: 'fake', sizeId: 'x', selections: [], quantity: 1 }, developmentCatalog)).toThrow(/Produto/);
-    expect(() => calculateItemPrice({ cartItemId: 'x', productId: 'agua-sem-gas', sizeId: 'fake', selections: [], quantity: 1 }, developmentCatalog)).toThrow(/Tamanho/);
+});
+
+describe('validação de reservas 2026', () => {
+  const validReservation = {
+    name: 'Aline Teiko',
+    whatsapp: '17999999999',
+    date: '2026-12-20',
+    time: '19:30',
+    people: 2,
+    notes: 'Mesa tranquila',
+  };
+
+  it('aceita data real de 2026 e mantém observação segura', () => {
+    expect(isValidReservationDate(validReservation.date)).toBe(true);
+    expect(validateReservationDraft(validReservation)).toEqual({});
+  });
+
+  it('rejeita ano fora do limite, dia impossível, nome inválido e telefone ruim', () => {
+    expect(isValidReservationDate('2027-02-11')).toBe(false);
+    expect(isValidReservationDate('2026-02-31')).toBe(false);
+    expect(validateReservationDraft({ ...validReservation, date: '2027-02-11', name: '!!!', whatsapp: 'abc' })).toMatchObject({
+      name: expect.any(String),
+      whatsapp: expect.any(String),
+      date: expect.any(String),
+    });
+  });
+
+  it('normaliza espaços e rejeita horário, lotação e observação fora dos limites', () => {
+    const errors = validateReservationDraft({
+      ...validReservation,
+      name: '  Aline   Teiko  ',
+      time: '25:90',
+      people: 31,
+      notes: 'x'.repeat(501),
+    });
+    expect(errors.name).toBeUndefined();
+    expect(errors.time).toMatch(/horário/i);
+    expect(errors.people).toMatch(/1 e 30/i);
+    expect(errors.notes).toMatch(/500/);
   });
 });

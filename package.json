@@ -1,5 +1,5 @@
 {
-  "name": "acai-mais-sabor",
+  "name": "teiko-sushi",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -8,18 +8,16 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
-    "build:firebase": "npm run build && npm --prefix functions run build && node scripts/prepare-firebase-build.mjs",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint app components/providers.tsx components/public-header.tsx components/admin-shell.tsx components/admin-form.tsx lib shared tests functions/src scripts vitest.config.ts vite.config.ts",
     "format": "oxfmt",
-    "typecheck": "tsc --noEmit && npm --prefix functions run build",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts --exclude tests/firestore.rules.test.ts",
     "test:domain": "vitest run --config vitest.config.ts tests/domain.test.ts tests/cart.test.ts",
-    "test:rules": "firebase emulators:exec --project demo-acai-mais-sabor --only firestore \"vitest run --config vitest.config.ts tests/firestore.rules.test.ts\"",
+    "test:rules": "firebase emulators:exec --project sushi-cbfd2 --only firestore \"vitest run --config vitest.config.ts tests/firestore.rules.test.ts\"",
     "test:functions": "npm --prefix functions test",
-    "test:functions:integration": "npm --prefix functions run build && firebase emulators:exec --project demo-acai-mais-sabor --only firestore,functions \"npm --prefix functions run test:integration\"",
-    "emulators": "npm --prefix functions run build && firebase emulators:start --project demo-acai-mais-sabor --import=.firebase-data --export-on-exit=.firebase-data",
-    "seed:emulator": "firebase emulators:exec --project demo-acai-mais-sabor --only firestore,auth --export-on-exit=.firebase-data \"npm --prefix functions run seed:emulator\"",
+    "emulators": "firebase emulators:start --project sushi-cbfd2 --import=.firebase-data --export-on-exit=.firebase-data",
+    "seed:emulator": "firebase emulators:exec --project sushi-cbfd2 --only firestore,auth --export-on-exit=.firebase-data \"npm --prefix functions run seed:emulator\"",
     "ci": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {

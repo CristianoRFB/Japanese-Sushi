@@ -1,7 +1,11 @@
+export const TEIKO_BRAND_ID = 'teiko';
 export type OrderStatus = 'NEW' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'OUT_FOR_DELIVERY' | 'COMPLETED' | 'CANCELLED';
+export type CustomerOrderApproval = 'NONE' | 'PENDING' | 'ACCEPTED' | 'DECLINED';
+export type ReservationStatus = 'REQUESTED' | 'CONFIRMED' | 'REFUSED' | 'CANCELLED' | 'COMPLETED';
 export type FulfillmentMode = 'PICKUP' | 'DELIVERY';
 export type DeliveryMode = 'NONE' | 'CONFIRM' | 'FIXED' | 'ZONES';
 export type Role = 'admin' | 'staff';
+export interface Unit { id: string; brandId: string; name: string; city: string; address?: string; whatsapp?: string; instagram?: string; active: boolean; delivery: boolean; pickup: boolean }
 
 export interface StoreHoursWindow { open: string; close: string }
 export interface StoreDayHours { day: number; closed: boolean; windows: StoreHoursWindow[] }
@@ -20,10 +24,13 @@ export interface StoreAvailability {
   estimate: DeliveryEstimate;
 }
 export interface StorePublicConfig {
+  brandId: string;
   storeName: string;
   instagramHandle?: string;
   address?: string;
   city?: string;
+  defaultUnitId: string;
+  units: Unit[];
   phoneDisplay?: string;
   whatsappNumber?: string;
   whatsappEnabled: boolean;
@@ -47,7 +54,7 @@ export interface StorePublicConfig {
   updatedAt?: unknown;
 }
 
-export interface ProductCategory { id: string; name: string; active: boolean; displayOrder: number }
+export interface ProductCategory { id: string; brandId: string; name: string; active: boolean; displayOrder: number }
 export interface ProductSize {
   id: string;
   label: string;
@@ -58,6 +65,7 @@ export interface ProductSize {
 }
 export interface Product {
   id: string;
+  brandId: string;
   name: string;
   slug: string;
   description: string;
@@ -68,10 +76,12 @@ export interface Product {
   displayOrder: number;
   sizes: ProductSize[];
   modifierGroupIds: string[];
+  unitIds?: string[];
   updatedAt?: unknown;
 }
 export interface ModifierGroup {
   id: string;
+  brandId: string;
   name: string;
   description?: string;
   active: boolean;
@@ -88,6 +98,7 @@ export interface ModifierGroup {
 }
 export interface Modifier {
   id: string;
+  brandId: string;
   name: string;
   active: boolean;
   available: boolean;
@@ -97,6 +108,20 @@ export interface Modifier {
   allergenKeys: string[];
   displayOrder: number;
   imageUrl?: string;
+  updatedAt?: unknown;
+}
+export type PromotionDiscountType = 'PERCENTAGE' | 'FIXED';
+export interface Promotion {
+  id: string;
+  brandId: string;
+  name: string;
+  description?: string;
+  active: boolean;
+  discountType: PromotionDiscountType;
+  discountValue: number;
+  startsAt: string;
+  endsAt: string;
+  productIds: string[];
   updatedAt?: unknown;
 }
 export interface ModifierSelection { modifierId: string; quantity: number }
@@ -128,12 +153,16 @@ export interface PricedGroupSelection { groupId: string; groupName: string; item
 export interface PricedItem {
   productId: string;
   productName: string;
+  imageUrl?: string;
   sizeId: string;
   sizeLabel: string;
   quantity: number;
   modifierSelections: PricedGroupSelection[];
   unitPriceCents: number;
   totalPriceCents: number;
+  originalTotalPriceCents?: number;
+  discountCents?: number;
+  promotionId?: string;
   notes?: string;
 }
 
@@ -146,6 +175,76 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   COMPLETED: [],
   CANCELLED: [],
 };
+
+export const RESERVATION_TRANSITIONS: Record<ReservationStatus, ReservationStatus[]> = {
+  REQUESTED: ['CONFIRMED', 'REFUSED', 'CANCELLED'],
+  CONFIRMED: ['CANCELLED', 'COMPLETED'],
+  REFUSED: [],
+  CANCELLED: [],
+  COMPLETED: [],
+};
+
+export const RESERVATION_YEAR = 2026;
+export const RESERVATION_MIN_DATE = `${RESERVATION_YEAR}-01-01`;
+export const RESERVATION_MAX_DATE = `${RESERVATION_YEAR}-12-31`;
+export interface ReservationDraft {
+  name: string;
+  whatsapp: string;
+  date: string;
+  time: string;
+  people: number;
+  notes?: string;
+}
+export type ReservationField = keyof ReservationDraft;
+
+export function normalizeReservationName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+export function isValidReservationDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    year === RESERVATION_YEAR &&
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
+}
+
+export function validateReservationDraft(
+  draft: ReservationDraft,
+): Partial<Record<ReservationField, string>> {
+  const errors: Partial<Record<ReservationField, string>> = {};
+  const name = normalizeReservationName(draft.name);
+  if (name.length < 2) errors.name = 'Informe seu nome completo.';
+  else if (!/\p{L}/u.test(name)) errors.name = 'Use pelo menos uma letra no nome.';
+  else if (Array.from(name).some((character) => {
+    const code = character.charCodeAt(0);
+    return code < 32 || code === 127;
+  })) errors.name = 'Remova caracteres inválidos do nome.';
+
+  try {
+    normalizePhone(draft.whatsapp);
+  } catch {
+    errors.whatsapp = 'Informe um WhatsApp válido com DDD.';
+  }
+
+  if (!isValidReservationDate(draft.date)) {
+    errors.date = `Escolha uma data válida entre 01/01 e 31/12 de ${RESERVATION_YEAR}.`;
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.time)) {
+    errors.time = 'Informe um horário válido, por exemplo 19:30.';
+  }
+  if (!Number.isInteger(draft.people) || draft.people < 1 || draft.people > 30) {
+    errors.people = 'Escolha uma quantidade entre 1 e 30 pessoas.';
+  }
+  if ((draft.notes ?? '').length > 500) {
+    errors.notes = 'A observação deve ter no máximo 500 caracteres.';
+  }
+  return errors;
+}
 
 export function formatBRL(cents: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
@@ -237,7 +336,7 @@ export function calculateModifierCharges(group: ModifierGroup, size: ProductSize
 }
 
 export function calculateItemPrice(draft: CartItemDraft, catalog: CatalogSnapshot): PricedItem {
-  const product = catalog.products.find((candidate) => candidate.id === draft.productId && candidate.active);
+  const product = catalog.products.find((candidate) => candidate.id === draft.productId && candidate.active && candidate.brandId === TEIKO_BRAND_ID);
   if (!product) throw new Error('Produto indisponível.');
   const size = product.sizes.find((candidate) => candidate.id === draft.sizeId && candidate.active);
   if (!size) throw new Error('Tamanho indisponível.');
@@ -268,12 +367,41 @@ export function calculateItemPrice(draft: CartItemDraft, catalog: CatalogSnapsho
   }
   for (const selection of normalized) if (!effectiveGroups.some((group) => group.id === selection.groupId)) throw new Error('Grupo de adicionais inválido.');
   const unitPriceCents = size.basePriceCents + modifiersTotal;
-  return { productId: product.id, productName: product.name, sizeId: size.id, sizeLabel: size.label, quantity: draft.quantity, modifierSelections: pricedGroups, unitPriceCents, totalPriceCents: unitPriceCents * draft.quantity, ...(draft.notes ? { notes: draft.notes.slice(0, 300) } : {}) };
+  return { productId: product.id, productName: product.name, ...(product.imageUrl ? { imageUrl: product.imageUrl } : {}), sizeId: size.id, sizeLabel: size.label, quantity: draft.quantity, modifierSelections: pricedGroups, unitPriceCents, totalPriceCents: unitPriceCents * draft.quantity, ...(draft.notes ? { notes: draft.notes.slice(0, 300) } : {}) };
 }
 
-export function calculateCartPreview(items: CartItemDraft[], catalog: CatalogSnapshot): { items: PricedItem[]; subtotalCents: number } {
+export function isPromotionActive(promotion: Promotion, date = new Date()): boolean {
+  if (!promotion.active || !/^\d{4}-\d{2}-\d{2}$/.test(promotion.startsAt) || !/^\d{4}-\d{2}-\d{2}$/.test(promotion.endsAt)) return false;
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(date);
+  return promotion.startsAt <= today && today <= promotion.endsAt;
+}
+
+export function formatPromotionValue(promotion: Promotion): string {
+  return promotion.discountType === 'PERCENTAGE'
+    ? `${promotion.discountValue}% de desconto`
+    : `${formatBRL(promotion.discountValue)} de desconto`;
+}
+
+export function calculatePromotionDiscount(promotion: Promotion, subtotalCents: number): number {
+  if (!Number.isSafeInteger(subtotalCents) || subtotalCents <= 0) return 0;
+  const discount = promotion.discountType === 'PERCENTAGE'
+    ? Math.floor(subtotalCents * promotion.discountValue / 100)
+    : promotion.discountValue;
+  return Math.max(0, Math.min(subtotalCents, discount));
+}
+
+export function calculateCartPreview(items: CartItemDraft[], catalog: CatalogSnapshot, promotions: Promotion[] = [], date = new Date()): { items: PricedItem[]; subtotalCents: number; discountCents: number } {
   const priced = items.map((item) => calculateItemPrice(item, catalog));
-  return { items: priced, subtotalCents: sumMoney(priced.map((item) => item.totalPriceCents)) };
+  const activePromotions = promotions.filter((promotion) => isPromotionActive(promotion, date));
+  const discounted = priced.map((item) => {
+    const promotion = activePromotions.find((candidate) => !candidate.productIds.length || candidate.productIds.includes(item.productId));
+    if (!promotion) return item;
+    const discountCents = calculatePromotionDiscount(promotion, item.totalPriceCents);
+    if (!discountCents) return item;
+    return { ...item, originalTotalPriceCents: item.totalPriceCents, discountCents, promotionId: promotion.id, totalPriceCents: item.totalPriceCents - discountCents };
+  });
+  const discountCents = sumMoney(discounted.map((item) => item.discountCents ?? 0));
+  return { items: discounted, subtotalCents: sumMoney(discounted.map((item) => item.totalPriceCents)), discountCents };
 }
 
 const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
