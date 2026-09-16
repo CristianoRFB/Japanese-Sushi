@@ -8,7 +8,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_
   throw new Error('Seed bloqueado: FIRESTORE_EMULATOR_HOST e FIREBASE_AUTH_EMULATOR_HOST são obrigatórios. Nunca execute este script contra produção.');
 }
 
-if (!getApps().length) initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-acai-mais-sabor' });
+if (!getApps().length) initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-teiko-sushi' });
 const db = getFirestore();
 const now = Timestamp.now();
 const batch = db.batch();

@@ -2,6 +2,7 @@ export type OrderStatus = 'NEW' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'OUT_FOR
 export type FulfillmentMode = 'PICKUP' | 'DELIVERY';
 export type DeliveryMode = 'NONE' | 'CONFIRM' | 'FIXED' | 'ZONES';
 export type Role = 'admin' | 'staff';
+export type PaymentMethod = 'PIX' | 'CARD' | 'CASH' | 'OTHER';
 
 export interface StoreHoursWindow { open: string; close: string }
 export interface StoreDayHours { day: number; closed: boolean; windows: StoreHoursWindow[] }
@@ -35,7 +36,7 @@ export interface StorePublicConfig {
   holidayDates?: string[];
   holidayHours?: StoreHoursWindow[];
   fulfillmentModes: FulfillmentMode[];
-  paymentMethods: Array<'PIX' | 'CARD' | 'CASH'>;
+  paymentMethods: PaymentMethod[];
   deliveryConfig: { mode: DeliveryMode; fixedFeeCents?: number; zones?: DeliveryZone[] };
   orderInstructions?: string;
   deliveryEstimate?: string;
@@ -143,7 +144,7 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PREPARING: ['READY', 'CANCELLED'],
   READY: ['OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED'],
   OUT_FOR_DELIVERY: ['COMPLETED', 'CANCELLED'],
-  COMPLETED: [],
+  COMPLETED: ['CANCELLED'],
   CANCELLED: [],
 };
 

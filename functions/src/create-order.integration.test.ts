@@ -3,9 +3,9 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { processIntegration } from './integration/service.js';
 
-if (!getApps().length) initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-acai-mais-sabor' });
+if (!getApps().length) initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-teiko-sushi' });
 const db = getFirestore();
-const endpoint = 'http://127.0.0.1:5001/demo-acai-mais-sabor/southamerica-east1/createOrder';
+const endpoint = 'http://127.0.0.1:5001/demo-teiko-sushi/southamerica-east1/createOrder';
 const basePayload = { customer: { name: 'Cliente Integração', whatsapp: '17999999999' }, items: [{ productId: 'simple', sizeId: 'unico', quantity: 1, selections: [] }], fulfillment: { mode: 'PICKUP' }, payment: { method: 'PIX', needsChange: false }, clientPreviewTotalCents: 1800 };
 
 async function call(data: unknown) {
@@ -15,8 +15,8 @@ async function call(data: unknown) {
 
 beforeAll(async () => {
   await db.doc('storePublicConfig/main').set({ storeName: 'Integração', whatsappEnabled: false, orderingEnabled: true, enforceHours: false, timezone: 'America/Sao_Paulo', hours: [], fulfillmentModes: ['PICKUP'], paymentMethods: ['PIX'], deliveryConfig: { mode: 'NONE' }, status: 'ACTIVE' });
-  await db.doc('categories/acai').set({ name: 'Açaí', active: true, displayOrder: 1 });
-  await db.doc('products/simple').set({ name: 'Açaí simples', slug: 'simples', description: '', active: true, categoryId: 'acai', productType: 'SIMPLE', displayOrder: 1, sizes: [{ id: 'unico', label: 'Único', active: true, basePriceCents: 1800, displayOrder: 1 }], modifierGroupIds: [] });
+  await db.doc('categories/sushis').set({ name: 'Sushis', active: true, displayOrder: 1 });
+  await db.doc('products/simple').set({ name: 'Sushi simples', slug: 'sushi-simples', description: '', active: true, categoryId: 'sushis', productType: 'SIMPLE', displayOrder: 1, sizes: [{ id: 'unico', label: '2 peças', active: true, basePriceCents: 1800, displayOrder: 1 }], modifierGroupIds: [] });
 });
 
 describe('createOrder no Emulator Suite', () => {

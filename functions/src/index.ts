@@ -10,7 +10,9 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { configuredMode } from './integration/provider.js';
 import { processIntegration } from './integration/service.js';
 import { customerIntegrationMessage } from '../../shared/integration.js';
+import { recordOrderRefundInTransaction, recordOrderSaleInTransaction } from './cash.js';
 export { getIntegrationReadiness, saveIntegrationMappings, retryOrderIntegration } from './integration/admin.js';
+export { openCash, recordCashMovement, closeCash } from './cash.js';
 
 import {
   calculateCartPreview,
@@ -38,7 +40,7 @@ export const createOrderSchema = z.object({
   customer: z.object({ name: z.string().trim().min(2).max(80), whatsapp: z.string().min(8).max(30), address: z.object({ street: z.string().trim().min(2).max(120), number: z.string().trim().min(1).max(20), complement: z.string().trim().max(80).optional(), neighborhood: z.string().trim().min(2).max(80), reference: z.string().trim().max(120).optional() }).optional() }),
   items: z.array(itemSchema).min(1).max(30),
   fulfillment: z.object({ mode: z.enum(['PICKUP', 'DELIVERY']), zoneId: z.string().max(100).optional() }),
-  payment: z.object({ method: z.enum(['PIX', 'CARD', 'CASH']), needsChange: z.boolean(), changeForCents: z.number().int().min(0).max(1_000_000).optional() }),
+  payment: z.object({ method: z.enum(['PIX', 'CARD', 'CASH', 'OTHER']), needsChange: z.boolean(), changeForCents: z.number().int().min(0).max(1_000_000).optional() }),
   notes: z.string().trim().max(500).optional(),
   clientPreviewTotalCents: z.number().int().min(0).max(10_000_000).optional(),
 }).superRefine((value, context) => {
@@ -66,7 +68,7 @@ async function loadCatalog(): Promise<{ catalog: CatalogSnapshot; config: StoreP
 
 function makeOrderNumber(now = new Date(), timeZone = 'America/Sao_Paulo'): string {
   const day = new Intl.DateTimeFormat('en-CA', { timeZone, year: '2-digit', month: '2-digit', day: '2-digit' }).format(now).replace(/-/g, '');
-  return `#A${day}${randomBytes(2).toString('hex').toUpperCase()}`;
+  return `#T${day}${randomBytes(2).toString('hex').toUpperCase()}`;
 }
 function makePublicCode(): string { return randomBytes(16).toString('base64url'); }
 function requestIdFrom(data: unknown): string { return typeof data === 'object' && data && 'clientRequestId' in data ? String((data as { clientRequestId?: unknown }).clientRequestId).slice(0, 80) : 'unknown'; }
@@ -183,6 +185,10 @@ export const updateOrderStatus = onCall({ region, timeoutSeconds: 15, memory: '2
     if (snapshot.data()?.integration?.provider === 'saipos') throw new HttpsError('failed-precondition', 'Operação e cancelamento devem ser realizados no Saipos. Sincronização de status ainda não homologada.');
     const current = snapshot.data()?.status as OrderStatus;
     if (!ORDER_TRANSITIONS[current]?.includes(status)) throw new HttpsError('failed-precondition', `Transição ${current} → ${status} não permitida.`);
+    const order = snapshot.data()!;
+    const actor = { uid: request.auth!.uid, email: request.auth?.token.email as string | undefined };
+    if (status === 'COMPLETED') await recordOrderSaleInTransaction(transaction, orderId, order as { pricing: { totalCents: number }; payment: { method: 'PIX' | 'CARD' | 'CASH' | 'OTHER' } }, actor);
+    if (status === 'CANCELLED') await recordOrderRefundInTransaction(transaction, orderId, order as { pricing: { totalCents: number }; payment: { method: 'PIX' | 'CARD' | 'CASH' | 'OTHER' } }, actor);
     transaction.update(orderRef, { status, updatedAt: FieldValue.serverTimestamp(), statusHistory: FieldValue.arrayUnion({ status, at: Timestamp.now(), actorUid: request.auth!.uid, actorRole: role, ...(reason ? { reason } : {}) }), ...(status === 'CANCELLED' ? { cancelledAt: FieldValue.serverTimestamp(), cancellationReason: reason || '' } : {}) });
   });
   logger.info('updateOrderStatus completed', { orderId, status, actorUid: request.auth?.uid });

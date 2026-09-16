@@ -1,5 +1,5 @@
 {
-  "name": "acai-mais-sabor-functions",
+  "name": "teiko-sushi-functions",
   "private": true,
   "type": "module",
   "main": "lib/functions/src/index.js",

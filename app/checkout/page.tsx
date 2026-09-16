@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { getFirebaseClient, hasFirebaseConfig } from '@/lib/firebase/client';
 import { calculateCartPreview, calculateDeliveryFee, formatBRL, formatNextOpening, getStoreAvailability, type FulfillmentMode } from '@/shared/domain';
 
-const paymentLabels = { PIX: 'Pix', CARD: 'Cartão na entrega', CASH: 'Dinheiro' } as const;
+const paymentLabels = { PIX: 'Pix', CARD: 'Cartão na entrega', CASH: 'Dinheiro', OTHER: 'Outro' } as const;
 type PaymentMethod = keyof typeof paymentLabels;
 
 interface CheckoutFields {
@@ -80,8 +80,8 @@ export default function CheckoutPage() {
     if (paymentMethod === 'CASH' && needsChange && changeForCents! < totalCents) { setError('O valor para troco precisa ser igual ou maior que o total do pedido.'); return; }
     if (!hasFirebaseConfig) { setError('Firebase ainda não foi configurado. O pedido não foi enviado.'); return; }
 
-    const clientRequestId = sessionStorage.getItem('acai-checkout-request-id') ?? crypto.randomUUID();
-    sessionStorage.setItem('acai-checkout-request-id', clientRequestId);
+    const clientRequestId = sessionStorage.getItem('teiko-checkout-request-id') ?? crypto.randomUUID();
+    sessionStorage.setItem('teiko-checkout-request-id', clientRequestId);
     const payload = {
       clientRequestId,
       customer: {
@@ -112,7 +112,7 @@ export default function CheckoutPage() {
       const createOrder = httpsCallable<typeof payload, { publicCode: string; orderNumber: string; totalCents: number }>(functions, 'createOrder');
       const response = await createOrder(payload);
       cart.clear();
-      sessionStorage.removeItem('acai-checkout-request-id');
+      sessionStorage.removeItem('teiko-checkout-request-id');
       window.location.href = `/pedido/${response.data.publicCode}?novo=1`;
     } catch (cause: unknown) {
       const rawMessage = cause instanceof Error ? cause.message.replace(/^FirebaseError:\s*/, '') : 'Não foi possível enviar o pedido.';

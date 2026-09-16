@@ -1,11 +1,10 @@
 'use client';
 
-import { ArrowRight, Clock3, MapPin, Timer, WalletCards } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowRight, Check, Clock3, MapPin, Timer, WalletCards } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { PublicHeader } from '@/components/public-header';
 import { useCatalog } from '@/components/providers';
-import { Button } from '@/components/ui/button';
 import { formatBRL, formatNextOpening, getStoreAvailability, type Product, type ProductCategory } from '@/shared/domain';
 
 export default function Home() {
@@ -15,75 +14,28 @@ export default function Home() {
   const products = catalog.products.filter((product) => product.active).sort((a, b) => a.displayOrder - b.displayOrder);
   const categories = catalog.categories.filter((category) => category.active && products.some((product) => product.categoryId === category.id)).sort((a, b) => a.displayOrder - b.displayOrder);
   const availability = getStoreAvailability(now, config);
-  const open = availability.acceptingOrders;
-  const primary = products.find((product) => product.id === 'acai-monte-seu') ?? products[0];
-  const mondayHours = config.hours.find((day) => day.day === 1)?.windows.map((window) => `${window.open} às ${window.close}`).join(' / ') || 'A confirmar';
+  const primary = products.find((product) => product.categoryId === 'combinados') ?? products[0];
   const sundayHours = config.hours.find((day) => day.day === 0)?.windows.map((window) => `${window.open} às ${window.close}`).join(' / ') || 'A confirmar';
 
-  return <main className="min-h-screen bg-[#fffaf5] text-[#2b1722]">
-    <PublicHeader />
-    <section className="relative overflow-hidden border-b border-[#82204f]/10">
-      <div className="absolute -right-32 -top-28 size-80 rounded-full bg-[#ffcf3d]/25 blur-3xl" />
-      <div className="absolute -bottom-44 left-1/3 size-80 rounded-full bg-[#d7f04a]/20 blur-3xl" />
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-10 sm:px-6 sm:py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-20">
-        <div className="relative z-10">
-          <div className={`mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold ${open ? 'border-emerald-700/15 bg-emerald-50 text-emerald-800' : 'border-amber-700/15 bg-amber-50 text-amber-900'}`}>
-            <span className={`size-2 rounded-full ${open ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-            {open ? `ABERTO AGORA${availability.closesAt ? ` · até ${availability.closesAt}` : ''}` : `FECHADO NO MOMENTO · ${availability.reason === 'OUTSIDE_HOURS' ? formatNextOpening(availability.nextOpening) : config.pauseMessage || 'Pedidos indisponíveis'}`}
-          </div>
-          <h1 className="max-w-xl text-5xl font-black leading-[.94] tracking-[-0.06em] text-[#53142f] sm:text-6xl lg:text-7xl">Seu sabor, do seu jeito.</h1>
-          <p className="mt-5 max-w-md text-lg leading-relaxed text-[#6f5360]">Monte seu copo ou escolha um dos nossos combinados. O cardápio completo está logo abaixo.</p>
-          <p className="mt-3 text-sm font-bold text-[#82204f]">Tempo estimado: {availability.estimate.label}. <span className="font-normal text-[#826a75]">{availability.estimate.detail}</span></p>
-          <Button disabled={!primary} className="mt-7 h-13 rounded-full bg-[#82204f] px-6 text-base font-bold text-white shadow-[0_14px_30px_rgba(130,32,79,.24)] hover:bg-[#6d183f]" render={<a href={primary ? `/montar/${primary.id}` : '#cardapio'} />}>
-            Montar meu copo <ArrowRight className="size-5" />
-          </Button>
-        </div>
-        <div className="relative mx-auto aspect-square w-full max-w-[430px]" aria-hidden="true">
-          <div className="absolute inset-[6%] rotate-6 rounded-[38%_62%_52%_48%/47%_41%_59%_53%] bg-[#ffcf3d]" />
-          <img src="/development-acai-placeholder.png" alt="" className="absolute inset-[13%] size-[74%] -rotate-3 rounded-[52%_48%_45%_55%/50%_47%_53%_50%] object-cover shadow-[0_30px_60px_rgba(83,20,47,.28)]" />
-          <div className="absolute bottom-[7%] right-[2%] rounded-2xl bg-white px-4 py-3 shadow-xl"><strong className="block text-sm text-[#53142f]">Açaí + Sabor</strong><span className="text-xs text-[#826a75]">Santa Fé do Sul</span></div>
+  return <main className="min-h-screen bg-[#f7f4ee] text-[#122b36]"><PublicHeader />
+    <section className="mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-8 sm:pb-16 sm:pt-8">
+      <div className="teiko-grain relative overflow-hidden rounded-[28px] bg-[#122b36] text-white shadow-[0_24px_70px_rgba(18,43,54,.18)] sm:rounded-[40px]">
+        <div className="absolute -right-24 -top-24 size-72 rounded-full border-[28px] border-[#d9ac64]/20" /><div className="absolute -bottom-24 left-1/3 size-64 rounded-full border-[18px] border-[#c84d43]/20" />
+        <div className="relative grid min-h-[520px] items-center gap-10 px-6 py-10 sm:px-12 sm:py-14 lg:grid-cols-[1fr_420px] lg:px-16">
+          <div className="max-w-2xl"><div className="flex flex-wrap items-center gap-3 text-[11px] font-black uppercase tracking-[.2em] text-[#d9ac64]"><span>Teiko Sushi</span><span className="size-1 rounded-full bg-[#c84d43]" /><span>Comida japonesa</span></div><h1 className="teiko-display mt-7 max-w-xl text-[3.5rem] leading-[.94] tracking-[-.055em] text-[#f7f4ee] sm:text-7xl">Peixe fresco.<br /><em className="text-[#d9ac64]">Tempo de verdade.</em></h1><p className="mt-6 max-w-md text-base leading-relaxed text-white/65 sm:text-lg">Combinados montados na hora, sabores honestos e aquele cuidado que chega até sua mesa.</p><div className="mt-7 flex flex-wrap items-center gap-3"><a className="inline-flex h-12 items-center gap-3 rounded-full bg-[#c84d43] px-6 text-sm font-black text-white shadow-[0_10px_25px_rgba(200,77,67,.25)] transition hover:bg-[#dc5b50]" href={primary ? `/montar/${primary.id}` : '#cardapio'}>Pedir agora <ArrowRight className="size-4" /></a><a className="inline-flex h-12 items-center rounded-full border border-white/20 px-5 text-sm font-bold text-white/80 transition hover:bg-white/10" href="#cardapio">Explorar cardápio</a></div><div className="mt-8 flex items-center gap-2 text-xs text-white/55"><span className={`size-2 rounded-full ${availability.acceptingOrders ? 'bg-emerald-400' : 'bg-[#d9ac64]'}`} />{availability.acceptingOrders ? `Aberto agora · ${availability.estimate.label}` : `Abre ${formatNextOpening(availability.nextOpening)}`}</div></div>
+          <SushiComposition />
         </div>
       </div>
     </section>
 
-    <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 sm:pt-10">
-      <div className="grid overflow-hidden rounded-[30px] bg-[#351924] text-white shadow-[0_20px_55px_rgba(53,25,36,.14)] lg:grid-cols-[1.25fr_.75fr]">
-        <div className="p-6 sm:p-8">
-          <p className="text-sm font-black text-[#ffcf3d]">Oiii ☺️</p>
-          <h2 className="mt-2 max-w-xl text-2xl font-black tracking-[-.035em] sm:text-3xl">Faça seu pedido com tudo o que precisamos para entregar direitinho.</h2>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/70">{config.orderInstructions}</p>
-          <p className="mt-5 text-sm font-bold text-[#d7f04a]">{config.gratitudeMessage}</p>
-        </div>
-        <div className="grid gap-px bg-white/10 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="flex gap-3 bg-white/5 p-5"><Timer className="mt-0.5 size-5 shrink-0 text-[#ffcf3d]" /><div><strong className="text-sm">Tempo estimado: {availability.estimate.label}</strong><p className="mt-1 text-xs leading-relaxed text-white/60">{availability.estimate.detail}</p></div></div>
-          <div className="flex gap-3 bg-white/5 p-5"><WalletCards className="mt-0.5 size-5 shrink-0 text-[#d7f04a]" /><div><strong className="text-sm">Entrega por {formatBRL(config.deliveryConfig.fixedFeeCents ?? 0)}</strong><p className="mt-1 text-xs leading-relaxed text-white/60">Informe a forma de pagamento e o troco no checkout.</p></div></div>
-        </div>
-      </div>
-    </section>
+    <section className="mx-auto grid max-w-7xl gap-3 px-4 sm:grid-cols-3 sm:px-8"><Feature icon={<Timer />} title={availability.estimate.label} text="Tempo estimado para seu pedido" /><Feature icon={<WalletCards />} title={formatBRL(config.deliveryConfig.fixedFeeCents ?? 0)} text="Taxa fixa de entrega" /><Feature icon={<MapPin />} title={config.city ?? 'Sua região'} text="Retire ou receba em casa" /></section>
 
-    <section id="cardapio" className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="flex items-end justify-between gap-4"><div><p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#a62c63]">Cardápio</p><h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#351924]">Escolha o que vai pedir</h2></div>{development && <span className="hidden rounded-full bg-[#fff0f5] px-3 py-1.5 text-xs font-bold text-[#82204f] sm:block">Prévia do cardápio</span>}</div>
-      <nav aria-label="Categorias do cardápio" className="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">{categories.map((category) => <a key={category.id} href={`#categoria-${category.id}`} className="shrink-0 rounded-full border border-[#82204f]/12 bg-white px-4 py-2 text-sm font-bold text-[#6d183f] shadow-sm hover:border-[#82204f]/35">{category.name}</a>)}</nav>
-      {loading && <div className="mt-7 grid gap-4 sm:grid-cols-2"><div className="h-52 animate-pulse rounded-[28px] bg-[#82204f]/8" /><div className="h-52 animate-pulse rounded-[28px] bg-[#82204f]/8" /></div>}
-      {error && <div role="alert" className="mt-6 rounded-2xl bg-red-50 p-4 text-sm text-red-800">Não foi possível carregar o cardápio: {error}</div>}
-      {!loading && !products.length && <div className="mt-7 rounded-[28px] border border-dashed border-[#82204f]/25 bg-white p-8 text-center"><strong>Cardápio em configuração</strong><p className="mt-1 text-sm text-[#826a75]">A loja ainda não publicou produtos.</p></div>}
-      {!loading && categories.map((category) => {
-        const categoryProducts = products.filter((product) => product.categoryId === category.id);
-        return <section key={category.id} id={`categoria-${category.id}`} className="scroll-mt-24 pt-11 first:pt-8">
-          <div className="flex items-end justify-between gap-4 border-b border-[#82204f]/10 pb-4"><div><h3 className="text-2xl font-black tracking-[-.035em] text-[#351924]">{category.name}</h3><p className="mt-1 text-sm text-[#826a75]">{categoryProducts.length} {categoryProducts.length === 1 ? 'opção' : 'opções'}</p></div>{category.id === 'combinados' && <span className="text-xs font-bold text-[#a62c63]">Adicionais disponíveis</span>}</div>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">{categoryProducts.map((product) => <ProductCard key={product.id} product={product} category={category} />)}</div>
-        </section>;
-      })}
-      <div className="mt-12 grid gap-3 rounded-[28px] bg-[#351924] p-5 text-white sm:grid-cols-2 sm:p-6"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-full bg-white/10"><Clock3 className="size-5 text-[#ffcf3d]" /></span><div><strong className="block text-sm">Segunda a sábado</strong><span className="text-xs text-white/60">{mondayHours}</span></div></div><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-full bg-white/10"><MapPin className="size-5 text-[#d7f04a]" /></span><div><strong className="block text-sm">Domingos e feriados</strong><span className="text-xs text-white/60">{sundayHours} • {config.city}</span></div></div></div>
-    </section>
+    <section id="cardapio" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-8 sm:py-24"><div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-[11px] font-black uppercase tracking-[.22em] text-[#c84d43]">O menu</p><h2 className="teiko-display mt-3 text-4xl tracking-[-.04em] text-[#122b36] sm:text-5xl">Escolha seu momento</h2></div>{development && <span className="w-fit rounded-full border border-[#d9ac64]/50 bg-[#fffdfa] px-3 py-2 text-[11px] font-black uppercase tracking-wider text-[#8c6a32]">Prévia do cardápio</span>}</div><nav aria-label="Categorias do cardápio" className="mt-8 flex gap-2 overflow-x-auto pb-2">{categories.map((category) => <a key={category.id} href={`#categoria-${category.id}`} className="shrink-0 rounded-full border border-[#d9d4ca] bg-[#fffdfa] px-4 py-2.5 text-sm font-bold text-[#536568] transition hover:border-[#c84d43] hover:text-[#c84d43]">{category.name}</a>)}</nav>{loading && <div className="mt-10 grid gap-5 sm:grid-cols-2"><div className="h-72 animate-pulse rounded-[24px] bg-[#ebe7df]" /><div className="h-72 animate-pulse rounded-[24px] bg-[#ebe7df]" /></div>}{error && <div role="alert" className="mt-8 rounded-2xl bg-red-50 p-4 text-sm text-red-800">Não foi possível carregar o cardápio: {error}</div>}{!loading && !products.length && <div className="mt-8 rounded-[24px] border border-dashed border-[#c84d43]/35 bg-[#fffdfa] p-8 text-center"><strong>Cardápio em configuração</strong><p className="mt-1 text-sm text-[#6f7d7e]">A loja ainda não publicou produtos.</p></div>}{!loading && categories.map((category) => <Category key={category.id} category={category} products={products.filter((product) => product.categoryId === category.id)} />)}<div className="mt-16 flex flex-col gap-5 rounded-[26px] border border-[#d9d4ca] bg-[#fffdfa] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div className="flex items-start gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-full bg-[#f5e8df] text-[#c84d43]"><Clock3 className="size-5" /></span><div><strong className="block text-base">Domingo é dia de Teiko</strong><p className="mt-1 text-sm text-[#6f7d7e]">{sundayHours} · {config.city}</p></div></div><a className="inline-flex items-center gap-2 text-sm font-black text-[#c84d43]" href="/informacoes">Ver informações da loja <ArrowRight className="size-4" /></a></div></section>
+    <footer className="border-t border-[#122b36]/10 px-4 py-8 text-center text-xs font-bold text-[#7a8585] sm:px-8">Teiko Sushi · feito com cuidado em {config.city ?? 'sua região'}</footer>
   </main>;
 }
 
-function ProductCard({ product, category }: { product: Product; category: ProductCategory }) {
-  const activeSizes = product.sizes.filter((size) => size.active);
-  const starting = activeSizes.length ? Math.min(...activeSizes.map((size) => size.basePriceCents)) : 0;
-  return <a href={`/montar/${product.id}`} className="group grid min-h-48 grid-cols-[1fr_112px] overflow-hidden rounded-[28px] border border-[#82204f]/10 bg-white p-5 shadow-[0_12px_40px_rgba(88,32,58,.07)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(88,32,58,.12)] sm:grid-cols-[1fr_150px]">
-    <div className="flex flex-col"><span className="text-xs font-bold text-[#a62c63]">{category.name}</span><h4 className="mt-2 text-xl font-black tracking-[-0.03em] text-[#351924]">{product.name}</h4><p className="mt-2 text-sm leading-relaxed text-[#826a75]">{product.description}</p><span className="mt-auto pt-5 text-sm font-extrabold text-[#82204f]">A partir de {formatBRL(starting)}</span></div>
-    <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#74204c] via-[#a22862] to-[#d14e7e]">{product.imageUrl ? <img src={product.imageUrl} alt="" className="size-full object-cover opacity-85 transition group-hover:scale-105" /> : <div className="grid size-full place-items-center p-3 text-center text-sm font-black leading-tight text-white/90">Açaí<br /><span className="text-[#ffcf3d]">+ Sabor</span></div>}<span className="absolute bottom-3 right-3 grid size-9 place-items-center rounded-full bg-[#d7f04a] text-[#351924]"><ArrowRight className="size-4" /></span></div>
-  </a>;
-}
+function SushiComposition() { return <div className="relative mx-auto h-[350px] w-full max-w-[390px]" aria-hidden="true"><div className="absolute inset-5 rotate-[-6deg] rounded-[30px] bg-[#d9ac64] p-4 shadow-[0_20px_40px_rgba(0,0,0,.18)]"><div className="grid h-full place-items-center rounded-[22px] border border-[#122b36]/20 bg-[#e7d7be]"><span className="teiko-vertical text-[12px] font-black uppercase tracking-[.4em] text-[#122b36]/65">sushi · bar · teiko</span></div></div><div className="absolute right-5 top-3 grid size-28 rotate-12 place-items-center rounded-full border-[13px] border-[#c84d43] bg-[#f28a66] shadow-xl"><span className="text-5xl">🍣</span></div><div className="absolute bottom-4 left-0 grid size-32 -rotate-12 place-items-center rounded-full border-[12px] border-[#122b36] bg-[#f2d7b8] shadow-xl"><span className="text-5xl">🍱</span></div><div className="absolute bottom-7 right-2 rounded-2xl bg-[#f7f4ee] px-4 py-3 text-[#122b36] shadow-xl"><span className="flex items-center gap-2 text-xs font-black"><Check className="size-3.5 text-[#c84d43]" /> Feito na hora</span><span className="mt-1 block text-[10px] font-bold text-[#6f7d7e]">sabor que fica</span></div></div>; }
+function Feature({ icon, title, text }: { icon: ReactNode; title: string; text: string }) { return <div className="flex items-center gap-3 border-b border-[#d9d4ca] bg-[#fffdfa] px-4 py-4 first:rounded-t-2xl last:rounded-b-2xl sm:border-b-0 sm:px-5 sm:first:rounded-l-2xl sm:first:rounded-tr-none sm:last:rounded-r-2xl sm:last:rounded-bl-none"><span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#f5e8df] text-[#c84d43]">{icon}</span><div><strong className="block text-sm font-black text-[#122b36]">{title}</strong><span className="text-xs text-[#6f7d7e]">{text}</span></div></div>; }
+function Category({ category, products }: { category: ProductCategory; products: Product[] }) { return <section id={`categoria-${category.id}`} className="scroll-mt-24 pt-14 first:pt-12"><div className="flex items-baseline justify-between border-b border-[#d9d4ca] pb-3"><div><h3 className="text-2xl font-black tracking-[-.035em] text-[#122b36]">{category.name}</h3><p className="mt-1 text-xs font-bold text-[#7a8585]">{products.length} {products.length === 1 ? 'opção' : 'opções'}</p></div>{category.id === 'combinados' && <span className="text-xs font-black uppercase tracking-wider text-[#c84d43]">Mais pedidos</span>}</div><div className="mt-5 grid gap-4 sm:grid-cols-2">{products.map((product) => <ProductCard key={product.id} product={product} category={category} />)}</div></section>; }
+function ProductCard({ product, category }: { product: Product; category: ProductCategory }) { const activeSizes = product.sizes.filter((size) => size.active); const starting = activeSizes.length ? Math.min(...activeSizes.map((size) => size.basePriceCents)) : 0; return <a href={`/montar/${product.id}`} className="group grid min-h-[148px] grid-cols-[1fr_118px] gap-4 rounded-[22px] border border-[#e3ded5] bg-[#fffdfa] p-4 transition hover:-translate-y-1 hover:border-[#d9ac64] hover:shadow-[0_16px_35px_rgba(18,43,54,.08)] sm:grid-cols-[1fr_150px] sm:p-5"><div className="flex min-w-0 flex-col"><span className="text-[10px] font-black uppercase tracking-[.16em] text-[#c84d43]">{category.name}</span><h4 className="mt-2 text-lg font-black tracking-[-.03em] text-[#122b36]">{product.name}</h4><p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#6f7d7e]">{product.description}</p><span className="mt-auto pt-4 text-sm font-black text-[#122b36]">A partir de {formatBRL(starting)}</span></div><div className="relative min-h-[116px] overflow-hidden rounded-[17px] bg-gradient-to-br from-[#21434f] via-[#356978] to-[#d9ac64]">{product.imageUrl ? <img src={product.imageUrl} alt="" className="size-full object-cover opacity-90 transition duration-500 group-hover:scale-110" /> : <div className="grid size-full place-items-center text-5xl">🍣</div>}<span className="absolute bottom-2 right-2 grid size-8 place-items-center rounded-full bg-[#f7f4ee] text-[#c84d43] shadow-sm"><ArrowRight className="size-3.5" /></span></div></a>; }

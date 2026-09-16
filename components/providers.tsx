@@ -46,7 +46,7 @@ interface CartState {
   clear: () => void;
 }
 const CartContext = createContext<CartState | null>(null);
-const CART_KEY = 'acai-mais-sabor-cart-v2';
+const CART_KEY = 'teiko-sushi-cart-v1';
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItemDraft[]>([]);

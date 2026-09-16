@@ -121,7 +121,7 @@ export default function ConfiguratorPage() {
     <header className="sticky top-0 z-30 border-b border-[#82204f]/10 bg-[#fffaf5]/94 backdrop-blur-xl">
       <div className="mx-auto flex h-18 max-w-6xl items-center justify-between px-4 sm:px-6">
         <a className="grid size-10 place-items-center rounded-full bg-white shadow-sm" href="/" aria-label="Voltar"><ArrowLeft className="size-5" /></a>
-        <div className="text-center"><strong className="block text-sm">Monte seu pedido</strong><span className="text-xs text-[#826a75]">{product.name}</span></div>
+        <div className="text-center"><strong className="block text-sm">Configure seu pedido</strong><span className="text-xs text-[#826a75]">{product.name}</span></div>
         <a className="relative grid size-10 place-items-center rounded-full bg-[#351924] text-white" href="/carrinho" aria-label="Ir para o carrinho"><ShoppingBag className="size-4" /></a>
       </div>
     </header>
