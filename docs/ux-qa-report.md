@@ -82,6 +82,32 @@ Estados verificados: vazio, carregando, erro/indisponibilidade de preço, sucess
 - Regras e backend mantêm a promoção vinculada à marca Teiko e impedem leitura pública de ofertas pausadas.
 - Suíte de domínio cobre desconto percentual, elegibilidade por produto e período ativo.
 
+## Ciclo 7 — auditoria cruzada com a Açaíteria
+
+Foi feita uma comparação de capacidades entre a base local da Açaíteria e o Teiko. O Teiko já possuía catálogo, adicionais, promoções, pedidos, reservas, KDS e PDV. As lacunas funcionais relevantes foram incorporadas de forma adaptada ao negócio japonês:
+
+- Caixa financeiro em `/admin/financas`, com receitas, despesas, filtros por mês, situação paga/pendente e categorias de vendas de sushi, insumos frescos e embalagens.
+- Busca pública por código ou número do pedido e recuperação dos últimos códigos no cache individual do navegador.
+- Central de notificações com fila de pedidos novos, contador, aceite e recusa rápida, mantendo o detalhe completo para edição e proposta de alteração.
+- Área `/admin/integracao` documentando o estado desativado das integrações externas, sem habilitar Functions de produção, Cloud Run, Storage ou credenciais de terceiros.
+- Regras Firestore para `financeEntries`, restritas ao admin da marca Teiko e com validação de tipo, status, valor positivo e data.
+
+Também foi confirmado que o catálogo visual usa imagens locais reais e que não há caracteres emoji no código de aplicação pesquisado.
+
+### Validação automatizada
+
+- `npm run lint`: passou.
+- `npm run typecheck`: passou.
+- `npm test -- --run`: passou antes desta rodada; após a inclusão do caixa, deve ser repetido junto com o build.
+- `npm --prefix functions run build`: passou.
+- `npm --prefix functions test`: 1 arquivo e 7 testes passaram.
+
+### Pontos de atenção encontrados
+
+- A criação de pedido no frontend ainda é uma escrita direta no Firestore para preservar o modo sem Functions em produção. Isso mantém a operação no plano gratuito, mas não substitui uma validação canônica de preço no servidor; antes de abrir vendas reais, a regra deve ser endurecida ou a próxima passada do Firebase deve validar o fluxo com segurança.
+- A busca por número do pedido depende da sessão anônima persistida no mesmo navegador; o código público continua sendo a forma portátil de consulta.
+- O banco oficial ainda precisa receber o catálogo, preços, configuração pública e usuário admin reais. O seed é somente demonstrativo.
+
 ## Limites preservados
 
 - Firebase oficial permanece `sushi-cbfd2`, Firestore `(default)`.

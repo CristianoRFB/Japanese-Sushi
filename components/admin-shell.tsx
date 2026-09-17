@@ -7,10 +7,12 @@ import {
   CalendarDays,
   ChefHat,
   LayoutDashboard,
+  Link2,
   LogOut,
   Settings,
   ShoppingBag,
   SlidersHorizontal,
+  WalletCards,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
@@ -19,6 +21,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '@/components/providers';
 import { getFirebaseClient, hasFirebaseConfig } from '@/lib/firebase/client';
 import { BrandMark } from '@/components/brand-mark';
+import { AdminNotifications } from '@/components/admin-notifications';
 import { TEIKO_BRAND_ID } from '@/shared/domain';
 
 const links = [
@@ -30,6 +33,8 @@ const links = [
   { href: '/admin/catalogo', label: 'Cardápio', icon: Boxes },
   { href: '/admin/adicionais', label: 'Adicionais', icon: SlidersHorizontal },
   { href: '/admin/promocoes', label: 'Promoções', icon: BadgePercent },
+  { href: '/admin/financas', label: 'Finanças', icon: WalletCards },
+  { href: '/admin/integracao', label: 'Integrações', icon: Link2 },
   { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
@@ -162,6 +167,7 @@ export function AdminShell({
         </header>
         <main className="p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
+      <AdminNotifications />
     </div>
   );
 }

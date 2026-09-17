@@ -265,6 +265,12 @@ export default function CheckoutPage() {
       });
       cart.clear();
       sessionStorage.removeItem('teiko-checkout-request-id');
+      try {
+        const recent = JSON.parse(localStorage.getItem('teiko-sushi-recent-orders') || '[]') as Array<{ publicCode: string; orderNumber?: string; savedAt: number }>;
+        localStorage.setItem('teiko-sushi-recent-orders', JSON.stringify([{ publicCode, orderNumber, savedAt: Date.now() }, ...(Array.isArray(recent) ? recent : [])].slice(0, 5)));
+      } catch {
+        // A consulta continua disponível pelo código exibido na tela.
+      }
       window.location.href = `/pedido/${publicCode}?novo=1`;
     } catch (cause: unknown) {
       const rawMessage =

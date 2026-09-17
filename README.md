@@ -1,6 +1,6 @@
 # Teiko Sushi
 
-Sistema operacional da Teiko Sushi — Santa Fé do Sul/SP — com cardápio administrável, carrinho, checkout, pedidos, acompanhamento, KDS, PDV e reservas.
+Sistema operacional da Teiko Sushi — Santa Fé do Sul/SP — com cardápio administrável, carrinho, checkout, pedidos, acompanhamento, KDS, PDV, reservas, promoções e caixa financeiro.
 
 ## Arquitetura
 
@@ -23,7 +23,10 @@ Sistema operacional da Teiko Sushi — Santa Fé do Sul/SP — com cardápio adm
 - `/admin/login` — acesso da equipe.
 - `/admin`, `/admin/pedidos`, `/admin/kds`, `/admin/pdv` — operação de pedidos.
 - `/admin/reservas` — confirmar, recusar e concluir reservas.
-- `/admin/catalogo`, `/admin/adicionais` e `/admin/configuracoes` — gestão da unidade.
+- `/admin/catalogo`, `/admin/adicionais`, `/admin/promocoes`, `/admin/financas` e `/admin/configuracoes` — gestão da unidade.
+- `/admin/integracao` — preparação segura para integrações futuras, desativada por padrão.
+
+O início também oferece busca pelo código ou número do pedido e recupera os últimos códigos salvos no cache individual do navegador.
 
 ## Desenvolvimento
 

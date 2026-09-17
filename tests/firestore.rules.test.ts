@@ -190,6 +190,22 @@ describe('Firestore Rules Spark Teiko', () => {
     }));
   });
 
+  it('restringe o caixa ao admin Teiko e valida lançamentos', async () => {
+    const adminDb = env.authenticatedContext('admin-uid').firestore();
+    await assertSucceeds(setDoc(doc(adminDb, 'financeEntries', `sale-${testRunId}`), {
+      brandId: 'teiko', kind: 'INCOME', category: 'Vendas de sushi', description: 'Combinado Teiko',
+      amountCents: 4200, date: '2026-09-17', status: 'PAID',
+    }));
+    await assertFails(setDoc(doc(env.authenticatedContext('staff-uid').firestore(), 'financeEntries', `staff-${testRunId}`), {
+      brandId: 'teiko', kind: 'EXPENSE', category: 'Insumos frescos', description: 'Salmão',
+      amountCents: 12000, date: '2026-09-17', status: 'PAID',
+    }));
+    await assertFails(setDoc(doc(adminDb, 'financeEntries', `invalid-${testRunId}`), {
+      brandId: 'teiko', kind: 'INCOME', category: 'Vendas de sushi', description: 'Valor inválido',
+      amountCents: 0, date: '2026-09-17', status: 'PAID',
+    }));
+  });
+
   it('permite staff operar status válido e bloqueia transição inválida', async () => {
     const staffDb = env.authenticatedContext('staff-uid').firestore();
     await assertSucceeds(

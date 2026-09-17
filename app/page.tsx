@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from 'react';
 
 import { PublicHeader } from '@/components/public-header';
+import { OrderLookup } from '@/components/order-lookup';
 import { useCatalog } from '@/components/providers';
 import { Button } from '@/components/ui/button';
 import {
@@ -230,6 +231,7 @@ export default function Home() {
           </section>
         ))}
       </section>
+      <OrderLookup />
     </main>
   );
 }
