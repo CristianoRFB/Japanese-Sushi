@@ -101,6 +101,7 @@ Também foi confirmado que o catálogo visual usa imagens locais reais e que nã
 - `npm test -- --run`: passou antes desta rodada; após a inclusão do caixa, deve ser repetido junto com o build.
 - `npm --prefix functions run build`: passou.
 - `npm --prefix functions test`: 1 arquivo e 7 testes passaram.
+- Revalidação HTTP no Site publicado: `/`, `/admin/login`, `/admin/financas`, `/admin/integracao`, `/admin/pedidos`, `/admin/kds`, `/admin/pdv` e `/admin/reservas` retornaram `200` após a publicação desta rodada.
 
 ### Pontos de atenção encontrados
 
