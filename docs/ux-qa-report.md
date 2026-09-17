@@ -109,6 +109,14 @@ Também foi confirmado que o catálogo visual usa imagens locais reais e que nã
 - A busca por número do pedido depende da sessão anônima persistida no mesmo navegador; o código público continua sendo a forma portátil de consulta.
 - O banco oficial ainda precisa receber o catálogo, preços, configuração pública e usuário admin reais. O seed é somente demonstrativo.
 
+## Ciclo 8 — correção de paleta do acompanhamento
+
+- A seção de busca de pedido deixou o fundo claro isolado e passou a usar o mesmo conjunto visual das telas Teiko: ameixa, ink, marfim, dourado e lima.
+- Campo, foco, botão, erro e cartão de pedido recente foram ajustados para manter contraste e leitura em uma superfície escura.
+- Smoke test público confirmou `200` em 13 rotas, incluindo `/pedido/teste`, `/reserva`, `/admin/financas` e as telas operacionais.
+- Lint, TypeScript, 17 testes da aplicação, 7 testes das Rules e 7 testes das Functions passaram novamente.
+- A inspeção visual automatizada não pôde ser concluída porque o backend de navegador não estava disponível; a validação foi compensada por inspeção do código, build e smoke test público.
+
 ## Limites preservados
 
 - Firebase oficial permanece `sushi-cbfd2`, Firestore `(default)`.
