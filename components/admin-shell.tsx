@@ -26,20 +26,36 @@ import { BrandMark } from '@/components/brand-mark';
 import { AdminNotifications } from '@/components/admin-notifications';
 import { TEIKO_BRAND_ID } from '@/shared/domain';
 
-const links = [
-  { href: '/admin', label: 'Visão geral', icon: LayoutDashboard },
-  { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingBag },
-  { href: '/admin/pdv', label: 'PDV', icon: ShoppingBag },
-  { href: '/admin/kds', label: 'Cozinha (KDS)', icon: ChefHat },
-  { href: '/admin/reservas', label: 'Reservas', icon: CalendarDays },
-  { href: '/admin/mesas', label: 'Mesas', icon: SquareStack },
-  { href: '/admin/catalogo', label: 'Cardápio', icon: Boxes },
-  { href: '/admin/adicionais', label: 'Adicionais', icon: SlidersHorizontal },
-  { href: '/admin/promocoes', label: 'Promoções', icon: BadgePercent },
-  { href: '/admin/financas', label: 'Finanças', icon: WalletCards },
-  { href: '/admin/integracao', label: 'Integrações', icon: Link2 },
-  { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
+const navGroups = [
+  {
+    label: 'Operação',
+    links: [
+      { href: '/admin', label: 'Visão geral', icon: LayoutDashboard },
+      { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingBag },
+      { href: '/admin/pdv', label: 'PDV', icon: ShoppingBag },
+      { href: '/admin/kds', label: 'Cozinha (KDS)', icon: ChefHat },
+      { href: '/admin/reservas', label: 'Reservas', icon: CalendarDays },
+      { href: '/admin/mesas', label: 'Mesas', icon: SquareStack },
+    ],
+  },
+  {
+    label: 'Cardápio',
+    links: [
+      { href: '/admin/catalogo', label: 'Cardápio', icon: Boxes },
+      { href: '/admin/adicionais', label: 'Adicionais', icon: SlidersHorizontal },
+      { href: '/admin/promocoes', label: 'Promoções', icon: BadgePercent },
+    ],
+  },
+  {
+    label: 'Gestão',
+    links: [
+      { href: '/admin/financas', label: 'Finanças', icon: WalletCards },
+      { href: '/admin/integracao', label: 'Integrações', icon: Link2 },
+      { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
+    ],
+  },
 ];
+const links = navGroups.flatMap((group) => group.links);
 
 export function AdminShell({
   children,
@@ -98,22 +114,17 @@ export function AdminShell({
   const activeMobileHref = links.find(({ href }) => isActive(href))?.href ?? '/admin';
   return (
     <div className="min-h-screen bg-[#f3f0e8] text-[#070a08]">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#070a08] p-5 text-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-teiko-ink p-5 text-teiko-paper lg:flex">
         <a href="/admin" aria-label="Teiko Sushi, painel operacional">
           <BrandMark />
         </a>
-        <nav className="mt-8 space-y-1">
-          {links.map(({ href, label, icon: Icon }) => (
-            <a
-              key={href}
-              href={href}
-              aria-current={isActive(href) ? 'page' : undefined}
-              className={`flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold transition ${isActive(href) ? 'bg-[#b5232b] text-white shadow-[0_8px_18px_rgba(181,35,43,.22)]' : 'text-white/70 hover:bg-white/8 hover:text-white'}`}
-            >
-              <Icon className={`size-4 ${isActive(href) ? 'text-[#f5dfb1]' : ''}`} />
-              {label}
-            </a>
-          ))}
+        <nav className="mt-8 space-y-6" aria-label="Seções do painel">
+          {navGroups.map((group) => <div key={group.label}>
+            <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[.18em] text-teiko-gold/75">{group.label}</p>
+            <div className="space-y-1">
+              {group.links.map(({ href, label, icon: Icon }) => <a key={href} href={href} aria-current={isActive(href) ? 'page' : undefined} className={`flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-bold transition ${isActive(href) ? 'bg-teiko-wine text-white shadow-[0_8px_18px_rgba(181,35,43,.22)]' : 'text-white/70 hover:bg-white/8 hover:text-white'}`}><Icon className={`size-4 ${isActive(href) ? 'text-teiko-gold' : ''}`} /><span className="min-w-0 flex-1 truncate">{label}</span>{label === 'Pedidos' && newOrderCount > 0 && <span className="grid min-w-5 place-items-center rounded-full bg-teiko-gold px-1.5 py-0.5 text-[10px] font-black text-teiko-ink">{newOrderCount > 9 ? '9+' : newOrderCount}</span>}</a>)}
+            </div>
+          </div>)}
         </nav>
         <div className="mt-auto rounded-2xl bg-white/6 p-3">
           <span className="block truncate text-xs font-bold">{user.email}</span>
