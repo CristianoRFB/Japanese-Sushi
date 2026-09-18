@@ -15,6 +15,7 @@ import { AdminShell } from '@/components/admin-shell';
 import { useAuth } from '@/components/providers';
 import { Button } from '@/components/ui/button';
 import { getFirebaseClient } from '@/lib/firebase/client';
+import { optimizedImageUrl } from '@/lib/media';
 import {
   formatBRL,
   ORDER_TRANSITIONS,
@@ -220,7 +221,7 @@ export default function OrderDetailPage() {
                 {order.orderNumber}
               </h1>
               <p className="mt-2 text-sm text-[#7b887d]">
-                {order.customer.name} • {order.customer.whatsapp}
+                {order.customer.name} • {order.customer.whatsapp || 'WhatsApp não informado'}
               </p>
             </div>
             <span className="w-fit rounded-full bg-[#070a08] px-4 py-2 text-sm font-black text-white">
@@ -258,7 +259,7 @@ export default function OrderDetailPage() {
                 {order.items.map((item, index) => (
                   <div key={index} className="py-5 first:pt-0">
                     <div className="flex justify-between gap-3">
-                      {item.imageUrl ? <img src={item.imageUrl} alt="" className="size-14 rounded-xl object-cover" /> : null}
+                      {item.imageUrl ? <img src={optimizedImageUrl(item.imageUrl)} alt="" className="size-14 rounded-xl object-cover" /> : null}
                       <strong className="flex-1">
                         {item.quantity}x {item.productName}
                       </strong>
