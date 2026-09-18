@@ -89,18 +89,18 @@ img, svg, video, canvas { max-width: 100%; }
 }
 
 :root {
-  --teiko-ink: #180e16;
-  --teiko-ink-soft: #28121f;
-  --teiko-plum: #381726;
-  --teiko-wine: #8c234f;
-  --teiko-berry: #b13b6b;
-  --teiko-cherry: #c13a43;
-  --teiko-gold: #d9b66f;
-  --teiko-lime: #d9ed55;
-  --teiko-paper: #fff8ef;
-  --teiko-blush: #f8e9ef;
-  --teiko-muted: #765665;
-  --teiko-line: #ead9e1;
+  --teiko-ink: #070a08;
+  --teiko-ink-soft: #10261a;
+  --teiko-plum: #173a28;
+  --teiko-wine: #8b1e2b;
+  --teiko-berry: #b5232b;
+  --teiko-cherry: #e3262e;
+  --teiko-gold: #c7a773;
+  --teiko-lime: #d6e7bf;
+  --teiko-paper: #f3f0e8;
+  --teiko-blush: #e8efe5;
+  --teiko-muted: #7b887d;
+  --teiko-line: #d3d8cf;
 
   --background: var(--teiko-paper);
   --foreground: var(--teiko-ink);
