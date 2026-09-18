@@ -15,9 +15,10 @@ import {
 import { Plus, Save, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { AdminShell } from '@/components/admin-shell';
-import { AdminField, AdminTextarea } from '@/components/admin-form';
+import { AdminField } from '@/components/admin-form';
 import { Button } from '@/components/ui/button';
 import { getFirebaseClient } from '@/lib/firebase/client';
+import { parseBRLToCents } from '@/shared/finance';
 import {
   TEIKO_BRAND_ID,
   formatBRL,
@@ -30,6 +31,7 @@ export default function ModifiersPage() {
   const [groups, setGroups] = useState<ModifierGroup[]>([]);
   const [editingModifier, setEditingModifier] = useState<Modifier | null>(null);
   const [editingGroup, setEditingGroup] = useState<ModifierGroup | null>(null);
+  const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>([]);
   const [form, setForm] = useState<'modifier' | 'group' | null>(null);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -74,7 +76,7 @@ export default function ModifiersPage() {
       name: String(data.get('name')).trim(),
       active: data.get('active') === 'on',
       available: data.get('available') === 'on',
-      priceCents: Number(data.get('priceCents')),
+      priceCents: parseBRLToCents(String(data.get('price') || '0')),
       premium: data.get('premium') === 'on',
       maxQuantity: data.get('maxQuantity')
         ? Number(data.get('maxQuantity'))
@@ -93,7 +95,7 @@ export default function ModifiersPage() {
         !Number.isSafeInteger(payload.priceCents) ||
         payload.priceCents < 0
       )
-        throw new Error('Nome e preço em centavos são obrigatórios.');
+        throw new Error('Informe o nome e um preço válido.');
       const db = getFirebaseClient().db;
       if (editingModifier)
         await setDoc(doc(db, 'modifiers', editingModifier.id), payload, {
@@ -124,16 +126,10 @@ export default function ModifiersPage() {
       maxPerModifier: data.get('maxPerModifier')
         ? Number(data.get('maxPerModifier'))
         : null,
-      appliesToSizeIds: String(data.get('appliesToSizeIds'))
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean),
+      appliesToSizeIds: editingGroup?.appliesToSizeIds ?? [],
       displayOrder: Number(data.get('displayOrder')),
       pricingMode: String(data.get('pricingMode')),
-      modifierIds: String(data.get('modifierIds'))
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean),
+      modifierIds: selectedModifierIds,
       updatedAt: serverTimestamp(),
     };
     try {
@@ -174,6 +170,7 @@ export default function ModifiersPage() {
             className="rounded-full"
             onClick={() => {
               setEditingGroup(null);
+              setSelectedModifierIds([]);
               setForm('group');
             }}
           >
@@ -260,6 +257,7 @@ export default function ModifiersPage() {
               <button
                 onClick={() => {
                   setEditingGroup(group);
+                  setSelectedModifierIds(group.modifierIds);
                   setForm('group');
                 }}
                 className="mt-4 text-xs font-black text-[#b5232b]"
@@ -296,7 +294,7 @@ export default function ModifiersPage() {
                 order={modifiers.length + 1}
               />
             ) : (
-              <GroupForm value={editingGroup} order={groups.length + 1} />
+              <GroupForm value={editingGroup} order={groups.length + 1} modifiers={modifiers} selectedIds={selectedModifierIds} onChange={setSelectedModifierIds} />
             )}
             {error && (
               <p
@@ -335,12 +333,13 @@ function ModifierForm({
           defaultValue={value?.name}
         />
         <AdminField
-          label="Preço (centavos)"
-          name="priceCents"
+          label="Preço (R$)"
+          name="price"
           type="number"
           min="0"
+          step="0.01"
           required
-          defaultValue={value?.priceCents ?? 0}
+          defaultValue={((value?.priceCents ?? 0) / 100).toFixed(2)}
         />
         <AdminField
           label="Máximo por item"
@@ -399,9 +398,15 @@ function ModifierForm({
 function GroupForm({
   value,
   order,
+  modifiers,
+  selectedIds,
+  onChange,
 }: {
   value: ModifierGroup | null;
   order: number;
+  modifiers: Modifier[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
 }) {
   return (
     <>
@@ -466,20 +471,19 @@ function GroupForm({
           </select>
         </label>
       </div>
-      <div className="mt-4">
-        <AdminTextarea
-          label="IDs dos adicionais, separados por vírgula"
-          name="modifierIds"
-          defaultValue={value?.modifierIds.join(', ')}
-        />
-      </div>
-      <div className="mt-4">
-        <AdminField
-          label="Aplica a tamanhos (IDs; vazio = todos)"
-          name="appliesToSizeIds"
-          defaultValue={value?.appliesToSizeIds?.join(', ')}
-        />
-      </div>
+      <fieldset className="mt-4 rounded-2xl border border-[#070a08]/10 bg-[#f3f0e8] p-4">
+        <legend className="px-1 text-sm font-black">Adicionais deste grupo</legend>
+        <p className="mt-1 text-xs text-[#7b887d]">Selecione pelo nome os itens que o cliente poderá escolher.</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {modifiers.map((modifier) => (
+            <label key={modifier.id} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3 text-sm font-bold">
+              <span>{modifier.name}<small className="ml-2 font-normal text-[#7b887d]">{formatBRL(modifier.priceCents)}</small></span>
+              <input type="checkbox" checked={selectedIds.includes(modifier.id)} onChange={(event) => onChange(event.target.checked ? [...selectedIds, modifier.id] : selectedIds.filter((id) => id !== modifier.id))} />
+            </label>
+          ))}
+          {!modifiers.length && <p className="text-sm text-[#7b887d]">Cadastre um adicional antes de criar o grupo.</p>}
+        </div>
+      </fieldset>
       <div className="mt-4 flex flex-wrap gap-4 text-sm font-bold">
         <label>
           <input
