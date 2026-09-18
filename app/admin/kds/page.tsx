@@ -40,6 +40,7 @@ interface KitchenOrder {
     }>;
     notes?: string;
   }>;
+  fulfillment: { mode: 'PICKUP' | 'DELIVERY' };
   status: OrderStatus;
   customerApproval?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'DECLINED';
 }
@@ -187,7 +188,9 @@ function KitchenCard({
   busy: boolean;
   onAdvance: (order: KitchenOrder, status: OrderStatus) => Promise<void>;
 }) {
-  const nextStatus = ORDER_TRANSITIONS[order.status].find((status) => ['CONFIRMED', 'PREPARING', 'READY'].includes(status));
+  const nextStatus = order.status === 'READY' && order.fulfillment.mode === 'DELIVERY'
+    ? 'OUT_FOR_DELIVERY'
+    : ORDER_TRANSITIONS[order.status].find((status) => ['CONFIRMED', 'PREPARING', 'READY'].includes(status));
   const waitingCustomer = order.customerApproval === 'PENDING';
   return (
     <article className="rounded-2xl border border-[#070a08]/10 bg-white p-4 shadow-sm">
@@ -219,7 +222,7 @@ function KitchenCard({
       ) : nextStatus ? (
         <button type="button" disabled={busy} onClick={() => void onAdvance(order, nextStatus)} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#070a08] font-black text-white transition hover:bg-[#b5232b] disabled:opacity-50">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-          {nextStatus === 'CONFIRMED' ? 'Aceitar pedido' : nextStatus === 'PREPARING' ? 'Iniciar preparo' : 'Marcar pronto'}
+          {nextStatus === 'CONFIRMED' ? 'Aceitar pedido' : nextStatus === 'PREPARING' ? 'Iniciar preparo' : nextStatus === 'READY' ? 'Marcar pronto' : 'Despachar para entrega'}
         </button>
       ) : (
         <p className="mt-4 rounded-xl bg-[#d6e7bf]/45 p-3 text-center text-xs font-black text-[#23452b]">Pronto para retirada ou saída.</p>
