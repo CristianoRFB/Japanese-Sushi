@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/components/providers';
@@ -48,6 +49,7 @@ export function AdminShell({
   adminOnly?: boolean;
 }) {
   const { user, role, loading } = useAuth();
+  const pathname = usePathname();
   const [newOrderCount, setNewOrderCount] = useState(0);
   useEffect(() => {
     if (!loading && (!user || !role)) window.location.href = '/admin/login';
@@ -92,6 +94,7 @@ export function AdminShell({
         text="Esta área exige a função admin."
       />
     );
+  const isActive = (href: string) => href === '/admin' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
   return (
     <div className="min-h-screen bg-[#f3f0e8] text-[#070a08]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#070a08] p-5 text-white lg:flex">
@@ -103,9 +106,10 @@ export function AdminShell({
             <a
               key={href}
               href={href}
-              className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold text-white/70 hover:bg-white/8 hover:text-white"
+              aria-current={isActive(href) ? 'page' : undefined}
+              className={`flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold transition ${isActive(href) ? 'bg-[#b5232b] text-white shadow-[0_8px_18px_rgba(181,35,43,.22)]' : 'text-white/70 hover:bg-white/8 hover:text-white'}`}
             >
-              <Icon className="size-4" />
+              <Icon className={`size-4 ${isActive(href) ? 'text-[#f5dfb1]' : ''}`} />
               {label}
             </a>
           ))}
@@ -135,9 +139,11 @@ export function AdminShell({
                 href={href}
                 aria-label={label}
                 title={label}
-                className="grid size-10 shrink-0 place-items-center rounded-full hover:bg-[#e3262e]/10"
+                aria-current={isActive(href) ? 'page' : undefined}
+                className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-xs font-black transition ${isActive(href) ? 'bg-[#b5232b] text-white' : 'text-[#7b887d] hover:bg-[#e8efe5] hover:text-[#070a08]'}`}
               >
                 <Icon className="size-4" />
+                <span>{label}</span>
               </a>
             ))}
           </nav>

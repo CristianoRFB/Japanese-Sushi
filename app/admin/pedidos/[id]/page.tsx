@@ -86,7 +86,7 @@ export default function OrderDetailPage() {
               ? ({ id: snapshot.id, ...snapshot.data() } as FullOrder)
               : null,
           ),
-        (cause) => setError(cause.message),
+        (cause) => setError(friendlyAdminError(cause)),
       ),
     [id],
   );
@@ -124,9 +124,7 @@ export default function OrderDetailPage() {
           : {}),
       });
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : 'Não foi possível atualizar.',
-      );
+      setError(friendlyAdminError(cause));
     } finally {
       setBusy(false);
     }
@@ -196,7 +194,7 @@ export default function OrderDetailPage() {
       });
       setEditing(false);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível enviar a alteração.');
+      setError(friendlyAdminError(cause));
     } finally {
       setBusy(false);
     }
@@ -344,7 +342,7 @@ export default function OrderDetailPage() {
                     <Button
                       disabled={busy}
                       onClick={() => requestUpdate('CANCELLED')}
-                      className="h-11 justify-start rounded-xl bg-[#e8efe5]0/15 px-4 text-[#ffe1e1] hover:bg-[#e8efe5]0/25"
+                      className="h-11 justify-start rounded-xl bg-[#e3262e]/15 px-4 text-[#ffe1e1] hover:bg-[#e3262e]/25"
                     >
                       <XCircle /> {order.status === 'NEW' ? 'Recusar pedido' : 'Cancelar pedido'}
                     </Button>
@@ -416,4 +414,12 @@ export default function OrderDetailPage() {
       )}
     </AdminShell>
   );
+}
+
+function friendlyAdminError(cause: unknown): string {
+  const text = cause instanceof Error ? cause.message : '';
+  if (/permission-denied|unauthenticated/i.test(text)) return 'Sua sessão não tem permissão para alterar este pedido.';
+  if (/failed-precondition|index/i.test(text)) return 'O pedido mudou enquanto você trabalhava. Atualize a página e revise.';
+  if (/network|offline|unavailable/i.test(text)) return 'A conexão com a unidade caiu. Tente novamente em instantes.';
+  return 'Não foi possível atualizar este pedido agora.';
 }

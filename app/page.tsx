@@ -72,7 +72,7 @@ export default function Home() {
             <span className="inline-flex items-center gap-2 rounded-full border border-[#c7a773]/35 px-3 py-1.5 text-xs font-bold uppercase tracking-[.18em] text-[#c7a773]">
               <Utensils className="size-3.5" /> Uma pausa para comer bem
             </span>
-            <h1 className="mt-6 max-w-2xl text-5xl font-black leading-[.94] tracking-[-.06em] sm:text-7xl">
+            <h1 className="teiko-display mt-6 max-w-2xl text-5xl leading-[.94] sm:text-7xl">
               Sushi com presença, feito para o seu momento.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#c1cdc3]">
@@ -149,7 +149,7 @@ export default function Home() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:gap-16 lg:py-20">
           <div>
             <p className="text-xs font-black uppercase tracking-[.18em] text-[#c7a773]">A experiência Teiko</p>
-            <h2 className="mt-4 max-w-xl text-4xl font-black leading-[.98] tracking-[-.05em] sm:text-5xl">Uma pausa que começa no olhar e termina na mesa.</h2>
+            <h2 className="teiko-display mt-4 max-w-xl text-4xl leading-[.98] sm:text-5xl">Uma pausa que começa no olhar e termina na mesa.</h2>
             <p className="mt-5 max-w-lg text-base leading-relaxed text-[#c1cdc3]">{config.orderInstructions || 'Escolha seus favoritos, monte seu pedido e deixe a equipe cuidar do restante.'}</p>
             <div className="mt-7 flex flex-wrap gap-3"><Button className="h-11 rounded-full bg-[#e3262e] px-5 font-black text-white hover:bg-[#e3262e]" nativeButton={false} render={<a href="#cardapio" />}>Explorar o cardápio <ArrowRight className="size-4" /></Button><a href="/informacoes" className="inline-flex h-11 items-center rounded-full border border-[#c7a773]/40 px-5 text-sm font-black text-[#f3f0e8]">Ver a unidade</a></div>
           </div>
@@ -165,7 +165,7 @@ export default function Home() {
             <p className="text-xs font-black uppercase tracking-[.18em] text-[#c7a773]">
               Cardápio
             </p>
-            <h2 className="mt-2 text-4xl font-black tracking-[-.05em]">
+            <h2 className="teiko-display mt-2 text-4xl">
               Escolha sua experiência
             </h2>
           </div>

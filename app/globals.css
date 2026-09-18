@@ -101,6 +101,7 @@ img, svg, video, canvas { max-width: 100%; }
   --teiko-blush: #e8efe5;
   --teiko-muted: #7b887d;
   --teiko-line: #d3d8cf;
+  --teiko-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
 
   --background: var(--teiko-paper);
   --foreground: var(--teiko-ink);
@@ -134,6 +135,12 @@ img, svg, video, canvas { max-width: 100%; }
   --sidebar-accent-foreground: var(--teiko-paper);
   --sidebar-border: rgb(255 248 239 / 12%);
   --sidebar-ring: var(--teiko-gold);
+}
+
+.teiko-display {
+  font-family: var(--teiko-display);
+  font-weight: 600;
+  letter-spacing: -0.045em;
 }
 
 .dark {
