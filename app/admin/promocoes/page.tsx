@@ -46,12 +46,12 @@ export default function PromotionsPage() {
     const promotionsStop = onSnapshot(
       query(collection(db, 'promotions'), where('brandId', '==', TEIKO_BRAND_ID)),
       (snap) => setPromotions(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as Promotion).sort((a, b) => a.startsAt.localeCompare(b.startsAt))),
-      (cause) => setError(cause.message),
+      (cause) => setError(friendlyAdminError(cause)),
     );
     const productsStop = onSnapshot(
       query(collection(db, 'products'), where('brandId', '==', TEIKO_BRAND_ID)),
       (snap) => setProducts(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as Product).sort((a, b) => a.name.localeCompare(b.name))),
-      (cause) => setError(cause.message),
+      (cause) => setError(friendlyAdminError(cause)),
     );
     return () => {
       promotionsStop();
@@ -91,7 +91,7 @@ export default function PromotionsPage() {
       setShowForm(false);
       setEditing(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar a promoção.');
+      setError(friendlyAdminError(cause, 'Não foi possível salvar a promoção.'));
     }
   }
 
@@ -143,4 +143,11 @@ export default function PromotionsPage() {
       )}
     </AdminShell>
   );
+}
+
+function friendlyAdminError(cause: unknown, fallback = 'Não foi possível atualizar as promoções.') {
+  const text = cause instanceof Error ? cause.message : '';
+  if (/permission-denied|unauthenticated/i.test(text)) return 'Sua sessão não tem permissão para editar promoções.';
+  if (/network|offline|unavailable/i.test(text)) return 'A conexão com a unidade caiu. Tente novamente em instantes.';
+  return text && !/FirebaseError|failed-precondition/i.test(text) ? text : fallback;
 }

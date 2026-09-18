@@ -48,6 +48,7 @@ export default function ModifiersPage() {
             (item) => ({ id: item.id, ...item.data() }) as Modifier,
           ),
         ),
+      () => setError('Não foi possível carregar os adicionais agora.'),
     );
     const b = onSnapshot(
       query(
@@ -61,6 +62,7 @@ export default function ModifiersPage() {
             (item) => ({ id: item.id, ...item.data() }) as ModifierGroup,
           ),
         ),
+      () => setError('Não foi possível carregar os grupos de adicionais agora.'),
     );
     return () => {
       a();

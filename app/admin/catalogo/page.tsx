@@ -30,9 +30,9 @@ export default function CatalogPage() {
 
   useEffect(() => {
     const db = getFirebaseClient().db;
-    const stopProducts = onSnapshot(query(collection(db, 'products'), where('brandId', '==', TEIKO_BRAND_ID), orderBy('displayOrder')), (snap) => setProducts(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as Product)));
-    const stopCategories = onSnapshot(query(collection(db, 'categories'), where('brandId', '==', TEIKO_BRAND_ID), orderBy('displayOrder')), (snap) => setCategories(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as ProductCategory)));
-    const stopGroups = onSnapshot(query(collection(db, 'modifierGroups'), where('brandId', '==', TEIKO_BRAND_ID), orderBy('displayOrder')), (snap) => setGroups(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as ModifierGroup)));
+    const stopProducts = onSnapshot(query(collection(db, 'products'), where('brandId', '==', TEIKO_BRAND_ID), orderBy('displayOrder')), (snap) => setProducts(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as Product)), () => setError('Não foi possível carregar os produtos agora.'));
+    const stopCategories = onSnapshot(query(collection(db, 'categories'), where('brandId', '==', TEIKO_BRAND_ID), orderBy('displayOrder')), (snap) => setCategories(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as ProductCategory)), () => setError('Não foi possível carregar as categorias agora.'));
+    const stopGroups = onSnapshot(query(collection(db, 'modifierGroups'), where('brandId', '==', TEIKO_BRAND_ID), orderBy('displayOrder')), (snap) => setGroups(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as ModifierGroup)), () => setError('Não foi possível carregar os grupos de adicionais agora.'));
     return () => { stopProducts(); stopCategories(); stopGroups(); };
   }, []);
 

@@ -43,7 +43,7 @@ export default function SettingsPage() {
     setHolidayDates(next.holidayDates ?? []);
     setHolidayHours(next.holidayHours?.length ? next.holidayHours.map((window) => ({ ...window })) : [{ ...defaultWindow }]);
     setZones(copyZones(next.deliveryConfig.zones));
-  }, (cause) => setError(cause.message)), []);
+  }, (cause) => setError(friendlyAdminError(cause))), []);
 
   function updateDay(day: number, patch: Partial<StoreDayHours>) {
     setHours((current) => current.map((item) => item.day === day ? { ...item, ...patch } : item));
@@ -99,7 +99,7 @@ export default function SettingsPage() {
       if (!payload.fulfillmentModes.length || !payload.paymentMethods.length) throw new Error('Selecione ao menos uma modalidade e uma forma de pagamento.');
       await setDoc(doc(getFirebaseClient().db, 'storePublicConfig', 'main'), payload);
       setMessage('Configurações salvas e publicadas.');
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível salvar.'); }
+    } catch (cause) { setError(friendlyAdminError(cause, 'Não foi possível salvar.')); }
   }
 
   function addHoliday() {
@@ -137,4 +137,11 @@ function ChoiceList({ title, options }: { title: string; options: Array<[string,
 
 function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return <section className="rounded-[26px] bg-white p-5 shadow-sm sm:p-6"><h2 className="mb-5 text-xl font-black">{title}</h2>{children}</section>;
+}
+
+function friendlyAdminError(cause: unknown, fallback = 'Não foi possível carregar as configurações.') {
+  const text = cause instanceof Error ? cause.message : '';
+  if (/permission-denied|unauthenticated/i.test(text)) return 'Sua sessão não tem permissão para alterar as configurações.';
+  if (/network|offline|unavailable/i.test(text)) return 'A conexão com a unidade caiu. Tente novamente em instantes.';
+  return text && !/FirebaseError|failed-precondition/i.test(text) ? text : fallback;
 }
