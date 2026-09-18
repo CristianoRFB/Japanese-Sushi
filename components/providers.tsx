@@ -182,7 +182,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         },
         (error) => {
           configStatus = 'error';
-          connectionError = error.message;
+          connectionError = `storePublicConfig: ${error.message}`;
           settle('config');
           publish();
         },
@@ -199,7 +199,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           publish();
         },
         (error) => {
-          connectionError = error.message;
+          connectionError = `promotions: ${error.message}`;
           settle('promotions');
           publish();
         },
@@ -226,7 +226,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           publish();
         },
         (error) => {
-          connectionError = error.message;
+          connectionError = `${name}: ${error.message}`;
           settle(name);
           publish();
         },

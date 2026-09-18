@@ -1,11 +1,15 @@
 export function BrandMark({
   size = 'md',
   showName = true,
+  tone = 'dark',
 }: {
   size?: 'sm' | 'md';
   showName?: boolean;
+  tone?: 'dark' | 'light';
 }) {
   const dimension = size === 'sm' ? 'size-9' : 'size-11';
+  const nameTone = tone === 'light' ? 'text-teiko-ink' : 'text-teiko-paper';
+  const cityTone = tone === 'light' ? 'text-teiko-muted' : 'text-teiko-cloud';
   return (
     <span className="flex items-center gap-3">
       <img
@@ -16,10 +20,10 @@ export function BrandMark({
       />
       {showName && (
         <span className="min-w-0">
-          <strong className="block truncate text-base font-black tracking-[-.03em] text-teiko-paper">
+          <strong className={`block truncate text-base font-black tracking-[-.03em] ${nameTone}`}>
             Teiko Sushi
           </strong>
-          <small className="hidden text-xs text-teiko-cloud sm:block">
+          <small className={`hidden text-xs sm:block ${cityTone}`}>
             Santa Fé do Sul
           </small>
         </span>
