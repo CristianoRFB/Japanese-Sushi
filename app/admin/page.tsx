@@ -89,6 +89,13 @@ function statusTone(status: OrderStatus) {
   return 'bg-[#e8efe5] text-[#3a5b35]';
 }
 
+function attentionRank(order: DashboardOrder) {
+  if (order.customerApproval === 'PENDING') return 0;
+  if (order.status === 'NEW') return 1;
+  if (order.status === 'READY' || order.status === 'OUT_FOR_DELIVERY') return 2;
+  return 3;
+}
+
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<DashboardOrder[]>([]);
   const [reservations, setReservations] = useState<DashboardReservation[]>([]);
@@ -110,7 +117,7 @@ export default function AdminDashboard() {
       },
     );
     const unsubscribeReservations = onSnapshot(
-      query(collection(db, 'reservations'), where('brandId', '==', TEIKO_BRAND_ID), orderBy('date', 'asc'), limit(100)),
+      query(collection(db, 'reservations'), where('brandId', '==', TEIKO_BRAND_ID), where('date', '>=', localDateKey()), orderBy('date', 'asc'), limit(100)),
       (snapshot) => {
         setReservations(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as DashboardReservation));
         setReservationsLoading(false);
@@ -125,12 +132,16 @@ export default function AdminDashboard() {
 
   const summary = useMemo(() => {
     const today = localDateKey();
-    const active = orders.filter((order) => !['COMPLETED', 'CANCELLED'].includes(order.status));
+    const active = orders
+      .filter((order) => !['COMPLETED', 'CANCELLED'].includes(order.status))
+      .sort((left, right) => attentionRank(left) - attentionRank(right) || (right.createdAt?.toMillis() ?? 0) - (left.createdAt?.toMillis() ?? 0));
     const newOrders = active.filter((order) => order.status === 'NEW' && order.customerApproval !== 'PENDING');
     const preparing = active.filter((order) => ['CONFIRMED', 'PREPARING'].includes(order.status));
     const ready = active.filter((order) => ['READY', 'OUT_FOR_DELIVERY'].includes(order.status));
     const todayRevenue = orders.filter((order) => orderDateKey(order.createdAt) === today && order.status !== 'CANCELLED').reduce((total, order) => total + (order.pricing?.totalCents ?? 0), 0);
-    const todayReservations = reservations.filter((reservation) => reservation.date === today && ['REQUESTED', 'CONFIRMED'].includes(reservation.status));
+    const todayReservations = reservations
+      .filter((reservation) => reservation.date === today && ['REQUESTED', 'CONFIRMED'].includes(reservation.status))
+      .sort((left, right) => left.time.localeCompare(right.time));
     return { active, newOrders, preparing, ready, todayRevenue, todayReservations };
   }, [orders, reservations]);
 
