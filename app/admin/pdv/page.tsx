@@ -45,7 +45,7 @@ export default function PosPage() {
       unitId: config.defaultUnitId,
       customer: {
         name: String(data.get('name') || 'Cliente balcão'),
-        whatsapp: String(data.get('whatsapp') || '17999999999'),
+        whatsapp: String(data.get('whatsapp') || '').trim(),
       },
       items: [
         {
