@@ -150,11 +150,22 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       config: emptyStoreConfig,
       promotions: [],
     };
+    const streamKeys = new Set<string>();
+    let configStatus: 'pending' | 'ready' | 'missing' | 'error' = 'pending';
+    let connectionError: string | undefined;
+    let timedOut = false;
+    const settle = (key: string) => {
+      streamKeys.add(key);
+    };
     const publish = () =>
       setState({
         ...next,
         catalog: { ...next.catalog },
-        loading: false,
+        loading: !timedOut && streamKeys.size < 6,
+        error:
+          configStatus === 'missing'
+            ? 'Configuração pública da Teiko ainda não foi cadastrada.'
+            : connectionError,
         development: false,
       });
     stops.push(
@@ -165,16 +176,17 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
             next.config = normalizeStoreConfig(
               snap.data() as Partial<StorePublicConfig>,
             );
-            publish();
-          } else
-            setState((old) => ({
-              ...old,
-              loading: false,
-              error: 'Configuração pública da Teiko ainda não foi cadastrada.',
-            }));
+            configStatus = 'ready';
+          } else configStatus = 'missing';
+          settle('config');
+          publish();
         },
-        (error) =>
-          setState((old) => ({ ...old, loading: false, error: error.message })),
+        (error) => {
+          configStatus = 'error';
+          connectionError = error.message;
+          settle('config');
+          publish();
+        },
       ),
       onSnapshot(
         query(
@@ -184,9 +196,14 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         ),
         (snap) => {
           next.promotions = snap.docs.map((item) => ({ id: item.id, ...item.data() }) as Promotion);
+          settle('promotions');
           publish();
         },
-        (error) => setState((old) => ({ ...old, loading: false, error: error.message })),
+        (error) => {
+          connectionError = error.message;
+          settle('promotions');
+          publish();
+        },
       ),
     );
     const subscribe = <T,>(name: string, key: keyof CatalogSnapshot) =>
@@ -201,10 +218,14 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           (next.catalog[key] as T[]) = snap.docs.map(
             (item) => ({ id: item.id, ...item.data() }) as T,
           );
+          settle(name);
           publish();
         },
-        (error) =>
-          setState((old) => ({ ...old, loading: false, error: error.message })),
+        (error) => {
+          connectionError = error.message;
+          settle(name);
+          publish();
+        },
       );
     stops.push(
       subscribe('categories', 'categories'),
@@ -214,16 +235,20 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     );
     const timeout = window.setTimeout(
       () =>
-        setState((old) =>
-          old.loading
-            ? {
-                ...old,
-                loading: false,
-                error:
-                  'Não foi possível conectar ao Firebase. Verifique a configuração e tente novamente.',
-              }
-            : old,
-        ),
+        (() => {
+          timedOut = true;
+          setState((old) =>
+            old.loading
+              ? {
+                  ...old,
+                  loading: false,
+                  error:
+                    old.error ??
+                    'Não foi possível conectar ao Firebase. Verifique a configuração e tente novamente.',
+                }
+              : old,
+          );
+        })(),
       10000,
     );
     return () => {
