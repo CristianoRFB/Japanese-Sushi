@@ -14,6 +14,7 @@ import { useMemo } from 'react';
 import { PublicHeader } from '@/components/public-header';
 import { useCart, useCatalog } from '@/components/providers';
 import { Button } from '@/components/ui/button';
+import { optimizedImageUrl } from '@/lib/media';
 import { calculateCartPreview, formatBRL } from '@/shared/domain';
 
 export default function CartPage() {
@@ -94,7 +95,7 @@ export default function CartPage() {
                 >
                   <div className="flex items-start gap-4">
                     <img
-                      src={product?.imageUrl || '/brand/teiko-sushi-atmosphere.png'}
+                      src={optimizedImageUrl(product?.imageUrl, '/brand/teiko-sushi-atmosphere.webp')}
                       alt={product ? `Foto de ${product.name}` : 'Imagem do pedido'}
                       className="size-20 rounded-[18px] object-cover"
                     />

@@ -46,12 +46,12 @@ export const menuCatalog = {
     { id: 'bebidas', brandId, name: 'Bebidas', active: true, displayOrder: 5 },
   ],
   products: [
-    simple('sushi-salmao', 'Sushi de salmão', 'Unidade de sushi de salmão.', 'sushi', 0, 1, '/menu/sushi-salmao.png'),
-    simple('sushi-atum', 'Sushi de atum', 'Unidade de sushi de atum.', 'sushi', 0, 2, '/menu/sushi-atum.png'),
-    simple('sashimi-salmao', 'Sashimi de salmão', 'Cortes de salmão preparados na hora.', 'sashimi', 0, 1, '/menu/sashimi-salmao.png'),
-    simple('temaki-salmao', 'Temaki de salmão', 'Temaki de salmão. Consulte a unidade para disponibilidade e preço.', 'temaki', 0, 1, '/menu/temaki-salmao.png'),
-    simple('combinado-teiko', 'Combinado Teiko', 'Seleção da casa. Composição e preço definidos pela unidade.', 'combinados', 0, 1, '/menu/combinado-teiko.png'),
-    simple('agua', 'Água', 'Bebida.', 'bebidas', 0, 1, '/menu/agua.png'),
+    simple('sushi-salmao', 'Sushi de salmão', 'Unidade de sushi de salmão.', 'sushi', 0, 1, '/menu/sushi-salmao.webp'),
+    simple('sushi-atum', 'Sushi de atum', 'Unidade de sushi de atum.', 'sushi', 0, 2, '/menu/sushi-atum.webp'),
+    simple('sashimi-salmao', 'Sashimi de salmão', 'Cortes de salmão preparados na hora.', 'sashimi', 0, 1, '/menu/sashimi-salmao.webp'),
+    simple('temaki-salmao', 'Temaki de salmão', 'Temaki de salmão. Consulte a unidade para disponibilidade e preço.', 'temaki', 0, 1, '/menu/temaki-salmao.webp'),
+    simple('combinado-teiko', 'Combinado Teiko', 'Seleção da casa. Composição e preço definidos pela unidade.', 'combinados', 0, 1, '/menu/combinado-teiko.webp'),
+    simple('agua', 'Água', 'Bebida.', 'bebidas', 0, 1, '/menu/agua.webp'),
   ],
   groups: [
     { id: 'extras', brandId, name: 'Observações', description: 'Opções adicionais serão cadastradas pela unidade.', active: false, required: false, minSelections: 0, maxSelections: 1, allowDuplicate: false, displayOrder: 1, pricingMode: 'individual', modifierIds: ['shoyu'] },

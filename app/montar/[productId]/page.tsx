@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useCart, useCatalog } from '@/components/providers';
 import { Button } from '@/components/ui/button';
+import { optimizedImageUrl } from '@/lib/media';
 import { calculateItemPrice, calculateModifierCharges, formatBRL, getEffectiveGroupRules, type GroupSelection } from '@/shared/domain';
 
 export default function ConfiguratorPage() {
@@ -136,7 +137,7 @@ export default function ConfiguratorPage() {
         <div className="overflow-hidden rounded-[28px] bg-[#173323] text-white">
           <div className="grid grid-cols-[1fr_120px] items-center gap-3 p-6 sm:grid-cols-[1fr_180px]">
             <div><span className="text-xs font-bold uppercase tracking-[.16em] text-[#c7a773]">Do seu jeito</span><h1 className="teiko-display mt-2 text-3xl tracking-[-.04em]">{product.name}</h1><p className="mt-2 text-sm leading-relaxed text-white/70">{product.description}</p>{development && <span className="mt-3 inline-block rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold">DESENVOLVIMENTO</span>}</div>
-            <img className="aspect-square w-full rounded-[22px] object-cover" src={product.imageUrl || '/brand/teiko-sushi-atmosphere.png'} alt={`Foto de ${product.name}`} />
+            <img className="aspect-square w-full rounded-[22px] object-cover" src={optimizedImageUrl(product.imageUrl, '/brand/teiko-sushi-atmosphere.webp')} alt={`Foto de ${product.name}`} />
           </div>
         </div>
 

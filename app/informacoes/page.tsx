@@ -52,7 +52,7 @@ export default function InformationPage() {
 
           <div className="relative min-h-[380px] sm:min-h-[470px]">
             <figure className="absolute inset-x-[8%] top-0 aspect-[4/5] overflow-hidden rounded-[38px] bg-teiko-ink shadow-teiko-lift sm:rounded-[48px]">
-              <img src="/menu/combinado-teiko.png" alt="Combinado Teiko servido à mesa" className="size-full object-cover" fetchPriority="high" />
+              <img src="/menu/combinado-teiko.webp" alt="Combinado Teiko servido à mesa" className="size-full object-cover" fetchPriority="high" />
               <div className="absolute inset-0 bg-gradient-to-t from-teiko-ink/90 via-transparent to-transparent" />
               <figcaption className="absolute inset-x-0 bottom-0 p-6 text-teiko-paper sm:p-8">
                 <span className="text-xs font-black uppercase tracking-[.18em] text-teiko-gold">A experiência Teiko</span>
@@ -60,7 +60,7 @@ export default function InformationPage() {
               </figcaption>
             </figure>
             <figure className="absolute bottom-0 left-0 z-10 w-[43%] rounded-[26px] border-8 border-teiko-paper bg-white p-2 shadow-xl sm:rounded-[32px] sm:border-[10px]">
-              <img src="/menu/sashimi-salmao.png" alt="Sashimi de salmão preparado pela Teiko Sushi" className="aspect-square w-full rounded-[18px] object-cover sm:rounded-[24px]" loading="lazy" />
+              <img src="/menu/sashimi-salmao.webp" alt="Sashimi de salmão preparado pela Teiko Sushi" className="aspect-square w-full rounded-[18px] object-cover sm:rounded-[24px]" loading="lazy" />
               <figcaption className="px-1 pb-1 pt-2 text-sm font-black sm:px-2 sm:pb-2 sm:pt-3 sm:text-base">Feito na hora.</figcaption>
             </figure>
             <div className="absolute bottom-8 right-0 z-10 rounded-2xl bg-teiko-ink px-4 py-3 text-teiko-paper shadow-xl sm:bottom-12 sm:px-5 sm:py-4">

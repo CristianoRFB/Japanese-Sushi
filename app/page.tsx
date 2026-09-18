@@ -15,6 +15,7 @@ import { PublicFooter } from '@/components/public-footer';
 import { OrderLookup } from '@/components/order-lookup';
 import { useCatalog } from '@/components/providers';
 import { Button } from '@/components/ui/button';
+import { optimizedImageUrl } from '@/lib/media';
 import {
   formatBRL,
   formatPromotionValue,
@@ -66,10 +67,10 @@ export default function Home() {
     isPromotionActive(promotion, now),
   );
   const imageFor = (id: string, fallback: string) =>
-    catalog.products.find((product) => product.id === id)?.imageUrl || fallback;
-  const heroImage = imageFor('combinado-teiko', '/menu/combinado-teiko.png');
-  const secondaryImage = imageFor('sushi-salmao', '/menu/sushi-salmao.png');
-  const detailImage = imageFor('sashimi-salmao', '/menu/sashimi-salmao.png');
+    optimizedImageUrl(catalog.products.find((product) => product.id === id)?.imageUrl, fallback) || fallback;
+  const heroImage = imageFor('combinado-teiko', '/menu/combinado-teiko.webp');
+  const secondaryImage = imageFor('sushi-salmao', '/menu/sushi-salmao.webp');
+  const detailImage = imageFor('sashimi-salmao', '/menu/sashimi-salmao.webp');
 
   return (
     <main className="min-h-screen overflow-hidden bg-teiko-paper text-teiko-ink">
@@ -252,7 +253,7 @@ function ProductCard({
   return (
     <a href={`/montar/${product.id}`} className="group grid min-h-44 grid-cols-[1fr_108px] gap-4 rounded-[26px] border border-white/10 bg-teiko-ink-soft p-5 transition hover:-translate-y-0.5 hover:border-teiko-gold/50 sm:grid-cols-[1fr_140px]">
       <div className="flex flex-col"><span className="text-xs font-bold uppercase tracking-[.12em] text-teiko-gold">{category.name}</span><h4 className="mt-2 text-xl font-black">{product.name}</h4><p className="mt-2 text-sm leading-relaxed text-teiko-cloud">{product.description}</p><span className="mt-auto pt-5 text-sm font-black text-teiko-gold">{starting > 0 ? `A partir de ${formatBRL(starting)}` : 'Preço a confirmar'}</span>{promotion && <span className="mt-2 w-fit rounded-full bg-teiko-lime px-2.5 py-1 text-xs font-black text-teiko-ink">{formatPromotionValue(promotion)}</span>}</div>
-      <div className="relative overflow-hidden rounded-[20px] bg-teiko-cherry text-center text-sm font-black text-white"><img src={product.imageUrl || '/brand/teiko-sushi-atmosphere.png'} alt={`Foto de ${product.name}`} className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" /><div className="absolute inset-0 bg-gradient-to-t from-teiko-ink/90 via-teiko-ink/20 to-transparent" /><span className="absolute inset-x-3 bottom-3">Ver item</span></div>
+      <div className="relative overflow-hidden rounded-[20px] bg-teiko-cherry text-center text-sm font-black text-white"><img src={optimizedImageUrl(product.imageUrl, '/brand/teiko-sushi-atmosphere.webp')} alt={`Foto de ${product.name}`} className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" /><div className="absolute inset-0 bg-gradient-to-t from-teiko-ink/90 via-teiko-ink/20 to-transparent" /><span className="absolute inset-x-3 bottom-3">Ver item</span></div>
     </a>
   );
 }
