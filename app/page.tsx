@@ -98,7 +98,7 @@ export default function Home() {
             </div>
           </div>
           <div className="space-y-5">
-            <div className="relative overflow-hidden rounded-[32px] border border-[#c7a773]/25 bg-[#10261a] shadow-[0_24px_60px_rgba(0,0,0,.26)]">
+            <div className="relative overflow-hidden rounded-[32px] border border-[#c7a773]/25 bg-[#10261a] shadow-teiko-lift">
               <img src="/brand/teiko-sushi-atmosphere.png" alt="Ambiente noturno de sushi com pratos sobre o balcão" className="aspect-[4/3] w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#070a08] via-[#070a08]/70 to-transparent px-5 pb-5 pt-16">
                 <p className="text-sm font-bold text-[#f3f0e8]">Uma noite com sabor de casa.</p>

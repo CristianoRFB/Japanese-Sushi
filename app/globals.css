@@ -7,6 +7,21 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-teiko-ink: var(--teiko-ink);
+  --color-teiko-ink-soft: var(--teiko-ink-soft);
+  --color-teiko-plum: var(--teiko-plum);
+  --color-teiko-wine: var(--teiko-wine);
+  --color-teiko-berry: var(--teiko-berry);
+  --color-teiko-cherry: var(--teiko-cherry);
+  --color-teiko-gold: var(--teiko-gold);
+  --color-teiko-lime: var(--teiko-lime);
+  --color-teiko-paper: var(--teiko-paper);
+  --color-teiko-blush: var(--teiko-blush);
+  --color-teiko-muted: var(--teiko-muted);
+  --color-teiko-cloud: var(--teiko-cloud);
+  --color-teiko-line: var(--teiko-line);
+  --font-display: var(--teiko-display);
+  --shadow-teiko-lift: 0 24px 60px rgb(7 10 8 / 26%);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
@@ -100,6 +115,7 @@ img, svg, video, canvas { max-width: 100%; }
   --teiko-paper: #f3f0e8;
   --teiko-blush: #e8efe5;
   --teiko-muted: #7b887d;
+  --teiko-cloud: #c1cdc3;
   --teiko-line: #d3d8cf;
   --teiko-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
 
