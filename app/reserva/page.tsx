@@ -18,6 +18,7 @@ import {
 import { useEffect, useState, type FormEvent } from 'react';
 
 import { PublicHeader } from '@/components/public-header';
+import { PublicFooter } from '@/components/public-footer';
 import { WhatsAppCta } from '@/components/whatsapp-cta';
 import { useCatalog } from '@/components/providers';
 import { Button } from '@/components/ui/button';
@@ -327,6 +328,7 @@ export default function ReservationPage() {
           </>
         )}
       </div>
+      <PublicFooter />
     </main>
   );
 }

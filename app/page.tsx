@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from 'react';
 
 import { PublicHeader } from '@/components/public-header';
+import { PublicFooter } from '@/components/public-footer';
 import { OrderLookup } from '@/components/order-lookup';
 import { useCatalog } from '@/components/providers';
 import { Button } from '@/components/ui/button';
@@ -246,6 +247,7 @@ export default function Home() {
         ))}
       </section>
       <OrderLookup />
+      <PublicFooter />
     </main>
   );
 }

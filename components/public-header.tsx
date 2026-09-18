@@ -17,14 +17,17 @@ export function PublicHeader() {
         </a>
         <nav className="flex items-center gap-1" aria-label="Navegação principal">
           <WhatsAppCta config={config} compact message="Olá, Teiko Sushi. Preciso de atendimento." />
-          <a className="grid size-10 place-items-center rounded-full text-[#c1cdc3] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/reserva" aria-label="Reservar mesa">
+          <a className="inline-flex h-10 items-center justify-center gap-2 rounded-full px-3 text-[#c1cdc3] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/reserva" aria-label="Reservar mesa">
             <CalendarDays className="size-5" />
+            <span className="hidden text-xs font-black sm:inline">Mesa</span>
           </a>
-          <a className="grid size-10 place-items-center rounded-full text-[#c1cdc3] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/informacoes" aria-label="Informações">
+          <a className="inline-flex h-10 items-center justify-center gap-2 rounded-full px-3 text-[#c1cdc3] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/informacoes" aria-label="Informações">
             <Info className="size-5" />
+            <span className="hidden text-xs font-black sm:inline">Unidade</span>
           </a>
-          <a className="relative grid size-11 place-items-center rounded-full bg-[#f3f0e8] text-[#070a08] transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/carrinho" aria-label={`Carrinho com ${count} itens`}>
+          <a className="relative inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f3f0e8] px-3 text-[#070a08] transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/carrinho" aria-label={`Carrinho com ${count} itens`}>
             <ShoppingBag className="size-5" />
+            <span className="hidden text-xs font-black sm:inline">Carrinho</span>
             {count > 0 && <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full bg-[#e3262e] text-[10px] font-black text-white">{count > 99 ? '99+' : count}</span>}
           </a>
         </nav>
