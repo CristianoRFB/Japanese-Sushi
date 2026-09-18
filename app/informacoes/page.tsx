@@ -20,7 +20,7 @@ import { formatBRL, getDeliveryEstimate } from '@/shared/domain';
 const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 export default function InformationPage() {
-  const { config, development } = useCatalog();
+  const { config, development, loading, error } = useCatalog();
   const estimate = getDeliveryEstimate(new Date(), config);
   const address = [config.address, config.city].filter(Boolean).join(' · ');
   const hours = [...config.hours].sort((a, b) => a.day - b.day);
@@ -37,7 +37,7 @@ export default function InformationPage() {
             <p className="text-xs font-black uppercase tracking-[.2em] text-teiko-wine">Teiko Sushi · Santa Fé do Sul</p>
             <h1 className="teiko-display mt-5 max-w-xl text-6xl leading-[.86] tracking-[-.055em] sm:text-7xl">A unidade por trás da mesa.</h1>
             <p className="mt-7 max-w-lg text-base leading-relaxed text-teiko-muted sm:text-lg">
-              {config.orderInstructions || 'Escolha seus favoritos e confirme os detalhes do atendimento com a unidade.'}
+              {loading ? 'Carregando as informações da unidade…' : config.orderInstructions || 'Escolha seus favoritos e confirme os detalhes do atendimento com a unidade.'}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a href="#horarios" className="inline-flex h-12 items-center gap-2 rounded-full bg-teiko-ink px-5 text-sm font-black text-teiko-paper transition hover:bg-teiko-ink-soft">
@@ -71,11 +71,13 @@ export default function InformationPage() {
         </div>
       </section>
 
+      {error && <p role="alert" className="mx-auto max-w-6xl border-b border-teiko-cherry/30 bg-teiko-wine/10 px-4 py-4 text-sm font-bold text-teiko-wine sm:px-6">As informações da unidade estão temporariamente indisponíveis. Tente novamente em instantes.</p>}
+
       <section className="bg-teiko-ink text-teiko-paper">
         <div className="mx-auto grid max-w-6xl divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <Fact icon={MapPin} label="Onde estamos" value={address || 'Endereço a confirmar'} />
-          <Fact icon={Clock3} label="Atendimento" value={config.holidayHoursNote || 'Segunda a sábado, das 19h às 23h.'} />
-          <Fact icon={Bike} label="Entrega" value={config.deliveryConfig.mode === 'FIXED' ? `Taxa fixa: ${formatBRL(config.deliveryConfig.fixedFeeCents ?? 0)}` : `Estimativa ${estimate.label}`} />
+          <Fact icon={MapPin} label="Onde estamos" value={loading ? 'Carregando endereço…' : address || 'Endereço a confirmar'} />
+          <Fact icon={Clock3} label="Atendimento" value={loading ? 'Carregando horários…' : config.holidayHoursNote || 'Segunda a sábado, das 19h às 23h.'} />
+          <Fact icon={Bike} label="Entrega" value={loading ? 'Carregando estimativa…' : config.deliveryConfig.mode === 'FIXED' ? `Taxa fixa: ${formatBRL(config.deliveryConfig.fixedFeeCents ?? 0)}` : `Estimativa ${estimate.label}`} />
         </div>
       </section>
 
@@ -98,14 +100,15 @@ export default function InformationPage() {
                 <div><h3 className="text-xl font-black">Horários</h3><p className="mt-1 text-sm text-teiko-cloud">{config.holidayHoursNote || 'Exceções devem ser configuradas pela unidade.'}</p></div>
               </div>
               <div className="mt-6 grid gap-x-8 divide-y divide-white/10 sm:grid-cols-2 sm:divide-y-0">
-                {hours.map((day) => <div key={day.day} className="flex justify-between gap-4 border-b border-white/10 py-3 text-sm last:border-0 sm:nth-[2n]:border-b-0"><strong>{dayNames[day.day]}</strong><span className="text-right text-teiko-cloud">{day.closed ? 'Fechado' : day.windows.map((window) => `${window.open} às ${window.close}`).join(' / ')}</span></div>)}
-                {!hours.length && <p className="py-3 text-sm text-teiko-cloud sm:col-span-2">Horários ainda não publicados.</p>}
+                {loading && <p className="py-3 text-sm text-teiko-cloud sm:col-span-2">Carregando horários…</p>}
+                {!loading && hours.map((day) => <div key={day.day} className="flex justify-between gap-4 border-b border-white/10 py-3 text-sm last:border-0 sm:nth-[2n]:border-b-0"><strong>{dayNames[day.day]}</strong><span className="text-right text-teiko-cloud">{day.closed ? 'Fechado' : day.windows.map((window) => `${window.open} às ${window.close}`).join(' / ')}</span></div>)}
+                {!loading && !hours.length && <p className="py-3 text-sm text-teiko-cloud sm:col-span-2">Horários ainda não publicados.</p>}
               </div>
             </section>
 
-            <InfoCard icon={MapPin} title="Endereço"><p>{config.address || 'A confirmar'}</p><p>{config.city || 'Santa Fé do Sul/SP'}</p></InfoCard>
-            <InfoCard icon={AtSign} title="Contato"><p>{config.phoneDisplay || 'Telefone a confirmar'}</p>{config.instagramHandle && <p>{config.instagramHandle}</p>}</InfoCard>
-            <InfoCard icon={ShieldCheck} title="Privacidade" className="sm:col-span-2"><p>{config.privacyNotice || 'Seus dados são usados somente para atender este pedido ou reserva.'}</p></InfoCard>
+            <InfoCard icon={MapPin} title="Endereço"><p>{loading ? 'Carregando endereço…' : config.address || 'A confirmar'}</p><p>{loading ? '' : config.city || 'Santa Fé do Sul/SP'}</p></InfoCard>
+            <InfoCard icon={AtSign} title="Contato"><p>{loading ? 'Carregando contato…' : config.phoneDisplay || 'Telefone a confirmar'}</p>{!loading && config.instagramHandle && <p>{config.instagramHandle}</p>}</InfoCard>
+            <InfoCard icon={ShieldCheck} title="Privacidade" className="sm:col-span-2"><p>{loading ? 'Carregando aviso de privacidade…' : config.privacyNotice || 'Seus dados são usados somente para atender este pedido ou reserva.'}</p></InfoCard>
           </div>
         </div>
       </section>
