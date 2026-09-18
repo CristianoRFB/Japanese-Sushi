@@ -74,6 +74,8 @@ export default function OrderDetailPage() {
   const [editing, setEditing] = useState(false);
   const [draftItems, setDraftItems] = useState<PricedItem[]>([]);
   const [editReason, setEditReason] = useState('');
+  const [reasonOpen, setReasonOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
   useEffect(
     () =>
       onSnapshot(
@@ -88,7 +90,7 @@ export default function OrderDetailPage() {
       ),
     [id],
   );
-  async function update(status: OrderStatus) {
+  async function update(status: OrderStatus, providedReason?: string) {
     if (!order) return;
     if (order.customerApproval === 'PENDING') {
       setError('Aguarde o cliente responder à alteração antes de avançar o status.');
@@ -96,8 +98,11 @@ export default function OrderDetailPage() {
     }
     let reason: string | undefined;
     if (status === 'CANCELLED') {
-      reason = window.prompt(order.status === 'NEW' ? 'Motivo da recusa:' : 'Motivo do cancelamento:')?.trim();
-      if (!reason) return;
+      reason = providedReason?.trim();
+      if (!reason) {
+        setError('Informe o motivo antes de continuar.');
+        return;
+      }
     }
     setBusy(true);
     setError('');
@@ -125,6 +130,14 @@ export default function OrderDetailPage() {
     } finally {
       setBusy(false);
     }
+  }
+  function requestUpdate(status: OrderStatus) {
+    if (status === 'CANCELLED') {
+      setCancellationReason('');
+      setReasonOpen(true);
+      return;
+    }
+    void update(status);
   }
   function startEditing() {
     if (!order) return;
@@ -316,7 +329,7 @@ export default function OrderDetailPage() {
                       <Button
                         key={status}
                         disabled={busy}
-                        onClick={() => update(status)}
+                        onClick={() => requestUpdate(status)}
                         className="h-11 justify-start rounded-xl bg-[#d6e7bf] px-4 font-black text-[#070a08] hover:bg-[#d6e7bf]"
                       >
                         {busy ? (
@@ -330,7 +343,7 @@ export default function OrderDetailPage() {
                   {ORDER_TRANSITIONS[order.status].includes('CANCELLED') && (
                     <Button
                       disabled={busy}
-                      onClick={() => update('CANCELLED')}
+                      onClick={() => requestUpdate('CANCELLED')}
                       className="h-11 justify-start rounded-xl bg-[#e8efe5]0/15 px-4 text-[#ffe1e1] hover:bg-[#e8efe5]0/25"
                     >
                       <XCircle /> {order.status === 'NEW' ? 'Recusar pedido' : 'Cancelar pedido'}
@@ -390,6 +403,16 @@ export default function OrderDetailPage() {
             </aside>
           </div>
         </>
+      )}
+      {reasonOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#070a08]/55 p-4 backdrop-blur-sm">
+          <section role="dialog" aria-modal="true" aria-labelledby="cancellation-title" className="w-full max-w-md rounded-[26px] bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[#8b1e2b]">Ação operacional</p><h2 id="cancellation-title" className="mt-1 text-2xl font-black">{order?.status === 'NEW' ? 'Recusar pedido' : 'Cancelar pedido'}</h2></div><button type="button" onClick={() => setReasonOpen(false)} aria-label="Fechar"><XCircle className="size-5 text-[#7b887d]" /></button></div>
+            <p className="mt-4 text-sm text-[#7b887d]">O motivo será salvo no histórico e ficará disponível para a equipe.</p>
+            <label className="mt-5 block text-sm font-bold">Motivo<textarea autoFocus required maxLength={300} value={cancellationReason} onChange={(event) => setCancellationReason(event.target.value)} className="mt-2 min-h-24 w-full rounded-xl border border-[#b5232b]/15 bg-[#f3f0e8] p-3 text-sm font-normal outline-none focus:border-[#b5232b]" placeholder="Explique brevemente o que aconteceu." /></label>
+            <div className="mt-5 flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setReasonOpen(false)} className="rounded-full">Voltar</Button><Button type="button" disabled={busy || !cancellationReason.trim()} onClick={() => { setReasonOpen(false); void update('CANCELLED', cancellationReason); }} className="rounded-full bg-[#b5232b] font-black text-white">Confirmar ação</Button></div>
+          </section>
+        </div>
       )}
     </AdminShell>
   );
