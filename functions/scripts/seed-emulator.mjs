@@ -13,12 +13,8 @@ if (
   );
 }
 
-<<<<<<< HEAD
 if (!getApps().length)
   initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'sushi-cbfd2' });
-=======
-if (!getApps().length) initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-teiko-sushi' });
->>>>>>> origin/main
 const db = getFirestore();
 const now = Timestamp.now();
 const batch = db.batch();

@@ -34,15 +34,11 @@ import {
   type FulfillmentMode,
 } from '@/shared/domain';
 
-<<<<<<< HEAD
 const paymentLabels = {
   PIX: 'Pix',
   CARD: 'Cartão na entrega',
   CASH: 'Dinheiro',
 } as const;
-=======
-const paymentLabels = { PIX: 'Pix', CARD: 'Cartão na entrega', CASH: 'Dinheiro', OTHER: 'Outro' } as const;
->>>>>>> origin/main
 type PaymentMethod = keyof typeof paymentLabels;
 
 interface CheckoutFields {
@@ -183,13 +179,9 @@ export default function CheckoutPage() {
       return;
     }
 
-<<<<<<< HEAD
     const clientRequestId =
       sessionStorage.getItem('teiko-checkout-request-id') ??
       crypto.randomUUID();
-=======
-    const clientRequestId = sessionStorage.getItem('teiko-checkout-request-id') ?? crypto.randomUUID();
->>>>>>> origin/main
     sessionStorage.setItem('teiko-checkout-request-id', clientRequestId);
     const payload = {
       clientRequestId,
@@ -273,7 +265,6 @@ export default function CheckoutPage() {
       });
       cart.clear();
       sessionStorage.removeItem('teiko-checkout-request-id');
-<<<<<<< HEAD
       try {
         const recent = JSON.parse(localStorage.getItem('teiko-sushi-recent-orders') || '[]') as Array<{ publicCode: string; orderNumber?: string; savedAt: number }>;
         localStorage.setItem('teiko-sushi-recent-orders', JSON.stringify([{ publicCode, orderNumber, savedAt: Date.now() }, ...(Array.isArray(recent) ? recent : [])].slice(0, 5)));
@@ -281,9 +272,6 @@ export default function CheckoutPage() {
         // A consulta continua disponível pelo código exibido na tela.
       }
       window.location.href = `/pedido/${publicCode}?novo=1`;
-=======
-      window.location.href = `/pedido/${response.data.publicCode}?novo=1`;
->>>>>>> origin/main
     } catch (cause: unknown) {
       const rawMessage =
         cause instanceof Error

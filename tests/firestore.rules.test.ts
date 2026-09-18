@@ -78,7 +78,6 @@ function reservationData(ownerUid: string) {
 }
 
 beforeAll(async () => {
-<<<<<<< HEAD
   const [host, port] = (
     process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8180'
   ).split(':');
@@ -128,24 +127,11 @@ beforeAll(async () => {
       endsAt: '2026-09-30',
       productIds: [],
     });
-=======
-  const [host, port] = (process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8180').split(':');
-  env = await initializeTestEnvironment({ projectId: 'demo-teiko-sushi', firestore: { host, port: Number(port), rules: readFileSync(resolve('firestore.rules'), 'utf8') } });
-  await env.withSecurityRulesDisabled(async (context) => {
-    const db = context.firestore();
-    await setDoc(doc(db, 'products', 'active'), { active: true, displayOrder: 1 });
-    await setDoc(doc(db, 'orders', 'secret'), { status: 'NEW' });
-    await setDoc(doc(db, 'cashRegisters', 'closed'), { status: 'CLOSED', expectedCashCents: 100 });
-    await setDoc(doc(db, 'cashMovements', 'sale'), { type: 'SALE', amountCents: 100, registerId: 'closed' });
-    await setDoc(doc(db, 'users', 'admin-uid'), { role: 'admin' });
-    await setDoc(doc(db, 'users', 'staff-uid'), { role: 'staff' });
->>>>>>> origin/main
   });
 });
 
 afterAll(() => env.cleanup());
 
-<<<<<<< HEAD
 describe('Firestore Rules Spark Teiko', () => {
   it('permite catálogo público, mas nega pedidos alheios e promoção de cliente', async () => {
     const publicDb = env.unauthenticatedContext().firestore();
@@ -202,29 +188,6 @@ describe('Firestore Rules Spark Teiko', () => {
       brandId: 'teiko', name: 'Nova oferta', active: true, discountType: 'FIXED', discountValue: 300,
       startsAt: '2026-09-01', endsAt: '2026-09-30', productIds: [],
     }));
-=======
-describe('Firestore Rules deny by default', () => {
-  it('público lê catálogo ativo, mas não escreve nem acessa pedidos/usuários', async () => {
-    const db = env.unauthenticatedContext().firestore();
-    await assertSucceeds(getDoc(doc(db, 'products', 'active')));
-    await assertFails(setDoc(doc(db, 'products', 'hacked'), { active: true }));
-    await assertFails(getDocs(collection(db, 'orders')));
-    await assertFails(getDoc(doc(db, 'cashRegisters', 'closed')));
-    await assertFails(getDoc(doc(db, 'cashMovements', 'sale')));
-    await assertFails(getDoc(doc(db, 'orders', 'secret')));
-    await assertFails(getDoc(doc(db, 'users', 'admin-uid')));
-    await assertFails(getDoc(doc(db, 'integrationConfig', 'saipos')));
-    await assertFails(getDocs(collection(db, 'orders', 'secret', 'integrationAttempts')));
-  });
-  it('staff lê pedidos, mas não ganha escrita administrativa', async () => {
-    const db = env.authenticatedContext('staff-uid').firestore();
-    await assertSucceeds(getDoc(doc(db, 'orders', 'secret')));
-    await assertSucceeds(getDoc(doc(db, 'cashRegisters', 'closed')));
-    await assertSucceeds(getDoc(doc(db, 'cashMovements', 'sale')));
-    await assertFails(setDoc(doc(db, 'cashMovements', 'bypass'), { type: 'SALE', amountCents: 999 }));
-    await assertFails(setDoc(doc(db, 'products', 'blocked'), { active: true }));
-    await assertFails(setDoc(doc(db, 'users', 'staff-uid'), { role: 'admin' }));
->>>>>>> origin/main
   });
 
   it('restringe o caixa ao admin Teiko e valida lançamentos', async () => {
