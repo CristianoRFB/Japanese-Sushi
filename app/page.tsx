@@ -145,6 +145,20 @@ export default function Home() {
           </div>
         </section>
       )}
+      <section className="border-y border-[#c7a773]/15 bg-[#10261a]">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:gap-16 lg:py-20">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[.18em] text-[#c7a773]">A experiência Teiko</p>
+            <h2 className="mt-4 max-w-xl text-4xl font-black leading-[.98] tracking-[-.05em] sm:text-5xl">Uma pausa que começa no olhar e termina na mesa.</h2>
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-[#c1cdc3]">{config.orderInstructions || 'Escolha seus favoritos, monte seu pedido e deixe a equipe cuidar do restante.'}</p>
+            <div className="mt-7 flex flex-wrap gap-3"><Button className="h-11 rounded-full bg-[#e3262e] px-5 font-black text-white hover:bg-[#e3262e]" nativeButton={false} render={<a href="#cardapio" />}>Explorar o cardápio <ArrowRight className="size-4" /></Button><a href="/informacoes" className="inline-flex h-11 items-center rounded-full border border-[#c7a773]/40 px-5 text-sm font-black text-[#f3f0e8]">Ver a unidade</a></div>
+          </div>
+          <div className="grid grid-cols-[1.15fr_.85fr] gap-3 sm:gap-5">
+            <div className="relative min-h-72 overflow-hidden rounded-[28px] border border-[#c7a773]/25"><img src={products[0]?.imageUrl || '/brand/teiko-sushi-atmosphere.png'} alt={products[0] ? `Foto de ${products[0].name}` : 'Ambiente da Teiko Sushi'} className="size-full object-cover" loading="lazy" /><div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#070a08] to-transparent p-5 pt-20"><span className="text-xs font-black uppercase tracking-[.14em] text-[#c7a773]">{products[0]?.name || 'Teiko Sushi'}</span></div></div>
+            <div className="mt-10 relative min-h-56 overflow-hidden rounded-[28px] border border-[#c7a773]/25 sm:mt-16"><img src={products[1]?.imageUrl || '/brand/teiko-sushi-atmosphere.png'} alt={products[1] ? `Foto de ${products[1].name}` : 'Atmosfera da Teiko Sushi'} className="size-full object-cover" loading="lazy" /><div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#070a08] to-transparent p-4 pt-16"><span className="text-xs font-black uppercase tracking-[.14em] text-[#c7a773]">{products[1]?.name || 'Uma noite bem servida'}</span></div></div>
+          </div>
+        </div>
+      </section>
       <section id="cardapio" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
