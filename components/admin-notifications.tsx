@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { getFirebaseClient, hasFirebaseConfig } from '@/lib/firebase/client';
 import { formatBRL, type OrderStatus } from '@/shared/domain';
 
-interface NewOrder { id: string; orderNumber: string; customer?: { name?: string }; pricing?: { totalCents?: number }; fulfillment?: { mode?: string } }
+interface NewOrder { id: string; orderNumber: string; customer?: { name?: string }; pricing?: { totalCents?: number }; fulfillment?: { mode?: string }; customerApproval?: string }
 
 export function AdminNotifications() {
   const { user, role } = useAuth();
@@ -19,7 +19,7 @@ export function AdminNotifications() {
   const [message, setMessage] = useState('');
   useEffect(() => {
     if (!role || !hasFirebaseConfig) return undefined;
-    return onSnapshot(query(collection(getFirebaseClient().db, 'orders'), where('brandId', '==', 'teiko'), where('status', '==', 'NEW'), limit(25)), (snapshot) => setOrders(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as NewOrder)), () => setMessage('Notificações indisponíveis no momento.'));
+    return onSnapshot(query(collection(getFirebaseClient().db, 'orders'), where('brandId', '==', 'teiko'), where('status', '==', 'NEW'), limit(25)), (snapshot) => setOrders(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as NewOrder).filter((order) => order.customerApproval !== 'PENDING')), () => setMessage('Notificações indisponíveis no momento.'));
   }, [role]);
   async function quickAction(orderId: string, status: Extract<OrderStatus, 'CONFIRMED' | 'CANCELLED'>) {
     if (!user || !role) return;
