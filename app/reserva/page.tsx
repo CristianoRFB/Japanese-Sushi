@@ -174,7 +174,7 @@ export default function ReservationPage() {
           <p className="text-xs font-black uppercase tracking-[.18em] text-[#c7a773]">
             Teiko Sushi
           </p>
-          <h1 className="mt-3 text-4xl font-black tracking-[-.05em] sm:text-5xl">
+          <h1 className="teiko-display mt-3 text-4xl tracking-[-.05em] sm:text-5xl">
             Reserve sua mesa
           </h1>
           <p className="mt-4 text-lg leading-relaxed text-[#c1cdc3]">

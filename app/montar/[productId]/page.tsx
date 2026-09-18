@@ -120,7 +120,7 @@ export default function ConfiguratorPage() {
   }
 
   if (loading) return <main className="grid min-h-screen place-items-center bg-[#f3f0e8]"><p>Carregando cardápio…</p></main>;
-  if (!product) return <main className="grid min-h-screen place-items-center bg-[#f3f0e8] p-6 text-center"><div><h1 className="text-2xl font-black">Produto não encontrado</h1><a className="mt-4 inline-block text-[#b5232b] underline" href="/">Voltar ao cardápio</a></div></main>;
+  if (!product) return <main className="grid min-h-screen place-items-center bg-[#f3f0e8] p-6 text-center"><div><h1 className="teiko-display text-2xl">Produto não encontrado</h1><a className="mt-4 inline-block text-[#b5232b] underline" href="/">Voltar ao cardápio</a></div></main>;
 
   return <main className="min-h-screen bg-[#f3f0e8] pb-28 text-[#070a08] lg:pb-12">
     <header className="sticky top-0 z-30 border-b border-[#b5232b]/10 bg-[#f3f0e8]/94 backdrop-blur-xl">
@@ -135,7 +135,7 @@ export default function ConfiguratorPage() {
       <div>
         <div className="overflow-hidden rounded-[28px] bg-[#173323] text-white">
           <div className="grid grid-cols-[1fr_120px] items-center gap-3 p-6 sm:grid-cols-[1fr_180px]">
-            <div><span className="text-xs font-bold uppercase tracking-[.16em] text-[#c7a773]">Do seu jeito</span><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{product.name}</h1><p className="mt-2 text-sm leading-relaxed text-white/70">{product.description}</p>{development && <span className="mt-3 inline-block rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold">DESENVOLVIMENTO</span>}</div>
+            <div><span className="text-xs font-bold uppercase tracking-[.16em] text-[#c7a773]">Do seu jeito</span><h1 className="teiko-display mt-2 text-3xl tracking-[-.04em]">{product.name}</h1><p className="mt-2 text-sm leading-relaxed text-white/70">{product.description}</p>{development && <span className="mt-3 inline-block rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold">DESENVOLVIMENTO</span>}</div>
             <img className="aspect-square w-full rounded-[22px] object-cover" src={product.imageUrl || '/brand/teiko-sushi-atmosphere.png'} alt={`Foto de ${product.name}`} />
           </div>
         </div>

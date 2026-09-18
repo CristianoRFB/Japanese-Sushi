@@ -35,7 +35,7 @@ export default function CartPage() {
           <span className="grid size-20 place-items-center rounded-full bg-[#e8efe5] text-[#b5232b]">
             <ShoppingBag className="size-8" />
           </span>
-          <h1 className="mt-6 text-3xl font-black tracking-[-.04em]">
+          <h1 className="teiko-display mt-6 text-3xl tracking-[-.04em]">
             Seu carrinho está vazio
           </h1>
           <p className="mt-2 text-sm text-[#7b887d]">
@@ -62,7 +62,7 @@ export default function CartPage() {
           >
             <ArrowLeft className="size-4" /> Continuar pedindo
           </a>
-          <h1 className="mt-5 text-4xl font-black tracking-[-.05em]">
+          <h1 className="teiko-display mt-5 text-4xl tracking-[-.05em]">
             Seu carrinho
           </h1>
           <p className="mt-2 text-sm text-[#7b887d]">

@@ -342,7 +342,7 @@ export default function CheckoutPage() {
       <main className="min-h-screen bg-[#f3f0e8]">
         <PublicHeader />
         <div className="mx-auto max-w-lg px-6 py-24 text-center">
-          <h1 className="text-3xl font-black">Carrinho vazio</h1>
+          <h1 className="teiko-display text-3xl">Carrinho vazio</h1>
           <p className="mt-2 text-sm text-[#7b887d]">
             Adicione um produto antes de ir ao checkout.
           </p>
@@ -377,7 +377,7 @@ export default function CheckoutPage() {
           >
             <ArrowLeft className="size-4" /> Voltar ao carrinho
           </a>
-          <h1 className="mt-5 text-4xl font-black tracking-[-.05em]">
+          <h1 className="teiko-display mt-5 text-4xl tracking-[-.05em]">
             Revisar e finalizar
           </h1>
           <p className="mt-2 text-sm text-[#7b887d]">

@@ -191,7 +191,7 @@ export default function OrderPage() {
       <main className="min-h-screen bg-[#f3f0e8]">
         <PublicHeader />
         <div className="mx-auto max-w-lg px-6 py-24 text-center">
-          <h1 className="text-3xl font-black">Não encontramos esse pedido</h1>
+          <h1 className="teiko-display text-3xl">Não encontramos esse pedido</h1>
           <p className="mt-2 text-sm text-[#7b887d]">{error}</p>
           <Button
             className="mt-6 rounded-full bg-[#b5232b] text-white"
@@ -216,7 +216,7 @@ export default function OrderPage() {
             </span>
           )}
           <p className="mt-5 text-sm text-white/60">Acompanhe seu pedido</p>
-          <h1 className="mt-1 text-4xl font-black tracking-[-.05em]">
+          <h1 className="teiko-display mt-1 text-4xl tracking-[-.05em]">
             {order.orderNumber}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-white/65">
@@ -264,7 +264,7 @@ export default function OrderPage() {
         {order.customerApproval === 'PENDING' && order.proposedChanges && (
           <section className="mt-5 rounded-[28px] border-2 border-[#c7a773] bg-[#e8efe5] p-5 sm:p-6">
             <p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Atenção necessária</p>
-            <h2 className="mt-2 text-2xl font-black">A unidade propôs uma alteração</h2>
+            <h2 className="teiko-display mt-2 text-2xl">A unidade propôs uma alteração</h2>
             <p className="mt-2 text-sm leading-relaxed text-[#7b887d]">Confira a nova composição abaixo. O pedido só segue depois que você decidir.</p>
             {order.proposedChanges.reason && <p className="mt-3 rounded-xl bg-white/70 p-3 text-sm font-bold text-[#070a08]">{order.proposedChanges.reason}</p>}
             <div className="mt-4 space-y-2 rounded-2xl bg-white p-4">
