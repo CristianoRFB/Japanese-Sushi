@@ -156,11 +156,11 @@ export default function Home() {
         <div className="mx-auto grid max-w-6xl divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <div className="flex items-start gap-3 px-4 py-6 sm:px-6">
             <MapPin className="mt-0.5 size-5 shrink-0 text-teiko-gold" />
-            <div><span className="block text-[10px] font-black uppercase tracking-[.18em] text-teiko-gold">Onde estamos</span><strong className="mt-1 block text-sm">{config.address || 'Rua 23, 624 - Centro'}</strong></div>
+            <div><span className="block text-[10px] font-black uppercase tracking-[.18em] text-teiko-gold">Onde estamos</span><strong className="mt-1 block text-sm">{loading ? 'Carregando endereço…' : config.address || 'Rua 23, 624 - Centro'}</strong></div>
           </div>
             <div className="flex items-start gap-3 px-4 py-6 sm:px-6">
             <Clock3 className="mt-0.5 size-5 shrink-0 text-teiko-gold" />
-            <div><span className="block text-[10px] font-black uppercase tracking-[.18em] text-teiko-gold">Atendimento</span><strong className="mt-1 block text-sm">{availability.acceptingOrders ? `Pedidos abertos${availability.closesAt ? ` até ${availability.closesAt}` : ''}` : formatNextOpening(availability.nextOpening)}</strong></div>
+            <div><span className="block text-[10px] font-black uppercase tracking-[.18em] text-teiko-gold">Atendimento</span><strong className="mt-1 block text-sm">{loading ? 'Carregando horários…' : availability.acceptingOrders ? `Pedidos abertos${availability.closesAt ? ` até ${availability.closesAt}` : ''}` : formatNextOpening(availability.nextOpening)}</strong></div>
           </div>
           <div className="flex items-start gap-3 px-4 py-6 sm:px-6">
             <Utensils className="mt-0.5 size-5 shrink-0 text-teiko-gold" />
