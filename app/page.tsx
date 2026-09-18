@@ -65,9 +65,11 @@ export default function Home() {
   const activePromotions = promotions.filter((promotion) =>
     isPromotionActive(promotion, now),
   );
-  const heroImage = products[0]?.imageUrl || '/menu/combinado-teiko.png';
-  const secondaryImage = products[1]?.imageUrl || '/menu/sushi-salmao.png';
-  const detailImage = products[2]?.imageUrl || '/menu/sashimi-salmao.png';
+  const imageFor = (id: string, fallback: string) =>
+    catalog.products.find((product) => product.id === id)?.imageUrl || fallback;
+  const heroImage = imageFor('combinado-teiko', '/menu/combinado-teiko.png');
+  const secondaryImage = imageFor('sushi-salmao', '/menu/sushi-salmao.png');
+  const detailImage = imageFor('sashimi-salmao', '/menu/sashimi-salmao.png');
 
   return (
     <main className="min-h-screen overflow-hidden bg-teiko-paper text-teiko-ink">
