@@ -95,6 +95,7 @@ export function AdminShell({
       />
     );
   const isActive = (href: string) => href === '/admin' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+  const activeMobileHref = links.find(({ href }) => isActive(href))?.href ?? '/admin';
   return (
     <div className="min-h-screen bg-[#f3f0e8] text-[#070a08]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#070a08] p-5 text-white lg:flex">
@@ -132,21 +133,17 @@ export function AdminShell({
           <a href="/admin" className="font-black lg:hidden" aria-label="Teiko Admin">
             <BrandMark size="sm" showName={false} />
           </a>
-          <nav className="flex gap-1 overflow-x-auto lg:hidden">
-            {links.slice(1).map(({ href, label, icon: Icon }) => (
-              <a
-                key={href}
-                href={href}
-                aria-label={label}
-                title={label}
-                aria-current={isActive(href) ? 'page' : undefined}
-                className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-xs font-black transition ${isActive(href) ? 'bg-[#b5232b] text-white' : 'text-[#7b887d] hover:bg-[#e8efe5] hover:text-[#070a08]'}`}
-              >
-                <Icon className="size-4" />
-                <span>{label}</span>
-              </a>
-            ))}
-          </nav>
+          <label className="min-w-0 flex-1 lg:hidden">
+            <span className="sr-only">Seção do painel</span>
+            <select
+              value={activeMobileHref}
+              onChange={(event) => { window.location.href = event.target.value; }}
+              aria-label="Seção do painel"
+              className="h-10 w-full min-w-0 rounded-xl border border-[#070a08]/10 bg-[#f3f0e8] px-3 text-xs font-black text-[#070a08] outline-none focus:border-[#b5232b]"
+            >
+              {links.map(({ href, label }) => <option key={href} value={href}>{label}</option>)}
+            </select>
+          </label>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-[#7b887d] lg:block">
               Operação em tempo real
@@ -168,7 +165,7 @@ export function AdminShell({
                 </span>
               )}
             </a>
-            <span className="rounded-full bg-[#e8efe5] px-3 py-1 text-xs font-bold text-[#3a5b35]">
+            <span className="hidden rounded-full bg-[#e8efe5] px-3 py-1 text-xs font-bold text-[#3a5b35] sm:inline">
               Online
             </span>
           </div>
