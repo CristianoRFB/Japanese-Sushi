@@ -307,6 +307,12 @@ describe('Firestore Rules Spark Teiko', () => {
     const adminDb = env.authenticatedContext('admin-uid').firestore();
     await assertSucceeds(
       updateDoc(doc(adminDb, 'reservations', `reservation-${testRunId}`), {
+        tableId: 'table-1',
+        updatedAt: Timestamp.now(),
+      }),
+    );
+    await assertSucceeds(
+      updateDoc(doc(adminDb, 'reservations', `reservation-${testRunId}`), {
         status: 'CONFIRMED',
         updatedAt: Timestamp.now(),
         statusHistory: arrayUnion({

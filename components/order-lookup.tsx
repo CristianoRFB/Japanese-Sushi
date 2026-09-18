@@ -4,7 +4,7 @@ import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { ArrowRight, Search, TicketCheck } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 
-import { getFirebaseClient, hasFirebaseConfig } from '@/lib/firebase/client';
+import { ensureAnonymousUser, getFirebaseClient, hasFirebaseConfig } from '@/lib/firebase/client';
 
 interface RecentOrder { publicCode: string; orderNumber?: string; savedAt: number }
 const RECENT_ORDERS_KEY = 'teiko-sushi-recent-orders';
@@ -30,7 +30,13 @@ export function OrderLookup() {
     setSearching(true); setError('');
     try {
       if (hasFirebaseConfig && normalized.startsWith('T')) {
-        const snapshot = await getDocs(query(collection(getFirebaseClient().db, 'orders'), where('orderNumber', '==', `#${normalized}`), limit(1)));
+        const user = await ensureAnonymousUser();
+        const snapshot = await getDocs(query(
+          collection(getFirebaseClient().db, 'orders'),
+          where('ownerUid', '==', user.uid),
+          where('orderNumber', '==', `#${normalized}`),
+          limit(1),
+        ));
         const match = snapshot.docs[0];
         if (match) { const publicCode = String(match.data().publicCode || match.id); window.location.href = `/pedido/${encodeURIComponent(publicCode)}`; return; }
       }

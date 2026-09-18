@@ -26,6 +26,11 @@ service cloud.firestore {
       return (resource.data.status == 'REQUESTED' && request.resource.data.status in ['CONFIRMED', 'REFUSED', 'CANCELLED'])
         || (resource.data.status == 'CONFIRMED' && request.resource.data.status in ['COMPLETED', 'CANCELLED']);
     }
+    function validReservationTableAssignment() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', 'tableId'])
+        && request.resource.data.updatedAt is timestamp
+        && (!request.resource.data.keys().hasAny(['tableId']) || request.resource.data.tableId is string);
+    }
     function validAdminOrderEdit() {
       return isStaff()
         && brand(resource.data)
@@ -173,7 +178,7 @@ service cloud.firestore {
         && brand(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'statusHistory', 'tableId'])
         && (!request.resource.data.keys().hasAny(['tableId']) || request.resource.data.tableId is string)
-        && validReservationTransition();
+        && (validReservationTransition() || validReservationTableAssignment());
       allow delete: if false;
     }
 

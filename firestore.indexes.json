@@ -102,6 +102,14 @@
       ]
     },
     {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerUid", "order": "ASCENDING" },
+        { "fieldPath": "orderNumber", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "reservations",
       "queryScope": "COLLECTION",
       "fields": [
