@@ -13,7 +13,7 @@ import {
   where,
   Timestamp,
 } from 'firebase/firestore';
-import { AlertCircle, CalendarDays, Check, Loader2, X } from 'lucide-react';
+import { AlertCircle, CalendarDays, Check, Loader2, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminShell } from '@/components/admin-shell';
@@ -52,6 +52,14 @@ const next: Record<ReservationStatus, ReservationStatus[]> = {
   CANCELLED: [],
   COMPLETED: [],
 };
+type ReservationFilter = 'UPCOMING' | 'TODAY' | 'REQUESTED' | 'CONFIRMED' | 'ALL';
+const reservationFilters: Array<[ReservationFilter, string]> = [
+  ['UPCOMING', 'Próximas'],
+  ['TODAY', 'Hoje'],
+  ['REQUESTED', 'Aguardando'],
+  ['CONFIRMED', 'Confirmadas'],
+  ['ALL', 'Todas'],
+];
 
 export default function ReservationsPage() {
   const { user, role } = useAuth();
@@ -60,6 +68,8 @@ export default function ReservationsPage() {
   const [busy, setBusy] = useState('');
   const [tables, setTables] = useState<DiningTable[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<ReservationFilter>('UPCOMING');
+  const [search, setSearch] = useState('');
   useEffect(
     () =>
       onSnapshot(
@@ -141,6 +151,20 @@ export default function ReservationsPage() {
   const confirmedCount = useMemo(() => reservations.filter((reservation) => reservation.status === 'CONFIRMED').length, [reservations]);
   const todayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const todayCount = useMemo(() => reservations.filter((reservation) => reservation.date === todayKey && ['REQUESTED', 'CONFIRMED'].includes(reservation.status)).length, [reservations, todayKey]);
+  const visibleReservations = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase('pt-BR');
+    return reservations.filter((reservation) => {
+      const matchesFilter = filter === 'ALL'
+        ? true
+        : filter === 'UPCOMING'
+          ? reservation.date >= todayKey && ['REQUESTED', 'CONFIRMED'].includes(reservation.status)
+          : filter === 'TODAY'
+            ? reservation.date === todayKey && ['REQUESTED', 'CONFIRMED'].includes(reservation.status)
+            : reservation.status === filter;
+      const matchesSearch = !term || `${reservation.name} ${reservation.whatsapp}`.toLocaleLowerCase('pt-BR').includes(term);
+      return matchesFilter && matchesSearch;
+    });
+  }, [reservations, filter, search, todayKey]);
   async function change(id: string, status: ReservationStatus) {
     const reservation = reservations.find((candidate) => candidate.id === id);
     if (status === 'CONFIRMED' && reservation && tables.length) {
@@ -196,6 +220,17 @@ export default function ReservationsPage() {
         <Summary label="Confirmadas" value={String(confirmedCount)} />
         <Summary label="Hoje" value={String(todayCount)} />
       </section>
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="relative block min-w-0 flex-1 sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#7b887d]" />
+          <span className="sr-only">Buscar reserva</span>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome ou WhatsApp" aria-label="Buscar por nome ou WhatsApp" className="h-11 w-full rounded-full border border-[#070a08]/10 bg-white pl-10 pr-4 text-sm outline-none focus:border-[#b5232b]" />
+        </label>
+        <span className="text-xs font-bold text-[#7b887d]">{visibleReservations.length} {visibleReservations.length === 1 ? 'reserva' : 'reservas'}</span>
+      </div>
+      <div className="teiko-scrollbar-none mt-3 flex gap-2 overflow-x-auto pb-2">
+        {reservationFilters.map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} className={`shrink-0 rounded-full px-4 py-2 text-xs font-black ${filter === value ? 'bg-[#070a08] text-white' : 'bg-white text-[#7b887d]'}`}>{label}</button>)}
+      </div>
       {error && (
         <div
           role="alert"
@@ -211,7 +246,7 @@ export default function ReservationsPage() {
       )}
       <div className="mt-7 grid gap-4 lg:grid-cols-2">
         {loading && <><div className="h-72 animate-pulse rounded-[26px] bg-white" /><div className="h-72 animate-pulse rounded-[26px] bg-white" /></>}
-        {!loading && reservations.map((reservation) => (
+        {!loading && visibleReservations.map((reservation) => (
           <article
             key={reservation.id}
             className="rounded-[26px] bg-white p-5 shadow-sm"
@@ -291,10 +326,10 @@ export default function ReservationsPage() {
             )}
           </article>
         ))}
-        {!loading && !reservations.length && (
+        {!loading && !visibleReservations.length && (
           <div className="rounded-[26px] border border-dashed border-[#070a08]/20 p-10 text-center text-sm text-[#7b887d]">
             <CalendarDays className="mx-auto size-8" />
-            <p className="mt-3">Nenhuma reserva encontrada.</p>
+            <p className="mt-3">{search ? 'Nenhuma reserva encontrada para essa busca.' : 'Nenhuma reserva nesta visão.'}</p>
           </div>
         )}
       </div>
