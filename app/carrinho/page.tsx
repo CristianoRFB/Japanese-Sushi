@@ -93,13 +93,11 @@ export default function CartPage() {
                   className="rounded-[26px] border border-[#b5232b]/10 bg-white p-5 shadow-sm"
                 >
                   <div className="flex items-start gap-4">
-                    {product?.imageUrl && (
-                      <img
-                        src={product.imageUrl}
-                        alt=""
-                        className="size-20 rounded-[18px] object-cover"
-                      />
-                    )}
+                    <img
+                      src={product?.imageUrl || '/brand/teiko-sushi-atmosphere.png'}
+                      alt={product ? `Foto de ${product.name}` : 'Imagem do pedido'}
+                      className="size-20 rounded-[18px] object-cover"
+                    />
                     <div className="min-w-0 flex-1">
                       <h2 className="text-lg font-black">
                         {priced?.productName ??

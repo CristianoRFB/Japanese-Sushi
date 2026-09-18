@@ -25,7 +25,7 @@ export function PublicHeader() {
           </a>
           <a className="relative grid size-11 place-items-center rounded-full bg-[#f3f0e8] text-[#070a08] transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/carrinho" aria-label={`Carrinho com ${count} itens`}>
             <ShoppingBag className="size-5" />
-            <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full bg-[#e3262e] text-[10px] font-black text-white">{count}</span>
+            {count > 0 && <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full bg-[#e3262e] text-[10px] font-black text-white">{count > 99 ? '99+' : count}</span>}
           </a>
         </nav>
       </div>

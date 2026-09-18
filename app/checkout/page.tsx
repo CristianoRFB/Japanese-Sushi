@@ -31,6 +31,7 @@ import {
   formatBRL,
   formatNextOpening,
   getStoreAvailability,
+  normalizePhone,
   type FulfillmentMode,
 } from '@/shared/domain';
 
@@ -40,6 +41,7 @@ const paymentLabels = {
   CASH: 'Dinheiro',
 } as const;
 type PaymentMethod = keyof typeof paymentLabels;
+type CheckoutFieldError = keyof CheckoutFields | 'zoneId';
 
 interface CheckoutFields {
   name: string;
@@ -78,6 +80,7 @@ export default function CheckoutPage() {
   const [zoneId, setZoneId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<CheckoutFieldError, string>>>({});
   const [whatsappFallbackUrl, setWhatsappFallbackUrl] = useState('');
   const [now, setNow] = useState(() => new Date());
 
@@ -128,6 +131,12 @@ export default function CheckoutPage() {
 
   function updateField(name: keyof CheckoutFields, value: string) {
     setFields((current) => ({ ...current, [name]: value }));
+    setFieldErrors((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
   }
 
   function selectPayment(method: PaymentMethod) {
@@ -148,6 +157,18 @@ export default function CheckoutPage() {
     }
     if (!previewValid) {
       setError('Um item do seu carrinho ficou indisponível ou ainda está sem preço oficial. Volte ao carrinho para revisar.');
+      return;
+    }
+    const nextFieldErrors = validateCheckoutFields({
+      fields,
+      fulfillment,
+      deliveryMode: config.deliveryConfig.mode,
+      zoneId,
+      deliveryZones: config.deliveryConfig.zones?.filter((zone) => zone.active).length ?? 0,
+    });
+    if (Object.keys(nextFieldErrors).length) {
+      setFieldErrors(nextFieldErrors);
+      setError('Revise os campos destacados antes de confirmar o pedido.');
       return;
     }
     if (!availability.acceptingOrders) {
@@ -186,16 +207,16 @@ export default function CheckoutPage() {
     const payload = {
       clientRequestId,
       customer: {
-        name: fields.name,
-        whatsapp: fields.whatsapp,
+        name: fields.name.trim().replace(/\s+/g, ' '),
+        whatsapp: normalizePhone(fields.whatsapp),
         ...(fulfillment === 'DELIVERY'
           ? {
               address: {
-                street: fields.street,
-                number: fields.number,
-                ...(fields.complement ? { complement: fields.complement } : {}),
-                neighborhood: fields.neighborhood,
-                ...(fields.reference ? { reference: fields.reference } : {}),
+                street: fields.street.trim(),
+                number: fields.number.trim(),
+                ...(fields.complement.trim() ? { complement: fields.complement.trim() } : {}),
+                neighborhood: fields.neighborhood.trim(),
+                ...(fields.reference.trim() ? { reference: fields.reference.trim() } : {}),
               },
             }
           : {}),
@@ -216,7 +237,7 @@ export default function CheckoutPage() {
         needsChange: paymentMethod === 'CASH' ? Boolean(needsChange) : false,
         ...(paymentMethod === 'CASH' && needsChange ? { changeForCents } : {}),
       },
-      notes: fields.orderNotes || undefined,
+      notes: fields.orderNotes.trim() || undefined,
       clientPreviewTotalCents: totalCents,
     };
 
@@ -287,7 +308,7 @@ export default function CheckoutPage() {
         );
       const message = ambiguous
         ? 'Estamos confirmando se seu pedido chegou. Não envie outro pedido ainda. Aguarde alguns instantes e tente novamente.'
-        : rawMessage;
+        : friendlyCheckoutError(errorCode, rawMessage);
       setError(message);
       const number = config.whatsappNumber?.replace(/\D/g, '');
       if (number && !ambiguous) {
@@ -340,6 +361,7 @@ export default function CheckoutPage() {
     <main className="min-h-screen bg-[#f3f0e8] pb-12 text-[#070a08]">
       <PublicHeader />
       <form
+        noValidate
         onSubmit={submit}
         className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_380px]"
       >
@@ -443,6 +465,7 @@ export default function CheckoutPage() {
                 placeholder="Como podemos chamar você?"
                 required
                 maxLength={80}
+                error={fieldErrors.name}
               />
               <Field
                 label="WhatsApp"
@@ -455,6 +478,7 @@ export default function CheckoutPage() {
                 required
                 inputMode="tel"
                 maxLength={20}
+                error={fieldErrors.whatsapp}
               />
             </div>
           </CheckoutSection>
@@ -470,8 +494,13 @@ export default function CheckoutPage() {
                   <select
                     required
                     value={zoneId}
-                    onChange={(event) => setZoneId(event.target.value)}
-                    className="mt-2 h-12 w-full rounded-2xl border border-[#b5232b]/15 bg-[#f3f0e8] px-4 font-normal outline-none focus:border-[#b5232b]"
+                    onChange={(event) => {
+                      setZoneId(event.target.value);
+                      setFieldErrors((current) => ({ ...current, zoneId: undefined }));
+                      setError('');
+                    }}
+                    aria-invalid={Boolean(fieldErrors.zoneId)}
+                    className={`mt-2 h-12 w-full rounded-2xl border bg-[#f3f0e8] px-4 font-normal outline-none focus:border-[#b5232b] ${fieldErrors.zoneId ? 'border-[#e3262e]' : 'border-[#b5232b]/15'}`}
                   >
                     <option value="">Selecione</option>
                     {config.deliveryConfig.zones
@@ -482,6 +511,7 @@ export default function CheckoutPage() {
                         </option>
                       ))}
                   </select>
+                  {fieldErrors.zoneId && <span className="mt-1 block text-xs font-bold text-[#e3262e]">{fieldErrors.zoneId}</span>}
                 </label>
               )}
               <div className="grid gap-4 sm:grid-cols-[1fr_120px]">
@@ -494,6 +524,7 @@ export default function CheckoutPage() {
                   }
                   required
                   maxLength={120}
+                  error={fieldErrors.street}
                 />
                 <Field
                   label="Número"
@@ -504,6 +535,7 @@ export default function CheckoutPage() {
                   }
                   required
                   maxLength={20}
+                  error={fieldErrors.number}
                 />
               </div>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -526,6 +558,7 @@ export default function CheckoutPage() {
                   }
                   required
                   maxLength={80}
+                  error={fieldErrors.neighborhood}
                 />
               </div>
               <div className="mt-4">
@@ -617,9 +650,12 @@ export default function CheckoutPage() {
               onChange={(event) =>
                 updateField('orderNotes', event.target.value)
               }
-              className="min-h-24 w-full rounded-[18px] border border-[#b5232b]/15 bg-[#f3f0e8] p-4 text-sm outline-none focus:border-[#b5232b]"
+              aria-invalid={Boolean(fieldErrors.orderNotes)}
+              aria-describedby={fieldErrors.orderNotes ? 'orderNotes-error' : undefined}
+              className={`min-h-24 w-full rounded-[18px] border bg-[#f3f0e8] p-4 text-sm outline-none focus:border-[#b5232b] ${fieldErrors.orderNotes ? 'border-[#e3262e]' : 'border-[#b5232b]/15'}`}
               placeholder="Opcional"
             />
+            {fieldErrors.orderNotes && <p id="orderNotes-error" className="mt-1 text-xs font-bold text-[#e3262e]">{fieldErrors.orderNotes}</p>}
           </CheckoutSection>
 
           {error && (
@@ -813,17 +849,21 @@ function Field(
   props: React.InputHTMLAttributes<HTMLInputElement> & {
     label: string;
     name: string;
+    error?: string;
   },
 ) {
-  const { label, name, ...input } = props;
+  const { label, name, error, ...input } = props;
   return (
     <label className="block text-sm font-bold">
       {label}
       <input
         name={name}
         {...input}
-        className="mt-2 h-12 w-full rounded-2xl border border-[#b5232b]/15 bg-[#f3f0e8] px-4 font-normal outline-none focus:border-[#b5232b] focus:ring-2 focus:ring-[#b5232b]/15"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${name}-error` : undefined}
+        className={`mt-2 h-12 w-full rounded-2xl border bg-[#f3f0e8] px-4 font-normal outline-none focus:border-[#b5232b] focus:ring-2 focus:ring-[#b5232b]/15 ${error ? 'border-[#e3262e]' : 'border-[#b5232b]/15'}`}
       />
+      {error && <span id={`${name}-error`} className="mt-1 block text-xs font-bold text-[#e3262e]">{error}</span>}
     </label>
   );
 }
@@ -847,4 +887,53 @@ function parseCurrencyToCents(value: string): number | null {
   if (!Number.isFinite(amount) || amount < 0) return null;
   const cents = Math.round(amount * 100);
   return Number.isSafeInteger(cents) ? cents : null;
+}
+
+function validateCheckoutFields({
+  fields,
+  fulfillment,
+  deliveryMode,
+  zoneId,
+  deliveryZones,
+}: {
+  fields: CheckoutFields;
+  fulfillment: FulfillmentMode;
+  deliveryMode: 'NONE' | 'CONFIRM' | 'FIXED' | 'ZONES';
+  zoneId: string;
+  deliveryZones: number;
+}): Partial<Record<CheckoutFieldError, string>> {
+  const errors: Partial<Record<CheckoutFieldError, string>> = {};
+  const name = fields.name.trim().replace(/\s+/g, ' ');
+  if (name.length < 2) errors.name = 'Informe seu nome.';
+  else if (!/\p{L}/u.test(name)) errors.name = 'Use pelo menos uma letra no nome.';
+  else if (Array.from(name).some((character) => {
+    const code = character.charCodeAt(0);
+    return code < 32 || code === 127;
+  })) errors.name = 'Remova caracteres inválidos do nome.';
+
+  try {
+    normalizePhone(fields.whatsapp);
+  } catch {
+    errors.whatsapp = 'Informe um WhatsApp válido com DDD.';
+  }
+
+  if (fulfillment === 'DELIVERY') {
+    if (fields.street.trim().length < 3) errors.street = 'Informe a rua ou avenida.';
+    if (!fields.number.trim()) errors.number = 'Informe o número.';
+    if (fields.neighborhood.trim().length < 2) errors.neighborhood = 'Informe o bairro.';
+    if (deliveryMode === 'NONE') errors.zoneId = 'A entrega está indisponível no momento.';
+    if (deliveryMode === 'ZONES' && deliveryZones === 0) errors.zoneId = 'A unidade ainda não configurou regiões de entrega.';
+    else if (deliveryMode === 'ZONES' && !zoneId) errors.zoneId = 'Selecione a região de entrega.';
+  }
+  if (fields.orderNotes.length > 500) errors.orderNotes = 'Use no máximo 500 caracteres.';
+  return errors;
+}
+
+function friendlyCheckoutError(code: string, rawMessage: string): string {
+  if (/permission-denied|unauthenticated/i.test(code)) return 'Não conseguimos confirmar sua sessão. Atualize a página e tente novamente.';
+  if (/failed-precondition/i.test(code)) return 'O cardápio mudou enquanto você preenchia o pedido. Volte ao carrinho e revise os itens.';
+  if (/invalid-argument/i.test(code)) return 'Algum dado do pedido ficou inválido. Revise os campos e tente novamente.';
+  if (/network-request-failed|offline/i.test(code)) return 'Sem conexão com a unidade. Confira sua internet e tente novamente.';
+  if (/FirebaseError|internal/i.test(rawMessage)) return 'Não foi possível concluir o pedido agora. Tente novamente em instantes.';
+  return rawMessage || 'Não foi possível enviar o pedido.';
 }
