@@ -14,7 +14,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { AlertCircle, CalendarDays, Check, Loader2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminShell } from '@/components/admin-shell';
 import { useAuth } from '@/components/providers';
@@ -59,6 +59,7 @@ export default function ReservationsPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const [tables, setTables] = useState<DiningTable[]>([]);
+  const [loading, setLoading] = useState(true);
   useEffect(
     () =>
       onSnapshot(
@@ -67,13 +68,13 @@ export default function ReservationsPage() {
           where('brandId', '==', TEIKO_BRAND_ID),
           orderBy('date', 'asc'),
         ),
-        (snapshot) =>
-          setReservations(
-            snapshot.docs.map(
-              (item) => ({ id: item.id, ...item.data() }) as Reservation,
-            ).filter((item) => isValidReservationDate(item.date)),
-          ),
-        () => setError('Não foi possível carregar a fila de reservas agora.'),
+        (snapshot) => {
+          setReservations(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Reservation)
+            .filter((item) => isValidReservationDate(item.date))
+            .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)));
+          setLoading(false);
+        },
+        () => { setError('Não foi possível carregar a fila de reservas agora.'); setLoading(false); },
       ),
     [],
   );
@@ -116,6 +117,13 @@ export default function ReservationsPage() {
       setError('Esta mesa já está vinculada a outra reserva ativa no mesmo dia e horário.');
       return;
     }
+    if (tableId) {
+      const capacityError = tableCapacityError(reservation, tableId);
+      if (capacityError) {
+        setError(capacityError);
+        return;
+      }
+    }
     setBusy(`${reservation.id}:table`);
     setError('');
     try {
@@ -129,6 +137,10 @@ export default function ReservationsPage() {
       setBusy('');
     }
   }
+  const requestedCount = useMemo(() => reservations.filter((reservation) => reservation.status === 'REQUESTED').length, [reservations]);
+  const confirmedCount = useMemo(() => reservations.filter((reservation) => reservation.status === 'CONFIRMED').length, [reservations]);
+  const todayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const todayCount = useMemo(() => reservations.filter((reservation) => reservation.date === todayKey && ['REQUESTED', 'CONFIRMED'].includes(reservation.status)).length, [reservations, todayKey]);
   async function change(id: string, status: ReservationStatus) {
     const reservation = reservations.find((candidate) => candidate.id === id);
     if (status === 'CONFIRMED' && reservation && tables.length) {
@@ -179,6 +191,11 @@ export default function ReservationsPage() {
           Solicitações de {RESERVATION_YEAR} aguardando confirmação da equipe.
         </p>
       </div>
+      <section aria-label="Resumo da agenda" className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-[#070a08]/10 bg-[#070a08]/10 sm:grid-cols-3">
+        <Summary label="Aguardando decisão" value={String(requestedCount)} />
+        <Summary label="Confirmadas" value={String(confirmedCount)} />
+        <Summary label="Hoje" value={String(todayCount)} />
+      </section>
       {error && (
         <div
           role="alert"
@@ -193,7 +210,8 @@ export default function ReservationsPage() {
         </div>
       )}
       <div className="mt-7 grid gap-4 lg:grid-cols-2">
-        {reservations.map((reservation) => (
+        {loading && <><div className="h-72 animate-pulse rounded-[26px] bg-white" /><div className="h-72 animate-pulse rounded-[26px] bg-white" /></>}
+        {!loading && reservations.map((reservation) => (
           <article
             key={reservation.id}
             className="rounded-[26px] bg-white p-5 shadow-sm"
@@ -273,7 +291,7 @@ export default function ReservationsPage() {
             )}
           </article>
         ))}
-        {!reservations.length && (
+        {!loading && !reservations.length && (
           <div className="rounded-[26px] border border-dashed border-[#070a08]/20 p-10 text-center text-sm text-[#7b887d]">
             <CalendarDays className="mx-auto size-8" />
             <p className="mt-3">Nenhuma reserva encontrada.</p>
@@ -282,4 +300,8 @@ export default function ReservationsPage() {
       </div>
     </AdminShell>
   );
+}
+
+function Summary({ label, value }: { label: string; value: string }) {
+  return <article className="bg-white p-4"><p className="text-xs font-bold text-[#7b887d]">{label}</p><strong className="mt-1 block text-2xl font-black">{value}</strong></article>;
 }
