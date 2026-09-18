@@ -1,28 +1,31 @@
 'use client';
 
 import { CalendarDays, Info, ShoppingBag } from 'lucide-react';
-import { useCart } from '@/components/providers';
+import { useCart, useCatalog } from '@/components/providers';
 import { BrandMark } from '@/components/brand-mark';
+import { WhatsAppCta } from '@/components/whatsapp-cta';
 
 export function PublicHeader() {
   const { items } = useCart();
+  const { config } = useCatalog();
   const count = items.reduce((total, item) => total + item.quantity, 0);
   return (
-    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#180e16]/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#070a08]/95 backdrop-blur-xl">
       <div className="mx-auto flex h-18 max-w-6xl items-center justify-between px-4 sm:px-6">
         <a href="/" aria-label="Teiko Sushi, início">
           <BrandMark size="sm" />
         </a>
         <nav className="flex items-center gap-1" aria-label="Navegação principal">
-          <a className="grid size-10 place-items-center rounded-full text-[#d9c4cf] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#d9b66f]" href="/reserva" aria-label="Reservar mesa">
+          <WhatsAppCta config={config} compact message="Olá, Teiko Sushi. Preciso de atendimento." />
+          <a className="grid size-10 place-items-center rounded-full text-[#c1cdc3] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/reserva" aria-label="Reservar mesa">
             <CalendarDays className="size-5" />
           </a>
-          <a className="grid size-10 place-items-center rounded-full text-[#d9c4cf] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#d9b66f]" href="/informacoes" aria-label="Informações">
+          <a className="grid size-10 place-items-center rounded-full text-[#c1cdc3] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/informacoes" aria-label="Informações">
             <Info className="size-5" />
           </a>
-          <a className="relative grid size-11 place-items-center rounded-full bg-[#fff7ea] text-[#180e16] transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#d9b66f]" href="/carrinho" aria-label={`Carrinho com ${count} itens`}>
+          <a className="relative grid size-11 place-items-center rounded-full bg-[#f3f0e8] text-[#070a08] transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[#c7a773]" href="/carrinho" aria-label={`Carrinho com ${count} itens`}>
             <ShoppingBag className="size-5" />
-            <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full bg-[#c13a43] text-[10px] font-black text-white">{count}</span>
+            <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full bg-[#e3262e] text-[10px] font-black text-white">{count}</span>
           </a>
         </nav>
       </div>

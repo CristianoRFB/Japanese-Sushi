@@ -158,13 +158,13 @@ export default function ModifiersPage() {
     <AdminShell adminOnly>
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#b13b6b]">
+          <p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#8b1e2b]">
             Regras
           </p>
           <h1 className="mt-2 text-3xl font-black tracking-[-.04em]">
             Adicionais
           </h1>
-          <p className="mt-2 text-sm text-[#765665]">
+          <p className="mt-2 text-sm text-[#7b887d]">
             Disponibilidade muda na hora, sem deploy.
           </p>
         </div>
@@ -180,7 +180,7 @@ export default function ModifiersPage() {
             <Plus /> Grupo
           </Button>
           <Button
-            className="rounded-full bg-[#8c234f] text-white"
+            className="rounded-full bg-[#b5232b] text-white"
             onClick={() => {
               setEditingModifier(null);
               setForm('modifier');
@@ -201,7 +201,7 @@ export default function ModifiersPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-black">{modifier.name}</h3>
-                  <p className="mt-1 text-xs text-[#765665]">
+                  <p className="mt-1 text-xs text-[#7b887d]">
                     {modifier.premium ? 'Premium • ' : ''}
                     {formatBRL(modifier.priceCents)}
                   </p>
@@ -216,7 +216,7 @@ export default function ModifiersPage() {
                       },
                     )
                   }
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-black ${modifier.available ? 'bg-[#d9ed55]/25 text-[#65741f]' : 'bg-[#f8e9ef] text-[#c13a43]'}`}
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-black ${modifier.available ? 'bg-[#d6e7bf]/25 text-[#3a5b35]' : 'bg-[#e8efe5] text-[#e3262e]'}`}
                 >
                   {modifier.available ? 'DISPONÍVEL' : 'INDISPONÍVEL'}
                 </button>
@@ -226,7 +226,7 @@ export default function ModifiersPage() {
                   setEditingModifier(modifier);
                   setForm('modifier');
                 }}
-                className="mt-4 text-xs font-black text-[#8c234f]"
+                className="mt-4 text-xs font-black text-[#b5232b]"
               >
                 Editar regras
               </button>
@@ -245,7 +245,7 @@ export default function ModifiersPage() {
               <div className="flex justify-between gap-3">
                 <div>
                   <h3 className="font-black">{group.name}</h3>
-                  <p className="mt-1 text-xs text-[#765665]">
+                  <p className="mt-1 text-xs text-[#7b887d]">
                     {group.required ? 'Obrigatório' : 'Opcional'} •{' '}
                     {group.minSelections} a {group.maxSelections} •{' '}
                     {group.pricingMode === 'includedQuota'
@@ -253,7 +253,7 @@ export default function ModifiersPage() {
                       : 'preço individual'}
                   </p>
                 </div>
-                <span className="text-xs font-bold text-[#8c234f]">
+                <span className="text-xs font-bold text-[#b5232b]">
                   {group.modifierIds.length} itens
                 </span>
               </div>
@@ -262,7 +262,7 @@ export default function ModifiersPage() {
                   setEditingGroup(group);
                   setForm('group');
                 }}
-                className="mt-4 text-xs font-black text-[#8c234f]"
+                className="mt-4 text-xs font-black text-[#b5232b]"
               >
                 Editar grupo
               </button>
@@ -271,7 +271,7 @@ export default function ModifiersPage() {
         </div>
       </section>
       {form && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#180e16]/50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#070a08]/50 p-4 backdrop-blur-sm">
           <form
             onSubmit={form === 'modifier' ? saveModifier : saveGroup}
             className="mx-auto my-4 max-w-2xl rounded-[28px] bg-white p-5 shadow-2xl sm:p-7"
@@ -285,7 +285,7 @@ export default function ModifiersPage() {
               <button
                 type="button"
                 onClick={() => setForm(null)}
-                className="grid size-9 place-items-center rounded-full bg-[#f8e9ef]"
+                className="grid size-9 place-items-center rounded-full bg-[#e8efe5]"
               >
                 <X className="size-4" />
               </button>
@@ -301,14 +301,14 @@ export default function ModifiersPage() {
             {error && (
               <p
                 role="alert"
-                className="mt-4 rounded-xl bg-[#f8e9ef] p-3 text-sm text-[#c13a43]"
+                className="mt-4 rounded-xl bg-[#e8efe5] p-3 text-sm text-[#e3262e]"
               >
                 {error}
               </p>
             )}
             <Button
               type="submit"
-              className="mt-6 h-11 w-full rounded-full bg-[#8c234f] font-black text-white"
+              className="mt-6 h-11 w-full rounded-full bg-[#b5232b] font-black text-white"
             >
               <Save /> Salvar
             </Button>
@@ -459,7 +459,7 @@ function GroupForm({
           <select
             name="pricingMode"
             defaultValue={value?.pricingMode ?? 'includedQuota'}
-            className="mt-2 h-11 w-full rounded-xl border bg-[#fff8ef] px-3 font-normal"
+            className="mt-2 h-11 w-full rounded-xl border bg-[#f3f0e8] px-3 font-normal"
           >
             <option value="includedQuota">Cota incluída</option>
             <option value="individual">Individual</option>

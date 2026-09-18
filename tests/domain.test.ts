@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { developmentCatalog, developmentStoreConfig } from '../lib/development-seed';
-import { calculateCartPreview, calculateDeliveryFee, calculateItemPrice, getStoreAvailability, isStoreOpen, isPromotionActive, isValidReservationDate, normalizeSelections, validateGroupSelection, validateReservationDraft, type CatalogSnapshot, type Promotion } from '../shared/domain';
+import { calculateCartPreview, calculateDeliveryFee, calculateItemPrice, getStoreAvailability, isStoreOpen, isPromotionActive, isReservationTimeWithinHours, isValidReservationDate, normalizeSelections, validateGroupSelection, validateReservationDraft, type CatalogSnapshot, type Promotion } from '../shared/domain';
 
 describe('motor de preço em centavos', () => {
   it('calcula item simples e quantidade sem aceitar total do cliente', () => {
@@ -103,5 +103,11 @@ describe('validação de reservas 2026', () => {
     expect(errors.time).toMatch(/horário/i);
     expect(errors.people).toMatch(/1 e 30/i);
     expect(errors.notes).toMatch(/500/);
+  });
+
+  it('aceita somente horário dentro da agenda da unidade', () => {
+    expect(isReservationTimeWithinHours('2026-12-21', '19:30', developmentStoreConfig)).toBe(true);
+    expect(isReservationTimeWithinHours('2026-12-21', '23:00', developmentStoreConfig)).toBe(false);
+    expect(isReservationTimeWithinHours('2026-12-20', '19:30', developmentStoreConfig)).toBe(false);
   });
 });

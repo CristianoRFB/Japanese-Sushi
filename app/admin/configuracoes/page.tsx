@@ -41,6 +41,9 @@ export default function SettingsPage() {
       if (!Array.isArray(holidayHours) || !holidayHours.length || holidayHours.some((window) => !timePattern.test(window.open) || !timePattern.test(window.close))) throw new Error('Janelas dos feriados inválidas. Use HH:mm.');
       const deliveryMode = String(data.get('deliveryMode')) as StorePublicConfig['deliveryConfig']['mode'];
       const fixedFeeCents = Number(data.get('fixedFeeCents'));
+      const whatsappNumber = String(data.get('whatsappNumber') || '').replace(/\D/g, '');
+      const whatsappEnabled = data.get('whatsappEnabled') === 'on';
+      if (whatsappEnabled && (whatsappNumber.length < 12 || whatsappNumber.length > 13)) throw new Error('Para exibir o botão, informe o WhatsApp da Teiko com 55, DDD e número.');
       if (deliveryMode === 'FIXED' && (!Number.isSafeInteger(fixedFeeCents) || fixedFeeCents < 0)) throw new Error('Taxa fixa inválida.');
 
       const payload: StorePublicConfig & { updatedAt: unknown } = {
@@ -52,8 +55,8 @@ export default function SettingsPage() {
         defaultUnitId: currentConfig.defaultUnitId,
         units: currentConfig.units,
         phoneDisplay: String(data.get('phoneDisplay')).trim(),
-        whatsappNumber: String(data.get('whatsappNumber')).replace(/\D/g, ''),
-        whatsappEnabled: data.get('whatsappEnabled') === 'on',
+        whatsappNumber,
+        whatsappEnabled,
         orderingEnabled: data.get('orderingEnabled') === 'on',
         pauseMessage: String(data.get('pauseMessage')).trim(),
         enforceHours: data.get('enforceHours') === 'on',
@@ -90,11 +93,12 @@ export default function SettingsPage() {
   const currentConfig = config;
 
   return <AdminShell adminOnly>
-    <div><p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#b13b6b]">Loja</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">Configurações</h1><p className="mt-2 text-sm text-[#765665]">Dados públicos, recebimento, pagamento e horário.</p></div>
+    <div><p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#8b1e2b]">Loja</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">Configurações</h1><p className="mt-2 text-sm text-[#7b887d]">Dados públicos, recebimento, pagamento e horário.</p></div>
     <form onSubmit={save} className="mt-7 max-w-4xl space-y-5">
       <SettingsSection title="Identificação">
-        <div className="grid gap-4 sm:grid-cols-2"><AdminField label="Nome da loja" name="storeName" required defaultValue={config.storeName} /><AdminField label="Instagram" name="instagramHandle" defaultValue={config.instagramHandle} /><AdminField label="Endereço" name="address" defaultValue={config.address} /><AdminField label="Cidade/UF" name="city" defaultValue={config.city} /><AdminField label="Telefone exibido" name="phoneDisplay" defaultValue={config.phoneDisplay} /><AdminField label="WhatsApp (55 + DDD + número)" name="whatsappNumber" defaultValue={config.whatsappNumber} /></div>
-        <label className="mt-4 flex items-center gap-2 text-sm font-bold"><input type="checkbox" name="whatsappEnabled" defaultChecked={config.whatsappEnabled} /> Exibir botão de WhatsApp após o pedido salvo</label>
+        <div className="grid gap-4 sm:grid-cols-2"><AdminField label="Nome da loja" name="storeName" required defaultValue={config.storeName} /><AdminField label="Instagram" name="instagramHandle" defaultValue={config.instagramHandle} /><AdminField label="Endereço" name="address" defaultValue={config.address} /><AdminField label="Cidade/UF" name="city" defaultValue={config.city} /><AdminField label="Telefone exibido" name="phoneDisplay" defaultValue={config.phoneDisplay} /><AdminField label="WhatsApp da Teiko (55 + DDD + número)" name="whatsappNumber" defaultValue={config.whatsappNumber} placeholder="5517999999999" /></div>
+        <label className="mt-4 flex items-center gap-2 text-sm font-bold"><input type="checkbox" name="whatsappEnabled" defaultChecked={config.whatsappEnabled} /> Exibir botão visível de WhatsApp</label>
+        <p className="mt-2 text-xs text-[#7b887d]">O botão aparece no cabeçalho, nas informações e na reserva. Cadastre o número oficial da Teiko; não use o contato de outra marca.</p>
       </SettingsSection>
 
       <SettingsSection title="Pedidos">
@@ -108,20 +112,20 @@ export default function SettingsPage() {
       </SettingsSection>
 
       <SettingsSection title="Delivery">
-        <div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-bold">Estratégia<select name="deliveryMode" defaultValue={config.deliveryConfig.mode} className="mt-2 h-11 w-full rounded-xl border bg-[#fff8ef] px-3 font-normal"><option value="NONE">Sem delivery</option><option value="CONFIRM">Taxa confirmada depois</option><option value="FIXED">Taxa fixa</option><option value="ZONES">Por bairro/zona</option></select></label><AdminField label="Taxa fixa (centavos)" name="fixedFeeCents" type="number" min="0" defaultValue={config.deliveryConfig.fixedFeeCents ?? 0} /></div>
+        <div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-bold">Estratégia<select name="deliveryMode" defaultValue={config.deliveryConfig.mode} className="mt-2 h-11 w-full rounded-xl border bg-[#f3f0e8] px-3 font-normal"><option value="NONE">Sem delivery</option><option value="CONFIRM">Taxa confirmada depois</option><option value="FIXED">Taxa fixa</option><option value="ZONES">Por bairro/zona</option></select></label><AdminField label="Taxa fixa (centavos)" name="fixedFeeCents" type="number" min="0" defaultValue={config.deliveryConfig.fixedFeeCents ?? 0} /></div>
         <div className="mt-4"><AdminTextarea label="Zonas (JSON; usado no modo ZONES)" name="zones" defaultValue={JSON.stringify(config.deliveryConfig.zones ?? [], null, 2)} rows={7} /></div>
       </SettingsSection>
 
       <SettingsSection title="Horários">
-        <p className="text-xs text-[#765665]">Timezone fixa: America/Sao_Paulo. O fechamento é exclusivo: às 21:50 a loja já aparece fechada.</p>
+        <p className="text-xs text-[#7b887d]">Timezone fixa: America/Sao_Paulo. O fechamento é exclusivo: às 21:50 a loja já aparece fechada.</p>
         <div className="mt-4"><AdminTextarea label="7 dias em JSON (0=domingo, 6=sábado)" name="hours" defaultValue={JSON.stringify(config.hours ?? fallbackHours, null, 2)} rows={15} /></div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2"><AdminTextarea label="Feriados em JSON (AAAA-MM-DD)" name="holidayDates" defaultValue={JSON.stringify(config.holidayDates ?? [], null, 2)} rows={8} /><AdminTextarea label="Janelas dos feriados em JSON" name="holidayHours" defaultValue={JSON.stringify(config.holidayHours ?? defaultHolidayHours, null, 2)} rows={8} /></div>
       </SettingsSection>
 
       <SettingsSection title="Privacidade"><AdminTextarea label="Aviso operacional (revisar juridicamente antes do lançamento)" name="privacyNotice" defaultValue={config.privacyNotice} /></SettingsSection>
-      {error && <p role="alert" className="rounded-xl bg-[#f8e9ef] p-3 text-sm text-[#c13a43]">{error}</p>}
-      {message && <p role="status" className="rounded-xl bg-[#d9ed55]/25 p-3 text-sm text-[#65741f]">{message}</p>}
-      <Button type="submit" className="h-12 rounded-full bg-[#8c234f] px-6 font-black text-white"><Save /> Salvar configurações</Button>
+      {error && <p role="alert" className="rounded-xl bg-[#e8efe5] p-3 text-sm text-[#e3262e]">{error}</p>}
+      {message && <p role="status" className="rounded-xl bg-[#d6e7bf]/25 p-3 text-sm text-[#3a5b35]">{message}</p>}
+      <Button type="submit" className="h-12 rounded-full bg-[#b5232b] px-6 font-black text-white"><Save /> Salvar configurações</Button>
     </form>
   </AdminShell>;
 }

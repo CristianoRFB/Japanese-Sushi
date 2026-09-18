@@ -3,6 +3,7 @@
 import {
   arrayUnion,
   collection,
+  deleteField,
   doc,
   onSnapshot,
   orderBy,
@@ -23,6 +24,7 @@ import {
   RESERVATION_YEAR,
   TEIKO_BRAND_ID,
   type ReservationStatus,
+  type DiningTable,
 } from '@/shared/domain';
 
 interface Reservation {
@@ -34,6 +36,7 @@ interface Reservation {
   people: number;
   notes?: string;
   status: ReservationStatus;
+  tableId?: string;
 }
 const labels: Record<ReservationStatus, string> = {
   REQUESTED: 'Solicitada',
@@ -55,6 +58,7 @@ export default function ReservationsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
+  const [tables, setTables] = useState<DiningTable[]>([]);
   useEffect(
     () =>
       onSnapshot(
@@ -73,7 +77,71 @@ export default function ReservationsPage() {
       ),
     [],
   );
+  useEffect(
+    () =>
+      onSnapshot(
+        query(
+          collection(getFirebaseClient().db, 'tables'),
+          where('brandId', '==', TEIKO_BRAND_ID),
+        ),
+        (snapshot) =>
+          setTables(
+            snapshot.docs
+              .map((item) => ({ id: item.id, ...item.data() }) as DiningTable)
+              .filter((table) => table.active)
+              .sort((a, b) => a.displayOrder - b.displayOrder),
+          ),
+        () => setError('Não foi possível carregar as mesas para a agenda.'),
+      ),
+    [],
+  );
+  function hasConflict(reservation: Reservation, tableId: string) {
+    return reservations.some(
+      (other) =>
+        other.id !== reservation.id &&
+        other.tableId === tableId &&
+        other.date === reservation.date &&
+        other.time === reservation.time &&
+        ['REQUESTED', 'CONFIRMED'].includes(other.status),
+    );
+  }
+  function tableCapacityError(reservation: Reservation, tableId: string) {
+    const table = tables.find((candidate) => candidate.id === tableId);
+    return table && reservation.people > table.capacity
+      ? `A ${table.name} comporta até ${table.capacity} pessoas.`
+      : '';
+  }
+  async function assignTable(reservation: Reservation, tableId: string) {
+    if (tableId && hasConflict(reservation, tableId)) {
+      setError('Esta mesa já está vinculada a outra reserva ativa no mesmo dia e horário.');
+      return;
+    }
+    setBusy(`${reservation.id}:table`);
+    setError('');
+    try {
+      await updateDoc(doc(getFirebaseClient().db, 'reservations', reservation.id), {
+        ...(tableId ? { tableId } : { tableId: deleteField() }),
+        updatedAt: serverTimestamp(),
+      });
+    } catch {
+      setError('Não foi possível vincular esta mesa à reserva.');
+    } finally {
+      setBusy('');
+    }
+  }
   async function change(id: string, status: ReservationStatus) {
+    const reservation = reservations.find((candidate) => candidate.id === id);
+    if (status === 'CONFIRMED' && reservation && tables.length) {
+      if (!reservation.tableId) {
+        setError('Escolha uma mesa antes de confirmar a reserva.');
+        return;
+      }
+      const capacityError = tableCapacityError(reservation, reservation.tableId);
+      if (capacityError || hasConflict(reservation, reservation.tableId)) {
+        setError(capacityError || 'Esta mesa já está vinculada a outra reserva ativa no mesmo dia e horário.');
+        return;
+      }
+    }
     setBusy(`${id}:${status}`);
     setError('');
     try {
@@ -103,11 +171,11 @@ export default function ReservationsPage() {
   return (
     <AdminShell>
       <div>
-        <p className="text-xs font-black uppercase tracking-[.18em] text-[#c13a43]">
+        <p className="text-xs font-black uppercase tracking-[.18em] text-[#e3262e]">
           Atendimento
         </p>
         <h1 className="mt-2 text-3xl font-black">Reservas</h1>
-        <p className="mt-2 text-sm text-[#765665]">
+        <p className="mt-2 text-sm text-[#7b887d]">
           Solicitações de {RESERVATION_YEAR} aguardando confirmação da equipe.
         </p>
       </div>
@@ -115,7 +183,7 @@ export default function ReservationsPage() {
         <div
           role="alert"
           aria-live="assertive"
-          className="mt-5 flex items-start gap-3 rounded-2xl border border-[#c13a43]/30 bg-[#f8e9ef] p-4 text-sm text-[#c13a43]"
+          className="mt-5 flex items-start gap-3 rounded-2xl border border-[#e3262e]/30 bg-[#e8efe5] p-4 text-sm text-[#e3262e]"
         >
           <AlertCircle className="mt-0.5 size-5 shrink-0" />
           <div>
@@ -133,33 +201,55 @@ export default function ReservationsPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-black">{reservation.name}</h2>
-                <p className="mt-1 text-sm text-[#765665]">
+                <p className="mt-1 text-sm text-[#7b887d]">
                   {reservation.whatsapp}
                 </p>
               </div>
-              <span className="rounded-full bg-[#fff7ea] px-3 py-1 text-xs font-black text-[#765665]">
+              <span className="rounded-full bg-[#f3f0e8] px-3 py-1 text-xs font-black text-[#7b887d]">
                 {labels[reservation.status]}
               </span>
             </div>
-            <div className="mt-5 grid grid-cols-3 gap-3 border-y border-[#180e16]/10 py-4 text-sm">
+            <div className="mt-5 grid grid-cols-3 gap-3 border-y border-[#070a08]/10 py-4 text-sm">
               <span>
-                <small className="block text-xs text-[#765665]">Data</small>
+                <small className="block text-xs text-[#7b887d]">Data</small>
                     <strong>{reservation.date.split('-').reverse().join('/')}</strong>
               </span>
               <span>
-                <small className="block text-xs text-[#765665]">Horário</small>
+                <small className="block text-xs text-[#7b887d]">Horário</small>
                 <strong>{reservation.time}</strong>
               </span>
               <span>
-                <small className="block text-xs text-[#765665]">Pessoas</small>
+                <small className="block text-xs text-[#7b887d]">Pessoas</small>
                 <strong>{reservation.people}</strong>
               </span>
             </div>
             {reservation.notes && (
-              <p className="mt-4 rounded-xl bg-[#fff8ef] p-3 text-sm">
+              <p className="mt-4 rounded-xl bg-[#f3f0e8] p-3 text-sm">
                 {reservation.notes}
               </p>
             )}
+            <label className="mt-4 block text-sm font-bold">
+              Mesa para confirmação
+              <select
+                value={reservation.tableId ?? ''}
+                onChange={(event) => void assignTable(reservation, event.target.value)}
+                disabled={Boolean(busy)}
+                className="mt-2 h-11 w-full rounded-xl border border-[#070a08]/15 bg-[#f3f0e8] px-3 font-normal outline-none focus:border-[#c7a773]"
+              >
+                <option value="">Definir depois</option>
+                {tables.map((table) => (
+                  <option key={table.id} value={table.id}>
+                    {table.name} · até {table.capacity} pessoas
+                  </option>
+                ))}
+              </select>
+              {reservation.tableId && hasConflict(reservation, reservation.tableId) && (
+                <span className="mt-1 block text-xs font-bold text-[#e3262e]">Conflito: revise esta mesa antes de confirmar.</span>
+              )}
+              {reservation.tableId && tableCapacityError(reservation, reservation.tableId) && (
+                <span className="mt-1 block text-xs font-bold text-[#e3262e]">{tableCapacityError(reservation, reservation.tableId)}</span>
+              )}
+            </label>
             {next[reservation.status].length > 0 && (
               <div className="mt-5 flex flex-wrap gap-2">
                 {next[reservation.status].map((status) => (
@@ -167,7 +257,7 @@ export default function ReservationsPage() {
                     key={status}
                     disabled={Boolean(busy)}
                     onClick={() => void change(reservation.id, status)}
-                    className={`inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-xs font-black ${status === 'REFUSED' || status === 'CANCELLED' ? 'bg-[#f8e9ef] text-[#c13a43]' : 'bg-[#180e16] text-white'}`}
+                    className={`inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-xs font-black ${status === 'REFUSED' || status === 'CANCELLED' ? 'bg-[#e8efe5] text-[#e3262e]' : 'bg-[#070a08] text-white'}`}
                   >
                     {busy === `${reservation.id}:${status}` ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -184,7 +274,7 @@ export default function ReservationsPage() {
           </article>
         ))}
         {!reservations.length && (
-          <div className="rounded-[26px] border border-dashed border-[#180e16]/20 p-10 text-center text-sm text-[#765665]">
+          <div className="rounded-[26px] border border-dashed border-[#070a08]/20 p-10 text-center text-sm text-[#7b887d]">
             <CalendarDays className="mx-auto size-8" />
             <p className="mt-3">Nenhuma reserva encontrada.</p>
           </div>

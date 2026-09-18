@@ -29,20 +29,20 @@ export default function CartPage() {
   const previewValid = cart.items.length === preview.items.length;
   if (!cart.items.length)
     return (
-      <main className="min-h-screen bg-[#fff8ef]">
+      <main className="min-h-screen bg-[#f3f0e8]">
         <PublicHeader />
         <div className="mx-auto grid max-w-lg place-items-center px-6 py-24 text-center">
-          <span className="grid size-20 place-items-center rounded-full bg-[#f8e9ef] text-[#8c234f]">
+          <span className="grid size-20 place-items-center rounded-full bg-[#e8efe5] text-[#b5232b]">
             <ShoppingBag className="size-8" />
           </span>
           <h1 className="mt-6 text-3xl font-black tracking-[-.04em]">
             Seu carrinho está vazio
           </h1>
-          <p className="mt-2 text-sm text-[#765665]">
+          <p className="mt-2 text-sm text-[#7b887d]">
             Escolha um item do cardápio para revisar seu pedido.
           </p>
           <Button
-            className="mt-6 h-12 rounded-full bg-[#8c234f] px-6 text-white"
+            className="mt-6 h-12 rounded-full bg-[#b5232b] px-6 text-white"
             nativeButton={false}
             render={<a href="/" />}
           >
@@ -52,24 +52,24 @@ export default function CartPage() {
       </main>
     );
   return (
-    <main className="min-h-screen bg-[#fff8ef] pb-32 text-[#180e16]">
+    <main className="min-h-screen bg-[#f3f0e8] pb-32 text-[#070a08]">
       <PublicHeader />
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_360px]">
         <div>
           <a
             href="/"
-            className="inline-flex items-center gap-2 text-sm font-bold text-[#8c234f]"
+            className="inline-flex items-center gap-2 text-sm font-bold text-[#b5232b]"
           >
             <ArrowLeft className="size-4" /> Continuar pedindo
           </a>
           <h1 className="mt-5 text-4xl font-black tracking-[-.05em]">
             Seu carrinho
           </h1>
-          <p className="mt-2 text-sm text-[#765665]">
+          <p className="mt-2 text-sm text-[#7b887d]">
             Revise cada item antes de finalizar.
           </p>
           {!previewValid && (
-            <p role="alert" className="mt-5 rounded-2xl border border-[#d9b66f] bg-[#fff7ea] p-4 text-sm font-bold text-[#765665]">
+            <p role="alert" className="mt-5 rounded-2xl border border-[#c7a773] bg-[#f3f0e8] p-4 text-sm font-bold text-[#7b887d]">
               Um item ficou indisponível ou ainda está sem preço oficial. Remova-o ou aguarde a unidade publicar o valor.
             </p>
           )}
@@ -90,7 +90,7 @@ export default function CartPage() {
               return (
                 <article
                   key={draft.cartItemId}
-                  className="rounded-[26px] border border-[#8c234f]/10 bg-white p-5 shadow-sm"
+                  className="rounded-[26px] border border-[#b5232b]/10 bg-white p-5 shadow-sm"
                 >
                   <div className="flex items-start gap-4">
                     {product?.imageUrl && (
@@ -107,19 +107,19 @@ export default function CartPage() {
                           'Item indisponível'}
                       </h2>
                       {!priced && (
-                        <p className="mt-2 text-sm font-bold text-[#765665]">
+                        <p className="mt-2 text-sm font-bold text-[#7b887d]">
                           Este item não pode ser finalizado enquanto o preço não estiver disponível.
                         </p>
                       )}
-                      <p className="mt-1 text-sm font-bold text-[#8c234f]">
+                      <p className="mt-1 text-sm font-bold text-[#b5232b]">
                         {priced?.sizeLabel}
                       </p>
-                      <div className="mt-2 space-y-1 text-xs text-[#765665]">
+                      <div className="mt-2 space-y-1 text-xs text-[#7b887d]">
                         {priced?.modifierSelections
                           .filter((group) => group.items.length)
                           .map((group) => (
                             <p key={group.groupId}>
-                              <strong className="text-[#381726]">
+                              <strong className="text-[#173323]">
                                 {group.groupName}:
                               </strong>{' '}
                               {group.items
@@ -132,17 +132,17 @@ export default function CartPage() {
                           ))}
                       </div>
                       {draft.notes && (
-                        <p className="mt-2 text-xs italic text-[#765665]">
+                        <p className="mt-2 text-xs italic text-[#7b887d]">
                           “{draft.notes}”
                         </p>
                       )}
                     </div>
-                    <strong className="shrink-0 text-lg font-black text-[#8c234f]">
+                    <strong className="shrink-0 text-lg font-black text-[#b5232b]">
                       {priced ? formatBRL(priced.totalPriceCents) : '—'}
                     </strong>
                   </div>
-                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#8c234f]/8 pt-4">
-                    <div className="flex items-center rounded-full bg-[#f8e9ef] p-1">
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#b5232b]/8 pt-4">
+                    <div className="flex items-center rounded-full bg-[#e8efe5] p-1">
                       <button
                         onClick={() =>
                           cart.setQuantity(draft.cartItemId, draft.quantity - 1)
@@ -168,21 +168,21 @@ export default function CartPage() {
                     <div className="flex items-center gap-1">
                       <a
                         href={`/montar/${draft.productId}?edit=${draft.cartItemId}`}
-                        className="grid size-9 place-items-center rounded-full text-[#765665] hover:bg-[#f8e9ef]"
+                        className="grid size-9 place-items-center rounded-full text-[#7b887d] hover:bg-[#e8efe5]"
                         aria-label="Editar item"
                       >
                         <Pencil className="size-4" />
                       </a>
                       <button
                         onClick={() => cart.duplicate(draft.cartItemId)}
-                        className="grid size-9 place-items-center rounded-full text-[#765665] hover:bg-[#f8e9ef]"
+                        className="grid size-9 place-items-center rounded-full text-[#7b887d] hover:bg-[#e8efe5]"
                         aria-label="Pedir outro igual"
                       >
                         <Copy className="size-4" />
                       </button>
                       <button
                         onClick={() => cart.remove(draft.cartItemId)}
-                        className="grid size-9 place-items-center rounded-full text-[#c13a43] hover:bg-[#f8e9ef]"
+                        className="grid size-9 place-items-center rounded-full text-[#e3262e] hover:bg-[#e8efe5]"
                         aria-label="Remover item"
                       >
                         <Trash2 className="size-4" />
@@ -198,24 +198,24 @@ export default function CartPage() {
           <Summary subtotal={preview.subtotalCents} valid={previewValid} />
         </aside>
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#8c234f]/10 bg-white/95 p-3 shadow-[0_-12px_35px_rgba(53,25,36,.1)] backdrop-blur-xl lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#b5232b]/10 bg-white/95 p-3 shadow-[0_-12px_35px_rgba(53,25,36,.1)] backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           <div className="flex-1">
-            <span className="block text-xs text-[#765665]">Subtotal</span>
-            <strong className="text-xl font-black text-[#8c234f]">
+            <span className="block text-xs text-[#7b887d]">Subtotal</span>
+            <strong className="text-xl font-black text-[#b5232b]">
               {formatBRL(preview.subtotalCents)}
             </strong>
           </div>
           {previewValid ? (
             <Button
-              className="h-12 rounded-full bg-[#8c234f] px-6 font-black text-white"
+              className="h-12 rounded-full bg-[#b5232b] px-6 font-black text-white"
               nativeButton={false}
               render={<a href="/checkout" />}
             >
               Finalizar pedido
             </Button>
           ) : (
-            <span className="text-right text-xs font-bold text-[#765665]">Revise os itens acima</span>
+            <span className="text-right text-xs font-bold text-[#7b887d]">Revise os itens acima</span>
           )}
         </div>
       </div>
@@ -225,7 +225,7 @@ export default function CartPage() {
 
 function Summary({ subtotal, valid }: { subtotal: number; valid: boolean }) {
   return (
-    <div className="sticky top-26 rounded-[28px] bg-[#180e16] p-6 text-white">
+    <div className="sticky top-26 rounded-[28px] bg-[#070a08] p-6 text-white">
       <h2 className="text-xl font-black">Resumo</h2>
       <div className="mt-5 flex justify-between text-sm text-white/70">
         <span>Subtotal</span>
@@ -237,7 +237,7 @@ function Summary({ subtotal, valid }: { subtotal: number; valid: boolean }) {
       </p>
       {valid ? (
         <Button
-          className="mt-6 h-12 w-full rounded-full bg-[#d9ed55] font-black text-[#180e16] hover:bg-[#d9ed55]"
+          className="mt-6 h-12 w-full rounded-full bg-[#d6e7bf] font-black text-[#070a08] hover:bg-[#d6e7bf]"
           nativeButton={false}
           render={<a href="/checkout" />}
         >

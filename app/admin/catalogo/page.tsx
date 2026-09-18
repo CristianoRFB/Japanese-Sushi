@@ -141,13 +141,13 @@ export default function CatalogPage() {
     <AdminShell adminOnly>
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#b13b6b]">
+          <p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#8b1e2b]">
             Cardápio
           </p>
           <h1 className="mt-2 text-3xl font-black tracking-[-.04em]">
             Produtos e tamanhos
           </h1>
-          <p className="mt-2 text-sm text-[#765665]">
+          <p className="mt-2 text-sm text-[#7b887d]">
             Alterações publicadas aparecem sem novo deploy.
           </p>
         </div>
@@ -164,7 +164,7 @@ export default function CatalogPage() {
               setEditing(null);
               setShowForm(true);
             }}
-            className="rounded-full bg-[#8c234f] text-white"
+            className="rounded-full bg-[#b5232b] text-white"
           >
             <Plus /> Produto
           </Button>
@@ -180,7 +180,7 @@ export default function CatalogPage() {
               <div className="flex min-w-0 items-start gap-3">
                 <img src={product.imageUrl || '/brand/teiko-sushi-atmosphere.png'} alt={`Foto de ${product.name}`} className="size-16 shrink-0 rounded-2xl object-cover" loading="lazy" />
                 <div>
-                <span className="text-xs font-bold text-[#b13b6b]">
+                <span className="text-xs font-bold text-[#8b1e2b]">
                   {
                     categories.find(
                       (category) => category.id === product.categoryId,
@@ -197,19 +197,19 @@ export default function CatalogPage() {
                     { active: !product.active, updatedAt: serverTimestamp() },
                   )
                 }
-                className={`rounded-full px-2.5 py-1 text-[10px] font-black ${product.active ? product.sizes.every((size) => size.basePriceCents <= 0) ? 'bg-[#fff7ea] text-[#765665]' : 'bg-[#d9ed55]/25 text-[#65741f]' : 'bg-[#ead9e1] text-[#765665]'}`}
+                className={`rounded-full px-2.5 py-1 text-[10px] font-black ${product.active ? product.sizes.every((size) => size.basePriceCents <= 0) ? 'bg-[#f3f0e8] text-[#7b887d]' : 'bg-[#d6e7bf]/25 text-[#3a5b35]' : 'bg-[#d6ded4] text-[#7b887d]'}`}
               >
                 {product.active ? product.sizes.every((size) => size.basePriceCents <= 0) ? 'ATIVO · PREÇO PENDENTE' : 'ATIVO' : 'INATIVO'}
               </button>
             </div>
-            <p className="mt-2 line-clamp-2 text-sm text-[#765665]">
+            <p className="mt-2 line-clamp-2 text-sm text-[#7b887d]">
               {product.description}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {product.sizes.map((size) => (
                 <span
                   key={size.id}
-                  className="rounded-full bg-[#f8e9ef] px-2.5 py-1 text-xs font-bold text-[#8c234f]"
+                  className="rounded-full bg-[#e8efe5] px-2.5 py-1 text-xs font-bold text-[#b5232b]"
                 >
                   {size.label} • {size.basePriceCents > 0 ? formatBRL(size.basePriceCents) : 'Preço pendente'}
                 </span>
@@ -220,7 +220,7 @@ export default function CatalogPage() {
                 setEditing(product);
                 setShowForm(true);
               }}
-              className="mt-5 text-sm font-black text-[#8c234f]"
+              className="mt-5 text-sm font-black text-[#b5232b]"
             >
               Editar produto
             </button>
@@ -228,7 +228,7 @@ export default function CatalogPage() {
         ))}
       </div>
       {showForm && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#180e16]/50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#070a08]/50 p-4 backdrop-blur-sm">
           <form
             onSubmit={save}
             className="mx-auto my-4 max-w-2xl rounded-[28px] bg-white p-5 shadow-2xl sm:p-7"
@@ -240,7 +240,7 @@ export default function CatalogPage() {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="grid size-9 place-items-center rounded-full bg-[#f8e9ef]"
+                className="grid size-9 place-items-center rounded-full bg-[#e8efe5]"
               >
                 <X className="size-4" />
               </button>
@@ -264,7 +264,7 @@ export default function CatalogPage() {
                   name="categoryId"
                   required
                   defaultValue={editing?.categoryId}
-                  className="mt-2 h-11 w-full rounded-xl border bg-[#fff8ef] px-3 font-normal"
+                  className="mt-2 h-11 w-full rounded-xl border bg-[#f3f0e8] px-3 font-normal"
                 >
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
@@ -278,7 +278,7 @@ export default function CatalogPage() {
                 <select
                   name="productType"
                   defaultValue={editing?.productType ?? 'CUSTOMIZABLE'}
-                  className="mt-2 h-11 w-full rounded-xl border bg-[#fff8ef] px-3 font-normal"
+                  className="mt-2 h-11 w-full rounded-xl border bg-[#f3f0e8] px-3 font-normal"
                 >
                   <option value="CUSTOMIZABLE">Personalizável</option>
                   <option value="SIMPLE">Simples</option>
@@ -336,14 +336,14 @@ export default function CatalogPage() {
             {error && (
               <p
                 role="alert"
-                className="mt-4 rounded-xl bg-[#f8e9ef] p-3 text-sm text-[#c13a43]"
+                className="mt-4 rounded-xl bg-[#e8efe5] p-3 text-sm text-[#e3262e]"
               >
                 {error}
               </p>
             )}
             <Button
               type="submit"
-              className="mt-6 h-11 w-full rounded-full bg-[#8c234f] font-black text-white"
+              className="mt-6 h-11 w-full rounded-full bg-[#b5232b] font-black text-white"
             >
               <Save /> Salvar produto
             </Button>

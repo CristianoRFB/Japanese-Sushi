@@ -318,15 +318,15 @@ export default function CheckoutPage() {
 
   if (!cart.items.length)
     return (
-      <main className="min-h-screen bg-[#fff8ef]">
+      <main className="min-h-screen bg-[#f3f0e8]">
         <PublicHeader />
         <div className="mx-auto max-w-lg px-6 py-24 text-center">
           <h1 className="text-3xl font-black">Carrinho vazio</h1>
-          <p className="mt-2 text-sm text-[#765665]">
+          <p className="mt-2 text-sm text-[#7b887d]">
             Adicione um produto antes de ir ao checkout.
           </p>
           <Button
-            className="mt-6 rounded-full bg-[#8c234f] text-white"
+            className="mt-6 rounded-full bg-[#b5232b] text-white"
             nativeButton={false}
             render={<a href="/" />}
           >
@@ -337,7 +337,7 @@ export default function CheckoutPage() {
     );
 
   return (
-    <main className="min-h-screen bg-[#fff8ef] pb-12 text-[#180e16]">
+    <main className="min-h-screen bg-[#f3f0e8] pb-12 text-[#070a08]">
       <PublicHeader />
       <form
         onSubmit={submit}
@@ -345,24 +345,24 @@ export default function CheckoutPage() {
       >
         <div>
           {!previewValid && (
-            <div role="alert" className="mb-5 rounded-2xl border border-[#d9b66f] bg-[#fff7ea] p-4 text-sm font-bold text-[#765665]">
+            <div role="alert" className="mb-5 rounded-2xl border border-[#c7a773] bg-[#f3f0e8] p-4 text-sm font-bold text-[#7b887d]">
               Um item do seu carrinho ficou indisponível ou ainda está sem preço oficial. Volte ao carrinho para revisar antes de continuar.
             </div>
           )}
           <a
             href="/carrinho"
-            className="inline-flex items-center gap-2 text-sm font-bold text-[#8c234f]"
+            className="inline-flex items-center gap-2 text-sm font-bold text-[#b5232b]"
           >
             <ArrowLeft className="size-4" /> Voltar ao carrinho
           </a>
           <h1 className="mt-5 text-4xl font-black tracking-[-.05em]">
             Revisar e finalizar
           </h1>
-          <p className="mt-2 text-sm text-[#765665]">
+          <p className="mt-2 text-sm text-[#7b887d]">
             Informe onde receber, a forma de pagamento e o troco, se precisar.
           </p>
           <div
-            className={`mt-5 rounded-2xl border p-4 text-sm ${availability.acceptingOrders ? 'border-[#d9ed55]/55 bg-[#d9ed55]/25 text-[#65741f]' : 'border-[#d9b66f]/60 bg-[#fff7ea] text-[#765665]'}`}
+            className={`mt-5 rounded-2xl border p-4 text-sm ${availability.acceptingOrders ? 'border-[#d6e7bf]/55 bg-[#d6e7bf]/25 text-[#3a5b35]' : 'border-[#c7a773]/60 bg-[#f3f0e8] text-[#7b887d]'}`}
           >
             <strong className="flex items-center gap-2">
               <Clock3 className="size-4" />
@@ -383,7 +383,7 @@ export default function CheckoutPage() {
             )}
           </div>
           {development && (
-            <div className="mt-3 rounded-2xl border border-[#d9b66f]/60 bg-[#fff7ea] p-4 text-xs leading-relaxed text-[#765665]">
+            <div className="mt-3 rounded-2xl border border-[#c7a773]/60 bg-[#f3f0e8] p-4 text-xs leading-relaxed text-[#7b887d]">
               <strong>Ambiente de desenvolvimento.</strong> O envio exige que os
               emuladores Firebase estejam rodando; nenhum pedido é fingido como
               concluído.
@@ -401,10 +401,10 @@ export default function CheckoutPage() {
                     setFulfillment(mode);
                     setError('');
                   }}
-                  className={`flex min-h-20 items-center gap-3 rounded-[20px] border-2 p-4 text-left ${fulfillment === mode ? 'border-[#8c234f] bg-[#f8e9ef]' : 'border-[#ead9e1]'}`}
+                  className={`flex min-h-20 items-center gap-3 rounded-[20px] border-2 p-4 text-left ${fulfillment === mode ? 'border-[#b5232b] bg-[#e8efe5]' : 'border-[#d6ded4]'}`}
                 >
                   <span
-                    className={`grid size-10 place-items-center rounded-full ${fulfillment === mode ? 'bg-[#8c234f] text-white' : 'bg-[#f8e9ef]'}`}
+                    className={`grid size-10 place-items-center rounded-full ${fulfillment === mode ? 'bg-[#b5232b] text-white' : 'bg-[#e8efe5]'}`}
                   >
                     {mode === 'PICKUP' ? (
                       <Store className="size-5" />
@@ -418,7 +418,7 @@ export default function CheckoutPage() {
                         ? 'Retirar na loja'
                         : 'Receber em casa'}
                     </strong>
-                    <small className="text-[#765665]">
+                    <small className="text-[#7b887d]">
                       {mode === 'PICKUP'
                         ? 'Sem taxa de entrega'
                         : config.deliveryConfig.mode === 'CONFIRM'
@@ -462,7 +462,7 @@ export default function CheckoutPage() {
           {fulfillment === 'DELIVERY' && (
             <CheckoutSection
               title="Endereço de entrega"
-              icon={<MapPin className="size-5 text-[#8c234f]" />}
+              icon={<MapPin className="size-5 text-[#b5232b]" />}
             >
               {config.deliveryConfig.mode === 'ZONES' && (
                 <label className="mb-4 block text-sm font-bold">
@@ -471,7 +471,7 @@ export default function CheckoutPage() {
                     required
                     value={zoneId}
                     onChange={(event) => setZoneId(event.target.value)}
-                    className="mt-2 h-12 w-full rounded-2xl border border-[#8c234f]/15 bg-[#fff8ef] px-4 font-normal outline-none focus:border-[#8c234f]"
+                    className="mt-2 h-12 w-full rounded-2xl border border-[#b5232b]/15 bg-[#f3f0e8] px-4 font-normal outline-none focus:border-[#b5232b]"
                   >
                     <option value="">Selecione</option>
                     {config.deliveryConfig.zones
@@ -544,7 +544,7 @@ export default function CheckoutPage() {
           )}
 
           <CheckoutSection title="Pagamento na retirada/entrega">
-            <p className="mb-4 text-xs text-[#765665]">
+            <p className="mb-4 text-xs text-[#7b887d]">
               Não coletamos dados de cartão.
             </p>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -554,14 +554,14 @@ export default function CheckoutPage() {
                   type="button"
                   aria-pressed={paymentMethod === method}
                   onClick={() => selectPayment(method)}
-                  className={`min-h-14 rounded-2xl border-2 p-3 text-sm font-bold ${paymentMethod === method ? 'border-[#8c234f] bg-[#f8e9ef]' : 'border-[#ead9e1]'}`}
+                  className={`min-h-14 rounded-2xl border-2 p-3 text-sm font-bold ${paymentMethod === method ? 'border-[#b5232b] bg-[#e8efe5]' : 'border-[#d6ded4]'}`}
                 >
                   {paymentLabels[method]}
                 </button>
               ))}
             </div>
             {paymentMethod === 'CASH' && (
-              <div className="mt-5 rounded-[20px] bg-[#fff8ef] p-4">
+              <div className="mt-5 rounded-[20px] bg-[#f3f0e8] p-4">
                 <p className="text-sm font-black">Precisa de troco?</p>
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <button
@@ -572,7 +572,7 @@ export default function CheckoutPage() {
                       setChangeFor('');
                       setError('');
                     }}
-                    className={`min-h-12 rounded-2xl border-2 text-sm font-bold ${needsChange === false ? 'border-[#8c234f] bg-white text-[#8c234f]' : 'border-[#ead9e1]'}`}
+                    className={`min-h-12 rounded-2xl border-2 text-sm font-bold ${needsChange === false ? 'border-[#b5232b] bg-white text-[#b5232b]' : 'border-[#d6ded4]'}`}
                   >
                     Não
                   </button>
@@ -583,7 +583,7 @@ export default function CheckoutPage() {
                       setNeedsChange(true);
                       setError('');
                     }}
-                    className={`min-h-12 rounded-2xl border-2 text-sm font-bold ${needsChange === true ? 'border-[#8c234f] bg-white text-[#8c234f]' : 'border-[#ead9e1]'}`}
+                    className={`min-h-12 rounded-2xl border-2 text-sm font-bold ${needsChange === true ? 'border-[#b5232b] bg-white text-[#b5232b]' : 'border-[#d6ded4]'}`}
                   >
                     Sim
                   </button>
@@ -617,7 +617,7 @@ export default function CheckoutPage() {
               onChange={(event) =>
                 updateField('orderNotes', event.target.value)
               }
-              className="min-h-24 w-full rounded-[18px] border border-[#8c234f]/15 bg-[#fff8ef] p-4 text-sm outline-none focus:border-[#8c234f]"
+              className="min-h-24 w-full rounded-[18px] border border-[#b5232b]/15 bg-[#f3f0e8] p-4 text-sm outline-none focus:border-[#b5232b]"
               placeholder="Opcional"
             />
           </CheckoutSection>
@@ -626,7 +626,7 @@ export default function CheckoutPage() {
             <div
               role="alert"
               aria-live="assertive"
-              className="mt-5 rounded-2xl border border-[#c13a43]/30 bg-[#f8e9ef] p-4 text-sm font-bold text-[#c13a43]"
+              className="mt-5 rounded-2xl border border-[#e3262e]/30 bg-[#e8efe5] p-4 text-sm font-bold text-[#e3262e]"
             >
               <p>{error}</p>
               <span className="mt-1 block font-normal">
@@ -637,7 +637,7 @@ export default function CheckoutPage() {
                   href={whatsappFallbackUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-3 inline-flex rounded-full bg-[#65741f] px-4 py-2 font-bold text-white"
+                  className="mt-3 inline-flex rounded-full bg-[#3a5b35] px-4 py-2 font-bold text-white"
                 >
                   Enviar pedido pelo WhatsApp
                 </a>
@@ -647,7 +647,7 @@ export default function CheckoutPage() {
         </div>
 
         <aside>
-          <div className="sticky top-26 rounded-[28px] bg-[#180e16] p-6 text-white shadow-[0_22px_50px_rgba(53,25,36,.16)]">
+          <div className="sticky top-26 rounded-[28px] bg-[#070a08] p-6 text-white shadow-[0_22px_50px_rgba(53,25,36,.16)]">
             <h2 className="text-xl font-black">Resumo final</h2>
             <div className="mt-5 space-y-4 border-b border-white/10 pb-5">
               {preview.items.map((item, index) => (
@@ -749,7 +749,7 @@ export default function CheckoutPage() {
               </div>
               <div className="mt-5 flex items-end justify-between">
                 <span className="text-sm">Total previsto</span>
-                <strong className="text-3xl font-black text-[#d9b66f]">
+                <strong className="text-3xl font-black text-[#c7a773]">
                   {formatBRL(totalCents)}
                 </strong>
               </div>
@@ -761,7 +761,7 @@ export default function CheckoutPage() {
             <Button
               type="submit"
               disabled={submitting || !availability.acceptingOrders}
-              className="mt-6 h-12 w-full rounded-full bg-[#d9ed55] font-black text-[#180e16] hover:bg-[#d9ed55] disabled:bg-white/15 disabled:text-white/55"
+              className="mt-6 h-12 w-full rounded-full bg-[#d6e7bf] font-black text-[#070a08] hover:bg-[#d6e7bf] disabled:bg-white/15 disabled:text-white/55"
             >
               {submitting ? (
                 <>
@@ -822,7 +822,7 @@ function Field(
       <input
         name={name}
         {...input}
-        className="mt-2 h-12 w-full rounded-2xl border border-[#8c234f]/15 bg-[#fff8ef] px-4 font-normal outline-none focus:border-[#8c234f] focus:ring-2 focus:ring-[#8c234f]/15"
+        className="mt-2 h-12 w-full rounded-2xl border border-[#b5232b]/15 bg-[#f3f0e8] px-4 font-normal outline-none focus:border-[#b5232b] focus:ring-2 focus:ring-[#b5232b]/15"
       />
     </label>
   );

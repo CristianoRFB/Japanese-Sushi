@@ -182,19 +182,19 @@ export default function OrderPage() {
   }
   if (loading)
     return (
-      <main className="grid min-h-screen place-items-center bg-[#fff8ef]">
-        <RefreshCw className="size-6 animate-spin text-[#8c234f]" />
+      <main className="grid min-h-screen place-items-center bg-[#f3f0e8]">
+        <RefreshCw className="size-6 animate-spin text-[#b5232b]" />
       </main>
     );
   if (!order)
     return (
-      <main className="min-h-screen bg-[#fff8ef]">
+      <main className="min-h-screen bg-[#f3f0e8]">
         <PublicHeader />
         <div className="mx-auto max-w-lg px-6 py-24 text-center">
           <h1 className="text-3xl font-black">Não encontramos esse pedido</h1>
-          <p className="mt-2 text-sm text-[#765665]">{error}</p>
+          <p className="mt-2 text-sm text-[#7b887d]">{error}</p>
           <Button
-            className="mt-6 rounded-full bg-[#8c234f] text-white"
+            className="mt-6 rounded-full bg-[#b5232b] text-white"
             onClick={load}
           >
             Tentar novamente
@@ -206,12 +206,12 @@ export default function OrderPage() {
     step.statuses.includes(order.status),
   );
   return (
-    <main className="min-h-screen bg-[#fff8ef] text-[#180e16]">
+    <main className="min-h-screen bg-[#f3f0e8] text-[#070a08]">
       <PublicHeader />
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <div className="rounded-[32px] bg-[#180e16] p-6 text-white sm:p-9">
+        <div className="rounded-[32px] bg-[#070a08] p-6 text-white sm:p-9">
           {search.get('novo') === '1' && (
-            <span className="inline-flex items-center gap-2 rounded-full bg-[#d9ed55] px-3 py-1.5 text-xs font-black text-[#180e16]">
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#d6e7bf] px-3 py-1.5 text-xs font-black text-[#070a08]">
               <Check className="size-3.5" /> Pedido salvo
             </span>
           )}
@@ -230,7 +230,7 @@ export default function OrderPage() {
               return (
                 <div key={step.label} className="text-center">
                   <span
-                    className={`mx-auto grid size-9 place-items-center rounded-full ${done ? 'bg-[#d9ed55] text-[#180e16]' : 'bg-white/10 text-white/35'}`}
+                    className={`mx-auto grid size-9 place-items-center rounded-full ${done ? 'bg-[#d6e7bf] text-[#070a08]' : 'bg-white/10 text-white/35'}`}
                   >
                     <Icon className="size-4" />
                   </span>
@@ -244,41 +244,41 @@ export default function OrderPage() {
             })}
           </div>
           {order.status === 'CANCELLED' && (
-            <div className="mt-6 rounded-2xl bg-[#c13a43]/15 p-4 text-sm font-bold text-[#ffe1e1]">
+            <div className="mt-6 rounded-2xl bg-[#e3262e]/15 p-4 text-sm font-bold text-[#ffe1e1]">
               Este pedido foi cancelado. Entre em contato com a loja se precisar
               de ajuda.
             </div>
           )}
         </div>
-        <section className="mt-5 rounded-[24px] border border-[#d9b66f]/40 bg-[#fff7ea] p-5">
+        <section className="mt-5 rounded-[24px] border border-[#c7a773]/40 bg-[#f3f0e8] p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[.16em] text-[#8c234f]">Guarde para consultar</p>
+              <p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Guarde para consultar</p>
               <h2 className="mt-1 text-lg font-black">Código do pedido</h2>
-              <p className="mt-1 text-sm text-[#765665]">Use este código sempre que quiser acompanhar este pedido.</p>
+              <p className="mt-1 text-sm text-[#7b887d]">Use este código sempre que quiser acompanhar este pedido.</p>
             </div>
-            <Button type="button" variant="outline" onClick={() => void copyCode()} className="rounded-full border-[#8c234f]/20 text-[#8c234f]">{copied ? 'Copiado' : 'Copiar código'}</Button>
+            <Button type="button" variant="outline" onClick={() => void copyCode()} className="rounded-full border-[#b5232b]/20 text-[#b5232b]">{copied ? 'Copiado' : 'Copiar código'}</Button>
           </div>
-          <code className="mt-4 block overflow-x-auto rounded-xl bg-[#180e16] px-4 py-3 text-center text-sm font-black tracking-[.12em] text-[#d9ed55]">{publicCode}</code>
+          <code className="mt-4 block overflow-x-auto rounded-xl bg-[#070a08] px-4 py-3 text-center text-sm font-black tracking-[.12em] text-[#d6e7bf]">{publicCode}</code>
         </section>
         {order.customerApproval === 'PENDING' && order.proposedChanges && (
-          <section className="mt-5 rounded-[28px] border-2 border-[#d9b66f] bg-[#f8e9ef] p-5 sm:p-6">
-            <p className="text-xs font-black uppercase tracking-[.16em] text-[#8c234f]">Atenção necessária</p>
+          <section className="mt-5 rounded-[28px] border-2 border-[#c7a773] bg-[#e8efe5] p-5 sm:p-6">
+            <p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Atenção necessária</p>
             <h2 className="mt-2 text-2xl font-black">A unidade propôs uma alteração</h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#765665]">Confira a nova composição abaixo. O pedido só segue depois que você decidir.</p>
-            {order.proposedChanges.reason && <p className="mt-3 rounded-xl bg-white/70 p-3 text-sm font-bold text-[#180e16]">{order.proposedChanges.reason}</p>}
+            <p className="mt-2 text-sm leading-relaxed text-[#7b887d]">Confira a nova composição abaixo. O pedido só segue depois que você decidir.</p>
+            {order.proposedChanges.reason && <p className="mt-3 rounded-xl bg-white/70 p-3 text-sm font-bold text-[#070a08]">{order.proposedChanges.reason}</p>}
             <div className="mt-4 space-y-2 rounded-2xl bg-white p-4">
-              {order.proposedChanges.items.map((item, index) => <div key={`${item.productId}-${index}`} className="flex items-center justify-between gap-3 border-b border-[#8c234f]/10 py-2 last:border-0"><span className="text-sm font-bold">{item.quantity}x {item.productName}</span><strong className="text-sm text-[#8c234f]">{formatBRL(item.totalPriceCents)}</strong></div>)}
-              <div className="flex justify-between border-t border-[#8c234f]/15 pt-3"><span className="text-sm font-bold">Novo total</span><strong className="text-lg text-[#8c234f]">{formatBRL(order.proposedChanges.pricing.totalCents)}</strong></div>
+              {order.proposedChanges.items.map((item, index) => <div key={`${item.productId}-${index}`} className="flex items-center justify-between gap-3 border-b border-[#b5232b]/10 py-2 last:border-0"><span className="text-sm font-bold">{item.quantity}x {item.productName}</span><strong className="text-sm text-[#b5232b]">{formatBRL(item.totalPriceCents)}</strong></div>)}
+              <div className="flex justify-between border-t border-[#b5232b]/15 pt-3"><span className="text-sm font-bold">Novo total</span><strong className="text-lg text-[#b5232b]">{formatBRL(order.proposedChanges.pricing.totalCents)}</strong></div>
             </div>
-            {(decisionError || decisionMessage) && <p role="alert" className="mt-4 rounded-xl bg-white p-3 text-sm font-bold text-[#8c234f]">{decisionError || decisionMessage}</p>}
-            {!decisionMessage && <div className="mt-4 grid gap-2 sm:grid-cols-2"><Button type="button" disabled={decisionBusy} onClick={() => void decideOnChanges(true)} className="h-12 rounded-full bg-[#8c234f] font-black text-white">{decisionBusy ? 'Salvando…' : 'Aceitar alterações'}</Button><Button type="button" disabled={decisionBusy} onClick={() => void decideOnChanges(false)} variant="outline" className="h-12 rounded-full border-[#8c234f]/30 font-black text-[#8c234f]">Recusar e encerrar pedido</Button></div>}
+            {(decisionError || decisionMessage) && <p role="alert" className="mt-4 rounded-xl bg-white p-3 text-sm font-bold text-[#b5232b]">{decisionError || decisionMessage}</p>}
+            {!decisionMessage && <div className="mt-4 grid gap-2 sm:grid-cols-2"><Button type="button" disabled={decisionBusy} onClick={() => void decideOnChanges(true)} className="h-12 rounded-full bg-[#b5232b] font-black text-white">{decisionBusy ? 'Salvando…' : 'Aceitar alterações'}</Button><Button type="button" disabled={decisionBusy} onClick={() => void decideOnChanges(false)} variant="outline" className="h-12 rounded-full border-[#b5232b]/30 font-black text-[#b5232b]">Recusar e encerrar pedido</Button></div>}
           </section>
         )}
         <section className="mt-6 rounded-[28px] bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-black">Resumo</h2>
-            <strong className="text-xl font-black text-[#8c234f]">
+            <strong className="text-xl font-black text-[#b5232b]">
               {formatBRL(order.pricing.totalCents)}
             </strong>
           </div>
@@ -286,7 +286,7 @@ export default function OrderPage() {
             {order.items.map((item, index) => (
               <div
                 key={index}
-                className="border-t border-[#8c234f]/8 pt-4 first:border-0 first:pt-0"
+                className="border-t border-[#b5232b]/8 pt-4 first:border-0 first:pt-0"
               >
                 <div className="flex justify-between gap-3">
                   <strong>
@@ -296,13 +296,13 @@ export default function OrderPage() {
                     {formatBRL(itemTotal(item))}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-[#765665]">{item.sizeLabel}</p>
+                <p className="mt-1 text-xs text-[#7b887d]">{item.sizeLabel}</p>
                 {(item.modifierSelections ?? [])
                   .filter((group) => group.items.length)
                   .map((group) => (
                     <p
                       key={group.groupId}
-                      className="mt-1 text-xs text-[#765665]"
+                      className="mt-1 text-xs text-[#7b887d]"
                     >
                       {group.groupName}:{' '}
                       {group.items
@@ -327,7 +327,7 @@ export default function OrderPage() {
           </Button>
           {config.whatsappEnabled && config.whatsappNumber && (
             <Button
-              className="h-12 flex-1 rounded-full bg-[#65741f] text-white hover:bg-[#65741f]"
+              className="h-12 flex-1 rounded-full bg-[#3a5b35] text-white hover:bg-[#3a5b35]"
               nativeButton={false}
               render={
                 <a href={whatsappUrl()} target="_blank" rel="noreferrer" />
@@ -337,7 +337,7 @@ export default function OrderPage() {
             </Button>
           )}
         </div>
-        <p className="mt-5 text-center text-xs text-[#765665]">
+        <p className="mt-5 text-center text-xs text-[#7b887d]">
           Guarde este link para acompanhar o pedido. O código não permite listar
           outros pedidos.
         </p>

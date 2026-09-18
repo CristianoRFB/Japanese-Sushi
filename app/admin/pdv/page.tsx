@@ -110,13 +110,13 @@ export default function PosPage() {
   return (
     <AdminShell>
       <div>
-        <p className="text-xs font-black uppercase tracking-[.18em] text-[#c13a43]">
+        <p className="text-xs font-black uppercase tracking-[.18em] text-[#e3262e]">
           Atendimento interno
         </p>
         <h1 className="mt-2 flex items-center gap-3 text-3xl font-black">
           <ShoppingBag className="size-8" /> PDV
         </h1>
-        <p className="mt-2 text-sm text-[#765665]">
+        <p className="mt-2 text-sm text-[#7b887d]">
           Crie um pedido de balcão usando o mesmo domínio do canal público.
         </p>
       </div>
@@ -189,7 +189,7 @@ export default function PosPage() {
         {error && (
           <p
             role="alert"
-            className="mt-4 rounded-xl bg-[#f8e9ef] p-3 text-sm text-[#c13a43]"
+            className="mt-4 rounded-xl bg-[#e8efe5] p-3 text-sm text-[#e3262e]"
           >
             {error}
           </p>
@@ -197,7 +197,7 @@ export default function PosPage() {
         {result && (
           <p
             role="status"
-            className="mt-4 rounded-xl bg-[#d9ed55]/25 p-3 text-sm text-[#65741f]"
+            className="mt-4 rounded-xl bg-[#d6e7bf]/25 p-3 text-sm text-[#3a5b35]"
           >
             {result}
           </p>
@@ -205,7 +205,7 @@ export default function PosPage() {
         <Button
           type="submit"
           disabled={busy || !catalog.products.length}
-          className="mt-6 h-12 rounded-full bg-[#180e16] px-6 font-black text-white"
+          className="mt-6 h-12 rounded-full bg-[#070a08] px-6 font-black text-white"
         >
           {busy ? <Loader2 className="animate-spin" /> : <ArrowRight />} Criar
           pedido
@@ -228,7 +228,7 @@ function Field(
       <input
         name={name}
         {...input}
-        className="mt-2 h-12 w-full rounded-2xl border px-4 font-normal outline-none focus:border-[#c13a43]"
+        className="mt-2 h-12 w-full rounded-2xl border px-4 font-normal outline-none focus:border-[#e3262e]"
       />
     </label>
   );

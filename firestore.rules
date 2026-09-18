@@ -171,8 +171,28 @@ service cloud.firestore {
       allow update: if isStaff()
         && brand(resource.data)
         && brand(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'statusHistory'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'statusHistory', 'tableId'])
+        && (!request.resource.data.keys().hasAny(['tableId']) || request.resource.data.tableId is string)
         && validReservationTransition();
+      allow delete: if false;
+    }
+
+    match /tables/{id} {
+      allow read: if isStaff() && brand(resource.data);
+      allow create: if isAdmin()
+        && brand(request.resource.data)
+        && request.resource.data.unitId == publicConfig().defaultUnitId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 40
+        && request.resource.data.capacity is int
+        && request.resource.data.capacity >= 1
+        && request.resource.data.capacity <= 30
+        && request.resource.data.active is bool;
+      allow update: if isAdmin()
+        && brand(resource.data)
+        && brand(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'capacity', 'active', 'displayOrder', 'updatedAt']);
       allow delete: if false;
     }
 

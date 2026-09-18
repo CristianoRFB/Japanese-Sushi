@@ -57,7 +57,7 @@ body {
 button, a, input, textarea, select { outline-offset: 3px; }
 
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
-  outline: 3px solid #d9b66f;
+  outline: 3px solid #c7a773;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -112,7 +112,7 @@ img, svg, video, canvas { max-width: 100%; }
   --primary-foreground: var(--teiko-paper);
   --secondary: var(--teiko-gold);
   --secondary-foreground: var(--teiko-ink);
-  --muted: #f8e9ef;
+  --muted: #e8efe5;
   --muted-foreground: var(--teiko-muted);
   --accent: var(--teiko-gold);
   --accent-foreground: var(--teiko-ink);
@@ -148,7 +148,7 @@ img, svg, video, canvas { max-width: 100%; }
   --secondary: var(--teiko-gold);
   --secondary-foreground: var(--teiko-ink);
   --muted: var(--teiko-plum);
-  --muted-foreground: #d9c4cf;
+  --muted-foreground: #c1cdc3;
   --accent: var(--teiko-gold);
   --accent-foreground: var(--teiko-ink);
   --destructive: var(--teiko-cherry);

@@ -95,45 +95,45 @@ export default function PromotionsPage() {
     <AdminShell adminOnly>
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#b13b6b]">Comunicação</p>
+          <p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#8b1e2b]">Comunicação</p>
           <h1 className="mt-2 text-3xl font-black tracking-[-.04em]">Promoções</h1>
-          <p className="mt-2 text-sm text-[#765665]">Crie ofertas para o período e produtos escolhidos. As promoções ativas aparecem no cardápio.</p>
+          <p className="mt-2 text-sm text-[#7b887d]">Crie ofertas para o período e produtos escolhidos. As promoções ativas aparecem no cardápio.</p>
         </div>
-        <Button onClick={() => { setEditing(null); setError(''); setShowForm(true); }} className="rounded-full bg-[#8c234f] text-white"><Plus /> Nova promoção</Button>
+        <Button onClick={() => { setEditing(null); setError(''); setShowForm(true); }} className="rounded-full bg-[#b5232b] text-white"><Plus /> Nova promoção</Button>
       </div>
-      {error && <p role="alert" className="mt-5 rounded-2xl border border-[#c13a43]/25 bg-[#f8e9ef] p-4 text-sm font-bold text-[#c13a43]">{error}</p>}
+      {error && <p role="alert" className="mt-5 rounded-2xl border border-[#e3262e]/25 bg-[#e8efe5] p-4 text-sm font-bold text-[#e3262e]">{error}</p>}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {promotions.map((promotion) => (
           <article key={promotion.id} className="rounded-[24px] bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
-              <span className="grid size-10 place-items-center rounded-full bg-[#f8e9ef] text-[#8c234f]"><BadgePercent className="size-5" /></span>
-              <button onClick={() => updateDoc(doc(getFirebaseClient().db, 'promotions', promotion.id), { active: !promotion.active, updatedAt: serverTimestamp() })} className={`rounded-full px-2.5 py-1 text-[10px] font-black ${promotion.active ? 'bg-[#d9ed55]/25 text-[#65741f]' : 'bg-[#ead9e1] text-[#765665]'}`}>{promotion.active ? 'ATIVA' : 'PAUSADA'}</button>
+              <span className="grid size-10 place-items-center rounded-full bg-[#e8efe5] text-[#b5232b]"><BadgePercent className="size-5" /></span>
+              <button onClick={() => updateDoc(doc(getFirebaseClient().db, 'promotions', promotion.id), { active: !promotion.active, updatedAt: serverTimestamp() })} className={`rounded-full px-2.5 py-1 text-[10px] font-black ${promotion.active ? 'bg-[#d6e7bf]/25 text-[#3a5b35]' : 'bg-[#d6ded4] text-[#7b887d]'}`}>{promotion.active ? 'ATIVA' : 'PAUSADA'}</button>
             </div>
             <h2 className="mt-4 text-xl font-black">{promotion.name}</h2>
-            <p className="mt-2 text-sm text-[#765665]">{promotion.description || 'Sem descrição.'}</p>
-            <strong className="mt-4 block text-lg text-[#8c234f]">{formatPromotionValue(promotion)}</strong>
-            <p className="mt-1 text-xs text-[#765665]">{promotion.startsAt} até {promotion.endsAt}</p>
-            <p className="mt-3 text-xs font-bold text-[#765665]">{promotion.productIds.length ? `${promotion.productIds.length} produto(s) selecionado(s)` : 'Todos os produtos elegíveis'}</p>
-            <button onClick={() => { setEditing(promotion); setError(''); setShowForm(true); }} className="mt-5 text-sm font-black text-[#8c234f]">Editar promoção</button>
+            <p className="mt-2 text-sm text-[#7b887d]">{promotion.description || 'Sem descrição.'}</p>
+            <strong className="mt-4 block text-lg text-[#b5232b]">{formatPromotionValue(promotion)}</strong>
+            <p className="mt-1 text-xs text-[#7b887d]">{promotion.startsAt} até {promotion.endsAt}</p>
+            <p className="mt-3 text-xs font-bold text-[#7b887d]">{promotion.productIds.length ? `${promotion.productIds.length} produto(s) selecionado(s)` : 'Todos os produtos elegíveis'}</p>
+            <button onClick={() => { setEditing(promotion); setError(''); setShowForm(true); }} className="mt-5 text-sm font-black text-[#b5232b]">Editar promoção</button>
           </article>
         ))}
       </div>
-      {!promotions.length && <div className="mt-8 rounded-[26px] border border-dashed border-[#d9b66f]/50 p-10 text-center"><strong className="text-xl">Nenhuma promoção cadastrada</strong><p className="mt-2 text-sm text-[#765665]">Crie a primeira oferta para destacar no cardápio.</p></div>}
+      {!promotions.length && <div className="mt-8 rounded-[26px] border border-dashed border-[#c7a773]/50 p-10 text-center"><strong className="text-xl">Nenhuma promoção cadastrada</strong><p className="mt-2 text-sm text-[#7b887d]">Crie a primeira oferta para destacar no cardápio.</p></div>}
       {showForm && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#180e16]/50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#070a08]/50 p-4 backdrop-blur-sm">
           <form onSubmit={save} className="mx-auto my-4 max-w-2xl rounded-[28px] bg-white p-5 shadow-2xl sm:p-7">
-            <div className="flex items-center justify-between"><h2 className="text-2xl font-black">{editing ? 'Editar promoção' : 'Nova promoção'}</h2><button type="button" onClick={() => setShowForm(false)} className="grid size-9 place-items-center rounded-full bg-[#f8e9ef]"><X className="size-4" /></button></div>
+            <div className="flex items-center justify-between"><h2 className="text-2xl font-black">{editing ? 'Editar promoção' : 'Nova promoção'}</h2><button type="button" onClick={() => setShowForm(false)} className="grid size-9 place-items-center rounded-full bg-[#e8efe5]"><X className="size-4" /></button></div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <AdminField label="Nome da promoção" name="name" required defaultValue={editing?.name} />
-              <label className="block text-sm font-bold">Tipo de desconto<select name="discountType" defaultValue={editing?.discountType ?? 'PERCENTAGE'} className="mt-2 h-11 w-full rounded-xl border border-[#8c234f]/15 bg-[#fff8ef] px-3 font-normal"><option value="PERCENTAGE">Percentual</option><option value="FIXED">Valor fixo em centavos</option></select></label>
+              <label className="block text-sm font-bold">Tipo de desconto<select name="discountType" defaultValue={editing?.discountType ?? 'PERCENTAGE'} className="mt-2 h-11 w-full rounded-xl border border-[#b5232b]/15 bg-[#f3f0e8] px-3 font-normal"><option value="PERCENTAGE">Percentual</option><option value="FIXED">Valor fixo em centavos</option></select></label>
               <AdminField label="Valor do desconto" name="discountValue" type="number" min="1" max={editing?.discountType === 'PERCENTAGE' ? 100 : undefined} required defaultValue={editing?.discountValue ?? 10} />
-              <label className="block text-sm font-bold">Início<input name="startsAt" type="date" required defaultValue={editing?.startsAt} className="mt-2 h-11 w-full rounded-xl border border-[#8c234f]/15 bg-[#fff8ef] px-3 font-normal" /></label>
-              <label className="block text-sm font-bold">Fim<input name="endsAt" type="date" required defaultValue={editing?.endsAt} className="mt-2 h-11 w-full rounded-xl border border-[#8c234f]/15 bg-[#fff8ef] px-3 font-normal" /></label>
+              <label className="block text-sm font-bold">Início<input name="startsAt" type="date" required defaultValue={editing?.startsAt} className="mt-2 h-11 w-full rounded-xl border border-[#b5232b]/15 bg-[#f3f0e8] px-3 font-normal" /></label>
+              <label className="block text-sm font-bold">Fim<input name="endsAt" type="date" required defaultValue={editing?.endsAt} className="mt-2 h-11 w-full rounded-xl border border-[#b5232b]/15 bg-[#f3f0e8] px-3 font-normal" /></label>
               <label className="flex items-center gap-2 self-end pb-2 text-sm font-bold"><input type="checkbox" name="active" defaultChecked={editing?.active ?? true} /> Promoção ativa</label>
             </div>
             <div className="mt-4"><AdminTextarea label="Descrição para o cliente" name="description" rows={3} defaultValue={editing?.description} /></div>
-            <label className="mt-4 block text-sm font-bold">Produtos participantes<select name="productIds" multiple defaultValue={editing?.productIds ?? []} className="mt-2 min-h-36 w-full rounded-xl border border-[#8c234f]/15 bg-[#fff8ef] p-2 font-normal">{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select><span className="mt-1 block text-xs font-normal text-[#765665]">Segure Ctrl ou Command para selecionar mais de um. Deixe vazio para todos.</span></label>
-            <Button type="submit" className="mt-6 h-12 rounded-full bg-[#8c234f] px-6 font-black text-white"><Save /> Salvar promoção</Button>
+            <label className="mt-4 block text-sm font-bold">Produtos participantes<select name="productIds" multiple defaultValue={editing?.productIds ?? []} className="mt-2 min-h-36 w-full rounded-xl border border-[#b5232b]/15 bg-[#f3f0e8] p-2 font-normal">{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select><span className="mt-1 block text-xs font-normal text-[#7b887d]">Segure Ctrl ou Command para selecionar mais de um. Deixe vazio para todos.</span></label>
+            <Button type="submit" className="mt-6 h-12 rounded-full bg-[#b5232b] px-6 font-black text-white"><Save /> Salvar promoção</Button>
           </form>
         </div>
       )}

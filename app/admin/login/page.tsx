@@ -41,13 +41,13 @@ export default function AdminLoginPage() {
     }
   }
   return (
-    <main className="grid min-h-screen place-items-center bg-[#180e16] p-4">
-      <div className="w-full max-w-md rounded-[32px] bg-[#fff7ea] p-6 shadow-2xl sm:p-8">
-        <img src="/brand/teiko-logo.jpg" alt="Logo Teiko Sushi" className="size-16 rounded-full object-cover ring-2 ring-[#c13a43]/30" />
+    <main className="grid min-h-screen place-items-center bg-[#070a08] p-4">
+      <div className="w-full max-w-md rounded-[32px] bg-[#f3f0e8] p-6 shadow-2xl sm:p-8">
+        <img src="/brand/teiko-logo.jpg" alt="Logo Teiko Sushi" className="size-16 rounded-full object-cover ring-2 ring-[#e3262e]/30" />
         <h1 className="mt-6 text-3xl font-black tracking-[-.04em]">
           Entrar no painel
         </h1>
-        <p className="mt-2 text-sm text-[#765665]">
+        <p className="mt-2 text-sm text-[#7b887d]">
           Acesso exclusivo da equipe autorizada.
         </p>
         <form onSubmit={submit} className="mt-7 space-y-4">
@@ -58,7 +58,7 @@ export default function AdminLoginPage() {
               type="email"
               required
               autoComplete="username"
-              className="mt-2 h-12 w-full rounded-2xl border border-[#8c234f]/15 bg-white px-4 font-normal outline-none focus:border-[#8c234f]"
+              className="mt-2 h-12 w-full rounded-2xl border border-[#b5232b]/15 bg-white px-4 font-normal outline-none focus:border-[#b5232b]"
             />
           </label>
           <label className="block text-sm font-bold">
@@ -68,13 +68,13 @@ export default function AdminLoginPage() {
               type="password"
               required
               autoComplete="current-password"
-              className="mt-2 h-12 w-full rounded-2xl border border-[#8c234f]/15 bg-white px-4 font-normal outline-none focus:border-[#8c234f]"
+              className="mt-2 h-12 w-full rounded-2xl border border-[#b5232b]/15 bg-white px-4 font-normal outline-none focus:border-[#b5232b]"
             />
           </label>
           {error && (
             <p
               role="alert"
-              className="rounded-xl bg-[#f8e9ef] p-3 text-sm text-[#c13a43]"
+              className="rounded-xl bg-[#e8efe5] p-3 text-sm text-[#e3262e]"
             >
               {error}
             </p>
@@ -82,13 +82,13 @@ export default function AdminLoginPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="h-12 w-full rounded-full bg-[#8c234f] font-black text-white"
+            className="h-12 w-full rounded-full bg-[#b5232b] font-black text-white"
           >
             {loading ? <Loader2 className="animate-spin" /> : <LockKeyhole />}{' '}
             Entrar
           </Button>
         </form>
-        <p className="mt-5 text-center text-xs text-[#765665]">
+        <p className="mt-5 text-center text-xs text-[#7b887d]">
           Usuários e roles são gerenciados pelo Firebase; nenhuma senha fica no
           código.
         </p>

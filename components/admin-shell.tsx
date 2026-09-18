@@ -12,6 +12,7 @@ import {
   Settings,
   ShoppingBag,
   SlidersHorizontal,
+  SquareStack,
   WalletCards,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
@@ -30,6 +31,7 @@ const links = [
   { href: '/admin/pdv', label: 'PDV', icon: ShoppingBag },
   { href: '/admin/kds', label: 'Cozinha (KDS)', icon: ChefHat },
   { href: '/admin/reservas', label: 'Reservas', icon: CalendarDays },
+  { href: '/admin/mesas', label: 'Mesas', icon: SquareStack },
   { href: '/admin/catalogo', label: 'Cardápio', icon: Boxes },
   { href: '/admin/adicionais', label: 'Adicionais', icon: SlidersHorizontal },
   { href: '/admin/promocoes', label: 'Promoções', icon: BadgePercent },
@@ -91,8 +93,8 @@ export function AdminShell({
       />
     );
   return (
-    <div className="min-h-screen bg-[#fff8ef] text-[#180e16]">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#180e16] p-5 text-white lg:flex">
+    <div className="min-h-screen bg-[#f3f0e8] text-[#070a08]">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#070a08] p-5 text-white lg:flex">
         <a href="/admin" aria-label="Teiko Sushi, painel operacional">
           <BrandMark />
         </a>
@@ -110,7 +112,7 @@ export function AdminShell({
         </nav>
         <div className="mt-auto rounded-2xl bg-white/6 p-3">
           <span className="block truncate text-xs font-bold">{user.email}</span>
-          <span className="mt-1 block text-[10px] uppercase tracking-widest text-[#d9b66f]">
+          <span className="mt-1 block text-[10px] uppercase tracking-widest text-[#c7a773]">
             {role}
           </span>
           <button
@@ -133,14 +135,14 @@ export function AdminShell({
                 href={href}
                 aria-label={label}
                 title={label}
-                className="grid size-10 shrink-0 place-items-center rounded-full hover:bg-[#c13a43]/10"
+                className="grid size-10 shrink-0 place-items-center rounded-full hover:bg-[#e3262e]/10"
               >
                 <Icon className="size-4" />
               </a>
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-[#765665] lg:block">
+            <span className="hidden text-sm text-[#7b887d] lg:block">
               Operação em tempo real
             </span>
             <a
@@ -151,16 +153,16 @@ export function AdminShell({
                   : 'Pedidos novos'
               }
               title="Pedidos novos"
-              className="relative grid size-10 place-items-center rounded-full text-[#8c234f] transition hover:bg-[#f8e9ef]"
+              className="relative grid size-10 place-items-center rounded-full text-[#b5232b] transition hover:bg-[#e8efe5]"
             >
               <Bell className="size-5" />
               {newOrderCount > 0 && (
-                <span className="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full bg-[#c13a43] px-1 text-[10px] font-black text-white">
+                <span className="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full bg-[#e3262e] px-1 text-[10px] font-black text-white">
                   {newOrderCount > 9 ? '9+' : newOrderCount}
                 </span>
               )}
             </a>
-            <span className="rounded-full bg-[#f8e9ef] px-3 py-1 text-xs font-bold text-[#65741f]">
+            <span className="rounded-full bg-[#e8efe5] px-3 py-1 text-xs font-bold text-[#3a5b35]">
               Online
             </span>
           </div>
@@ -174,11 +176,11 @@ export function AdminShell({
 
 function AdminMessage({ title, text }: { title: string; text: string }) {
   return (
-    <main className="grid min-h-screen place-items-center bg-[#fff8ef] p-6 text-center">
+    <main className="grid min-h-screen place-items-center bg-[#f3f0e8] p-6 text-center">
       <div>
-        <img src="/brand/teiko-logo.jpg" alt="Logo Teiko Sushi" className="mx-auto size-16 rounded-full object-cover ring-2 ring-[#d9b66f]/40" />
+        <img src="/brand/teiko-logo.jpg" alt="Logo Teiko Sushi" className="mx-auto size-16 rounded-full object-cover ring-2 ring-[#c7a773]/40" />
         <h1 className="mt-5 text-2xl font-black">{title}</h1>
-        <p className="mt-2 text-sm text-[#765665]">{text}</p>
+        <p className="mt-2 text-sm text-[#7b887d]">{text}</p>
       </div>
     </main>
   );

@@ -6,6 +6,15 @@ export type FulfillmentMode = 'PICKUP' | 'DELIVERY';
 export type DeliveryMode = 'NONE' | 'CONFIRM' | 'FIXED' | 'ZONES';
 export type Role = 'admin' | 'staff';
 export interface Unit { id: string; brandId: string; name: string; city: string; address?: string; whatsapp?: string; instagram?: string; active: boolean; delivery: boolean; pickup: boolean }
+export interface DiningTable {
+  id: string;
+  brandId: string;
+  unitId: string;
+  name: string;
+  capacity: number;
+  active: boolean;
+  displayOrder: number;
+}
 
 export interface StoreHoursWindow { open: string; close: string }
 export interface StoreDayHours { day: number; closed: boolean; windows: StoreHoursWindow[] }
@@ -244,6 +253,30 @@ export function validateReservationDraft(
     errors.notes = 'A observação deve ter no máximo 500 caracteres.';
   }
   return errors;
+}
+
+export function isReservationTimeWithinHours(
+  dateValue: string,
+  timeValue: string,
+  config: StoreScheduleConfig,
+): boolean {
+  if (!isValidReservationDate(dateValue) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(timeValue)) return false;
+  try {
+    const schedule = getBusinessHours(new Date(`${dateValue}T12:00:00.000Z`), config);
+    const requested = timeToMinutes(timeValue);
+    return !schedule.closed && schedule.windows.some((window) => {
+      const start = timeToMinutes(window.open);
+      const end = timeToMinutes(window.close);
+      return end >= start ? requested >= start && requested < end : requested >= start || requested < end;
+    });
+  } catch {
+    return false;
+  }
+}
+
+export function getWhatsappNumber(config: StorePublicConfig): string {
+  const unit = config.units.find((candidate) => candidate.id === config.defaultUnitId);
+  return (config.whatsappNumber || unit?.whatsapp || '').replace(/\D/g, '');
 }
 
 export function formatBRL(cents: number): string {

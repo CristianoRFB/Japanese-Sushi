@@ -196,23 +196,23 @@ export default function OrderDetailPage() {
         <>
           <a
             href="/admin/pedidos"
-            className="inline-flex items-center gap-2 text-sm font-bold text-[#8c234f]"
+            className="inline-flex items-center gap-2 text-sm font-bold text-[#b5232b]"
           >
             <ArrowLeft className="size-4" /> Voltar
           </a>
           <div className="mt-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#b13b6b]">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#8b1e2b]">
                 Pedido
               </p>
               <h1 className="mt-1 text-4xl font-black tracking-[-.05em]">
                 {order.orderNumber}
               </h1>
-              <p className="mt-2 text-sm text-[#765665]">
+              <p className="mt-2 text-sm text-[#7b887d]">
                 {order.customer.name} • {order.customer.whatsapp}
               </p>
             </div>
-            <span className="w-fit rounded-full bg-[#180e16] px-4 py-2 text-sm font-black text-white">
+            <span className="w-fit rounded-full bg-[#070a08] px-4 py-2 text-sm font-black text-white">
               {order.customerApproval === 'PENDING'
                 ? 'Aguardando cliente'
                 : labels[order.status]}
@@ -221,7 +221,7 @@ export default function OrderDetailPage() {
           {error && (
             <p
               role="alert"
-              className="mt-5 rounded-xl bg-[#f8e9ef] p-3 text-sm text-[#c13a43]"
+              className="mt-5 rounded-xl bg-[#e8efe5] p-3 text-sm text-[#e3262e]"
             >
               {error}
             </p>
@@ -237,13 +237,13 @@ export default function OrderDetailPage() {
                 )}
               </div>
               {order.customerApproval === 'PENDING' && (
-                <div className="mt-4 rounded-2xl border border-[#d9b66f]/40 bg-[#fff7ea] p-4 text-sm text-[#180e16]">
+                <div className="mt-4 rounded-2xl border border-[#c7a773]/40 bg-[#f3f0e8] p-4 text-sm text-[#070a08]">
                   <strong>Alteração aguardando o cliente</strong>
-                  <p className="mt-1 text-[#765665]">O preparo fica pausado até o cliente aceitar ou recusar a nova composição.</p>
-                  {order.proposedChanges?.reason && <p className="mt-2 font-bold text-[#8c234f]">Motivo: {order.proposedChanges.reason}</p>}
+                  <p className="mt-1 text-[#7b887d]">O preparo fica pausado até o cliente aceitar ou recusar a nova composição.</p>
+                  {order.proposedChanges?.reason && <p className="mt-2 font-bold text-[#b5232b]">Motivo: {order.proposedChanges.reason}</p>}
                 </div>
               )}
-              <div className="mt-5 divide-y divide-[#8c234f]/8">
+              <div className="mt-5 divide-y divide-[#b5232b]/8">
                 {order.items.map((item, index) => (
                   <div key={index} className="py-5 first:pt-0">
                     <div className="flex justify-between gap-3">
@@ -253,7 +253,7 @@ export default function OrderDetailPage() {
                       </strong>
                       <strong>{formatBRL(itemTotal(item))}</strong>
                     </div>
-                    <p className="mt-1 text-sm text-[#8c234f]">
+                    <p className="mt-1 text-sm text-[#b5232b]">
                       {item.sizeLabel}
                     </p>
                     {(item.modifierSelections ?? [])
@@ -261,7 +261,7 @@ export default function OrderDetailPage() {
                       .map((group) => (
                         <p
                           key={group.groupId}
-                          className="mt-1 text-xs text-[#765665]"
+                          className="mt-1 text-xs text-[#7b887d]"
                         >
                           <b>{group.groupName}:</b>{' '}
                           {group.items
@@ -270,7 +270,7 @@ export default function OrderDetailPage() {
                         </p>
                       ))}
                     {item.notes && (
-                      <p className="mt-2 rounded-lg bg-[#fff7ea] p-2 text-xs text-[#765665]">
+                      <p className="mt-2 rounded-lg bg-[#f3f0e8] p-2 text-xs text-[#7b887d]">
                         {item.notes}
                       </p>
                     )}
@@ -278,36 +278,36 @@ export default function OrderDetailPage() {
                 ))}
               </div>
               {order.notes && (
-                <div className="mt-5 rounded-xl bg-[#fff7ea] p-3 text-sm text-[#765665]">
+                <div className="mt-5 rounded-xl bg-[#f3f0e8] p-3 text-sm text-[#7b887d]">
                   <strong>Observação:</strong> {order.notes}
                 </div>
               )}
               {editing && (
-                <div className="mt-6 rounded-2xl border border-[#8c234f]/15 bg-[#f8e9ef] p-4">
+                <div className="mt-6 rounded-2xl border border-[#b5232b]/15 bg-[#e8efe5] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="font-black">Propor alteração ao cliente</h3>
-                      <p className="mt-1 text-xs text-[#765665]">A alteração só vale depois da aprovação do cliente.</p>
+                      <p className="mt-1 text-xs text-[#7b887d]">A alteração só vale depois da aprovação do cliente.</p>
                     </div>
-                    <button type="button" onClick={() => setEditing(false)} className="text-xs font-black text-[#8c234f]">Fechar</button>
+                    <button type="button" onClick={() => setEditing(false)} className="text-xs font-black text-[#b5232b]">Fechar</button>
                   </div>
                   <div className="mt-4 space-y-3">
                     {draftItems.map((item, index) => (
                       <div key={`${item.productId}-${index}`} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3">
-                        <div className="min-w-0"><strong className="block truncate text-sm">{item.productName}</strong><span className="text-xs text-[#765665]">{formatBRL(item.unitPriceCents ?? 0)} por unidade</span></div>
-                        <div className="flex items-center gap-2 rounded-full border border-[#8c234f]/15 p-1"><button type="button" aria-label={`Diminuir ${item.productName}`} onClick={() => changeQuantity(index, -1)} className="grid size-7 place-items-center rounded-full"><Minus className="size-3" /></button><span className="w-5 text-center text-sm font-black">{item.quantity}</span><button type="button" aria-label={`Aumentar ${item.productName}`} onClick={() => changeQuantity(index, 1)} className="grid size-7 place-items-center rounded-full bg-[#180e16] text-white"><Plus className="size-3" /></button></div>
+                        <div className="min-w-0"><strong className="block truncate text-sm">{item.productName}</strong><span className="text-xs text-[#7b887d]">{formatBRL(item.unitPriceCents ?? 0)} por unidade</span></div>
+                        <div className="flex items-center gap-2 rounded-full border border-[#b5232b]/15 p-1"><button type="button" aria-label={`Diminuir ${item.productName}`} onClick={() => changeQuantity(index, -1)} className="grid size-7 place-items-center rounded-full"><Minus className="size-3" /></button><span className="w-5 text-center text-sm font-black">{item.quantity}</span><button type="button" aria-label={`Aumentar ${item.productName}`} onClick={() => changeQuantity(index, 1)} className="grid size-7 place-items-center rounded-full bg-[#070a08] text-white"><Plus className="size-3" /></button></div>
                       </div>
                     ))}
                   </div>
                   <label className="mt-4 block text-sm font-bold">Explique a alteração
-                    <textarea value={editReason} onChange={(event) => setEditReason(event.target.value)} maxLength={300} className="mt-2 min-h-20 w-full rounded-xl border border-[#8c234f]/15 bg-white p-3 text-sm font-normal outline-none focus:border-[#8c234f]" placeholder="Ex.: substituição solicitada pela unidade" />
+                    <textarea value={editReason} onChange={(event) => setEditReason(event.target.value)} maxLength={300} className="mt-2 min-h-20 w-full rounded-xl border border-[#b5232b]/15 bg-white p-3 text-sm font-normal outline-none focus:border-[#b5232b]" placeholder="Ex.: substituição solicitada pela unidade" />
                   </label>
-                  <Button type="button" disabled={busy} onClick={() => void proposeEdit()} className="mt-4 h-11 w-full rounded-full bg-[#8c234f] font-black text-white"><Save /> Enviar para aprovação</Button>
+                  <Button type="button" disabled={busy} onClick={() => void proposeEdit()} className="mt-4 h-11 w-full rounded-full bg-[#b5232b] font-black text-white"><Save /> Enviar para aprovação</Button>
                 </div>
               )}
             </section>
             <aside className="space-y-5">
-              <section className="rounded-[26px] bg-[#180e16] p-5 text-white">
+              <section className="rounded-[26px] bg-[#070a08] p-5 text-white">
                 <h2 className="text-lg font-black">Atualizar status</h2>
                 <div className="mt-4 grid gap-2">
                   {ORDER_TRANSITIONS[order.status]
@@ -317,7 +317,7 @@ export default function OrderDetailPage() {
                         key={status}
                         disabled={busy}
                         onClick={() => update(status)}
-                        className="h-11 justify-start rounded-xl bg-[#d9ed55] px-4 font-black text-[#180e16] hover:bg-[#d9ed55]"
+                        className="h-11 justify-start rounded-xl bg-[#d6e7bf] px-4 font-black text-[#070a08] hover:bg-[#d6e7bf]"
                       >
                         {busy ? (
                           <Loader2 className="animate-spin" />
@@ -331,7 +331,7 @@ export default function OrderDetailPage() {
                     <Button
                       disabled={busy}
                       onClick={() => update('CANCELLED')}
-                      className="h-11 justify-start rounded-xl bg-[#f8e9ef]0/15 px-4 text-[#ffe1e1] hover:bg-[#f8e9ef]0/25"
+                      className="h-11 justify-start rounded-xl bg-[#e8efe5]0/15 px-4 text-[#ffe1e1] hover:bg-[#e8efe5]0/25"
                     >
                       <XCircle /> {order.status === 'NEW' ? 'Recusar pedido' : 'Cancelar pedido'}
                     </Button>
@@ -345,7 +345,7 @@ export default function OrderDetailPage() {
                 <h2 className="text-lg font-black">Entrega e pagamento</h2>
                 <dl className="mt-4 space-y-3 text-sm">
                   <div>
-                    <dt className="text-xs text-[#765665]">Recebimento</dt>
+                    <dt className="text-xs text-[#7b887d]">Recebimento</dt>
                     <dd className="font-bold">
                       {order.fulfillment.mode === 'PICKUP'
                         ? 'Retirada'
@@ -354,7 +354,7 @@ export default function OrderDetailPage() {
                   </div>
                   {order.customer.address && (
                     <div>
-                      <dt className="text-xs text-[#765665]">Endereço</dt>
+                      <dt className="text-xs text-[#7b887d]">Endereço</dt>
                       <dd className="font-bold">
                         {order.customer.address.street},{' '}
                         {order.customer.address.number}
@@ -367,7 +367,7 @@ export default function OrderDetailPage() {
                     </div>
                   )}
                   <div>
-                    <dt className="text-xs text-[#765665]">
+                    <dt className="text-xs text-[#7b887d]">
                       Pagamento informado
                     </dt>
                     <dd className="font-bold">
@@ -381,7 +381,7 @@ export default function OrderDetailPage() {
                 <div className="mt-5 border-t pt-4">
                   <div className="flex justify-between text-sm">
                     <span>Total</span>
-                    <strong className="text-xl text-[#8c234f]">
+                    <strong className="text-xl text-[#b5232b]">
                       {formatBRL(order.pricing.totalCents)}
                     </strong>
                   </div>

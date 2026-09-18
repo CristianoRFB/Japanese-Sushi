@@ -103,20 +103,20 @@ export default function KdsPage() {
   return (
     <AdminShell>
       <div>
-        <p className="text-xs font-black uppercase tracking-[.18em] text-[#c13a43]">
+        <p className="text-xs font-black uppercase tracking-[.18em] text-[#e3262e]">
           Produção
         </p>
         <h1 className="mt-2 flex items-center gap-3 text-3xl font-black">
           <ChefHat className="size-8" /> Cozinha (KDS)
         </h1>
-        <p className="mt-2 text-sm text-[#765665]">
+        <p className="mt-2 text-sm text-[#7b887d]">
           Fila ativa em tempo real, ordenada pela chegada.
         </p>
       </div>
       {error && (
         <p
           role="alert"
-          className="mt-5 rounded-xl bg-[#f8e9ef] p-3 text-sm text-[#c13a43]"
+          className="mt-5 rounded-xl bg-[#e8efe5] p-3 text-sm text-[#e3262e]"
         >
           {error}
         </p>
@@ -129,7 +129,7 @@ export default function KdsPage() {
           return (
             <article
               key={order.id}
-              className="rounded-[26px] bg-[#180e16] p-5 text-white shadow-lg"
+              className="rounded-[26px] bg-[#070a08] p-5 text-white shadow-lg"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -138,11 +138,11 @@ export default function KdsPage() {
                     {order.customer.name}
                   </p>
                 </div>
-                <span className="rounded-full bg-[#c13a43] px-3 py-1 text-xs font-black">
+                <span className="rounded-full bg-[#e3262e] px-3 py-1 text-xs font-black">
                   {labels[order.status]}
                 </span>
               </div>
-              <p className="mt-4 text-xs text-[#d9b66f]">
+              <p className="mt-4 text-xs text-[#c7a773]">
                 {order.createdAt?.toDate().toLocaleTimeString('pt-BR', {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -176,7 +176,7 @@ export default function KdsPage() {
                         </p>
                       ))}
                     {item.notes && (
-                      <p className="mt-1 text-xs italic text-[#d9b66f]">
+                      <p className="mt-1 text-xs italic text-[#c7a773]">
                         {item.notes}
                       </p>
                     )}
@@ -187,7 +187,7 @@ export default function KdsPage() {
                 <button
                   disabled={Boolean(busy)}
                   onClick={() => void advance(order, nextStatus)}
-                  className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#d9b66f] font-black text-[#180e16]"
+                  className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#c7a773] font-black text-[#070a08]"
                 >
                   {busy === order.id ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -205,7 +205,7 @@ export default function KdsPage() {
           );
         })}
         {!orders.length && (
-          <div className="rounded-[26px] border border-dashed border-[#180e16]/20 p-10 text-center text-sm text-[#765665] md:col-span-2 xl:col-span-3">
+          <div className="rounded-[26px] border border-dashed border-[#070a08]/20 p-10 text-center text-sm text-[#7b887d] md:col-span-2 xl:col-span-3">
             <ChefHat className="mx-auto size-8" />
             <p className="mt-3">A fila da cozinha está vazia.</p>
           </div>
