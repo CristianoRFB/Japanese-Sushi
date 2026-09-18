@@ -202,6 +202,14 @@ service cloud.firestore {
       allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data);
       allow delete: if isAdmin() && brand(resource.data);
     }
+    match /cashRegisters/{id} {
+      allow read: if isStaff();
+      allow write: if false;
+    }
+    match /cashMovements/{id} {
+      allow read: if isStaff();
+      allow write: if false;
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }

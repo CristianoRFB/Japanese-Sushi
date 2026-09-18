@@ -5,6 +5,17 @@ import { logger } from 'firebase-functions';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onRequest } from 'firebase-functions/v2/https';
 import { z } from 'zod';
+<<<<<<< HEAD
+=======
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { configuredMode } from './integration/provider.js';
+import { processIntegration } from './integration/service.js';
+import { customerIntegrationMessage } from '../../shared/integration.js';
+import { recordOrderRefundInTransaction, recordOrderSaleInTransaction } from './cash.js';
+export { getIntegrationReadiness, saveIntegrationMappings, retryOrderIntegration } from './integration/admin.js';
+export { openCash, recordCashMovement, closeCash } from './cash.js';
+>>>>>>> origin/main
 
 import {
   calculateCartPreview,
@@ -29,6 +40,7 @@ const db = getFirestore();
 const region = 'southamerica-east1';
 const enforceAppCheck = process.env.ENFORCE_APP_CHECK === 'true';
 
+<<<<<<< HEAD
 const selectionSchema = z.object({
   groupId: z.string().min(1).max(100),
   items: z
@@ -39,6 +51,24 @@ const selectionSchema = z.object({
       }),
     )
     .max(60),
+=======
+const selectionSchema = z.object({ groupId: z.string().min(1).max(100), items: z.array(z.object({ modifierId: z.string().min(1).max(100), quantity: z.number().int().min(1).max(20) })).max(60) });
+const itemSchema = z.object({ productId: z.string().min(1).max(100), sizeId: z.string().min(1).max(100), quantity: z.number().int().min(1).max(20), selections: z.array(selectionSchema).max(30), notes: z.string().trim().max(300).optional() });
+export const createOrderSchema = z.object({
+  clientRequestId: z.uuid(),
+  source: z.enum(['WEB', 'QR', 'TABLET', 'TOTEM']).default('WEB'),
+  customer: z.object({ name: z.string().trim().min(2).max(80), whatsapp: z.string().min(8).max(30), address: z.object({ street: z.string().trim().min(2).max(120), number: z.string().trim().min(1).max(20), complement: z.string().trim().max(80).optional(), neighborhood: z.string().trim().min(2).max(80), reference: z.string().trim().max(120).optional() }).optional() }),
+  items: z.array(itemSchema).min(1).max(30),
+  fulfillment: z.object({ mode: z.enum(['PICKUP', 'DELIVERY']), zoneId: z.string().max(100).optional() }),
+  payment: z.object({ method: z.enum(['PIX', 'CARD', 'CASH', 'OTHER']), needsChange: z.boolean(), changeForCents: z.number().int().min(0).max(1_000_000).optional() }),
+  notes: z.string().trim().max(500).optional(),
+  clientPreviewTotalCents: z.number().int().min(0).max(10_000_000).optional(),
+}).superRefine((value, context) => {
+  if (value.fulfillment.mode === 'DELIVERY' && !value.customer.address) context.addIssue({ code: 'custom', message: 'Endereço obrigatório para delivery.', path: ['customer', 'address'] });
+  if (value.payment.method !== 'CASH' && (value.payment.needsChange || value.payment.changeForCents !== undefined)) context.addIssue({ code: 'custom', message: 'Troco só pode ser informado para dinheiro.', path: ['payment', 'needsChange'] });
+  if (value.payment.method === 'CASH' && value.payment.needsChange && value.payment.changeForCents === undefined) context.addIssue({ code: 'custom', message: 'Informe para quanto precisa de troco.', path: ['payment', 'changeForCents'] });
+  if (value.payment.method === 'CASH' && !value.payment.needsChange && value.payment.changeForCents !== undefined) context.addIssue({ code: 'custom', message: 'Remova o valor do troco ou marque que precisa de troco.', path: ['payment', 'changeForCents'] });
+>>>>>>> origin/main
 });
 const itemSchema = z.object({
   productId: z.string().min(1).max(100),
@@ -171,6 +201,7 @@ async function loadCatalog(): Promise<{
   };
 }
 
+<<<<<<< HEAD
 function makeOrderNumber(
   now = new Date(),
   timeZone = 'America/Sao_Paulo',
@@ -195,6 +226,11 @@ function requestIdFrom(data: unknown): string {
         80,
       )
     : 'unknown';
+=======
+function makeOrderNumber(now = new Date(), timeZone = 'America/Sao_Paulo'): string {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone, year: '2-digit', month: '2-digit', day: '2-digit' }).format(now).replace(/-/g, '');
+  return `#T${day}${randomBytes(2).toString('hex').toUpperCase()}`;
+>>>>>>> origin/main
 }
 
 export const createOrder = onCall(
@@ -492,6 +528,7 @@ async function requireRole(
     throw new HttpsError('permission-denied', 'Usuário sem permissão.');
   return role;
 }
+<<<<<<< HEAD
 const updateStatusSchema = z.object({
   orderId: z.string().min(1).max(128),
   status: z.enum([
@@ -504,6 +541,29 @@ const updateStatusSchema = z.object({
     'CANCELLED',
   ]),
   reason: z.string().trim().max(300).optional(),
+=======
+const updateStatusSchema = z.object({ orderId: z.string().min(1).max(128), status: z.enum(['NEW', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED']), reason: z.string().trim().max(300).optional() });
+export const updateOrderStatus = onCall({ region, timeoutSeconds: 15, memory: '256MiB', enforceAppCheck }, async (request) => {
+  const role = await requireRole(request.auth?.uid, ['admin', 'staff']);
+  const parsed = updateStatusSchema.safeParse(request.data);
+  if (!parsed.success) throw new HttpsError('invalid-argument', parsed.error.issues[0]?.message ?? 'Status inválido.');
+  const { orderId, status, reason } = parsed.data;
+  const orderRef = db.doc(`orders/${orderId}`);
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(orderRef);
+    if (!snapshot.exists) throw new HttpsError('not-found', 'Pedido não encontrado.');
+    if (snapshot.data()?.integration?.provider === 'saipos') throw new HttpsError('failed-precondition', 'Operação e cancelamento devem ser realizados no Saipos. Sincronização de status ainda não homologada.');
+    const current = snapshot.data()?.status as OrderStatus;
+    if (!ORDER_TRANSITIONS[current]?.includes(status)) throw new HttpsError('failed-precondition', `Transição ${current} → ${status} não permitida.`);
+    const order = snapshot.data()!;
+    const actor = { uid: request.auth!.uid, email: request.auth?.token.email as string | undefined };
+    if (status === 'COMPLETED') await recordOrderSaleInTransaction(transaction, orderId, order as { pricing: { totalCents: number }; payment: { method: 'PIX' | 'CARD' | 'CASH' | 'OTHER' } }, actor);
+    if (status === 'CANCELLED') await recordOrderRefundInTransaction(transaction, orderId, order as { pricing: { totalCents: number }; payment: { method: 'PIX' | 'CARD' | 'CASH' | 'OTHER' } }, actor);
+    transaction.update(orderRef, { status, updatedAt: FieldValue.serverTimestamp(), statusHistory: FieldValue.arrayUnion({ status, at: Timestamp.now(), actorUid: request.auth!.uid, actorRole: role, ...(reason ? { reason } : {}) }), ...(status === 'CANCELLED' ? { cancelledAt: FieldValue.serverTimestamp(), cancellationReason: reason || '' } : {}) });
+  });
+  logger.info('updateOrderStatus completed', { orderId, status, actorUid: request.auth?.uid });
+  return { ok: true };
+>>>>>>> origin/main
 });
 export const updateOrderStatus = onCall(
   { region, timeoutSeconds: 15, memory: '256MiB', enforceAppCheck },

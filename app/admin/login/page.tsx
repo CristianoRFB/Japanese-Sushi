@@ -40,6 +40,7 @@ export default function AdminLoginPage() {
       setLoading(false);
     }
   }
+<<<<<<< HEAD
   return (
     <main className="grid min-h-screen place-items-center bg-[#070a08] p-4">
       <div className="w-full max-w-md rounded-[32px] bg-[#f3f0e8] p-6 shadow-2xl sm:p-8">
@@ -95,4 +96,7 @@ export default function AdminLoginPage() {
       </div>
     </main>
   );
+=======
+  return <main className="grid min-h-screen place-items-center bg-[#172d3d] p-4"><div className="w-full max-w-md rounded-[32px] bg-[#fffaf5] p-6 shadow-2xl sm:p-8"><span className="grid size-12 place-items-center rounded-full bg-[#f1c46a] font-black text-[#172d3d]">T</span><h1 className="mt-6 text-3xl font-black tracking-[-.04em]">Entrar no painel</h1><p className="mt-2 text-sm text-[#607681]">Acesso exclusivo da equipe autorizada.</p><form onSubmit={submit} className="mt-7 space-y-4"><label className="block text-sm font-bold">E-mail<input name="email" type="email" required autoComplete="username" className="mt-2 h-12 w-full rounded-2xl border border-[#172d3d]/15 bg-white px-4 font-normal outline-none focus:border-[#172d3d]" /></label><label className="block text-sm font-bold">Senha<input name="password" type="password" required autoComplete="current-password" className="mt-2 h-12 w-full rounded-2xl border border-[#172d3d]/15 bg-white px-4 font-normal outline-none focus:border-[#172d3d]" /></label>{error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}<Button type="submit" disabled={loading} className="h-12 w-full rounded-full bg-[#172d3d] font-black text-white">{loading ? <Loader2 className="animate-spin" /> : <LockKeyhole />} Entrar</Button></form><p className="mt-5 text-center text-xs text-[#607681]">Usuários e funções são gerenciados pelo Firebase; nenhuma senha fica no código.</p></div></main>;
+>>>>>>> origin/main
 }

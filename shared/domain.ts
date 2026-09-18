@@ -5,6 +5,7 @@ export type ReservationStatus = 'REQUESTED' | 'CONFIRMED' | 'REFUSED' | 'CANCELL
 export type FulfillmentMode = 'PICKUP' | 'DELIVERY';
 export type DeliveryMode = 'NONE' | 'CONFIRM' | 'FIXED' | 'ZONES';
 export type Role = 'admin' | 'staff';
+<<<<<<< HEAD
 export interface Unit { id: string; brandId: string; name: string; city: string; address?: string; whatsapp?: string; instagram?: string; active: boolean; delivery: boolean; pickup: boolean }
 export interface DiningTable {
   id: string;
@@ -15,6 +16,9 @@ export interface DiningTable {
   active: boolean;
   displayOrder: number;
 }
+=======
+export type PaymentMethod = 'PIX' | 'CARD' | 'CASH' | 'OTHER';
+>>>>>>> origin/main
 
 export interface StoreHoursWindow { open: string; close: string }
 export interface StoreDayHours { day: number; closed: boolean; windows: StoreHoursWindow[] }
@@ -51,7 +55,7 @@ export interface StorePublicConfig {
   holidayDates?: string[];
   holidayHours?: StoreHoursWindow[];
   fulfillmentModes: FulfillmentMode[];
-  paymentMethods: Array<'PIX' | 'CARD' | 'CASH'>;
+  paymentMethods: PaymentMethod[];
   deliveryConfig: { mode: DeliveryMode; fixedFeeCents?: number; zones?: DeliveryZone[] };
   orderInstructions?: string;
   deliveryEstimate?: string;
@@ -181,7 +185,7 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PREPARING: ['READY', 'CANCELLED'],
   READY: ['OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED'],
   OUT_FOR_DELIVERY: ['COMPLETED', 'CANCELLED'],
-  COMPLETED: [],
+  COMPLETED: ['CANCELLED'],
   CANCELLED: [],
 };
 

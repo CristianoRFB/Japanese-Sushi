@@ -52,6 +52,7 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   max-width: 100%;
   overflow-x: hidden;
+  background: #f7f4ee;
 }
 
 button, a, input, textarea, select { outline-offset: 3px; }
@@ -89,6 +90,7 @@ img, svg, video, canvas { max-width: 100%; }
 }
 
 :root {
+<<<<<<< HEAD
   --teiko-ink: #180e16;
   --teiko-ink-soft: #28121f;
   --teiko-plum: #381726;
@@ -134,6 +136,40 @@ img, svg, video, canvas { max-width: 100%; }
   --sidebar-accent-foreground: var(--teiko-paper);
   --sidebar-border: rgb(255 248 239 / 12%);
   --sidebar-ring: var(--teiko-gold);
+=======
+  --background: #f7f4ee;
+  --foreground: #122b36;
+  --card: #fffdfa;
+  --card-foreground: #122b36;
+  --popover: #fffdfa;
+  --popover-foreground: #122b36;
+  --primary: #c84d43;
+  --primary-foreground: #ffffff;
+  --secondary: #d9ac64;
+  --secondary-foreground: #122b36;
+  --muted: #ebe7df;
+  --muted-foreground: #6f7d7e;
+  --accent: #e9d8bd;
+  --accent-foreground: #122b36;
+  --destructive: #b93636;
+  --border: #e3ded5;
+  --input: #ddd8ce;
+  --ring: #c84d43;
+  --chart-1: #c84d43;
+  --chart-2: #d9ac64;
+  --chart-3: #235363;
+  --chart-4: #7f9c98;
+  --chart-5: #122b36;
+  --radius: .9rem;
+  --sidebar: #122b36;
+  --sidebar-foreground: #f7f4ee;
+  --sidebar-primary: #d9ac64;
+  --sidebar-primary-foreground: #122b36;
+  --sidebar-accent: #21434f;
+  --sidebar-accent-foreground: #fffdfa;
+  --sidebar-border: #2a4c57;
+  --sidebar-ring: #d9ac64;
+>>>>>>> origin/main
 }
 
 .dark {
@@ -183,3 +219,23 @@ img, svg, video, canvas { max-width: 100%; }
   }
   button, a { -webkit-tap-highlight-color: transparent; }
 }
+
+.teiko-display { font-family: Georgia, 'Times New Roman', serif; }
+.teiko-grain { position: relative; isolation: isolate; }
+.teiko-grain::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .18; background-image: radial-gradient(#ffffff 0.7px, transparent 0.7px); background-size: 7px 7px; }
+.teiko-vertical { writing-mode: vertical-rl; text-orientation: mixed; }
+
+/* Keep the existing ordering, cart and checkout screens in the same visual system. */
+[class~="bg-[#fffaf5]"] { background-color: #f7f4ee !important; }
+[class~="bg-[#fff0f5]"] { background-color: #faece7 !important; }
+[class~="bg-[#f8f1f4]"] { background-color: #f3ece4 !important; }
+[class~="bg-[#351924]"] { background-color: #122b36 !important; }
+[class~="bg-[#172d3d]"] { background-color: #122b36 !important; }
+[class~="text-[#2b1722]"] { color: #122b36 !important; }
+[class~="text-[#351924]"] { color: #122b36 !important; }
+[class~="text-[#82204f]"] { color: #c84d43 !important; }
+[class~="text-[#826a75]"] { color: #6f7d7e !important; }
+[class~="text-[#607681]"] { color: #6f7d7e !important; }
+[class~="bg-[#82204f]"] { background-color: #c84d43 !important; }
+[class~="bg-[#d7f04a]"] { background-color: #d9ac64 !important; }
+[class~="bg-[#f1c46a]"] { background-color: #d9ac64 !important; }
