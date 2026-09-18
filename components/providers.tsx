@@ -6,7 +6,6 @@ import {
   doc,
   getDoc,
   onSnapshot,
-  orderBy,
   query,
   where,
 } from 'firebase/firestore';
@@ -212,12 +211,17 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           collection(db, name),
           where('brandId', '==', TEIKO_BRAND_ID),
           where('active', '==', true),
-          orderBy('displayOrder'),
         ),
         (snap) => {
-          (next.catalog[key] as T[]) = snap.docs.map(
+          const items = snap.docs.map(
             (item) => ({ id: item.id, ...item.data() }) as T,
           );
+          items.sort(
+            (left, right) =>
+              ((left as T & { displayOrder?: number }).displayOrder ?? 0) -
+              ((right as T & { displayOrder?: number }).displayOrder ?? 0),
+          );
+          (next.catalog[key] as T[]) = items;
           settle(name);
           publish();
         },
