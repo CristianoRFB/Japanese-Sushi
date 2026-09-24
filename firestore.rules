@@ -12,15 +12,69 @@ service cloud.firestore {
     function userRole() { return activeUser() ? userData().role : null; }
     function isStaff() { return userRole() == 'staff' || userRole() == 'admin'; }
     function isAdmin() { return userRole() == 'admin'; }
+    function isDriver() {
+      return userRole() == 'driver'
+        && exists(/databases/$(database)/documents/deliveryDrivers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/deliveryDrivers/$(request.auth.uid)).data.enabled == true
+        && get(/databases/$(database)/documents/deliveryDrivers/$(request.auth.uid)).data.brandId == 'teiko';
+    }
     function isOwner(data) { return signedIn() && data.ownerUid == request.auth.uid; }
     function publicConfig() { return get(/databases/$(database)/documents/storePublicConfig/main).data; }
     function validUnit() { return request.resource.data.unitId == publicConfig().defaultUnitId; }
-    function validOrderTransition() {
+    function validOrderInput() {
+      let data = request.resource.data;
+      return data.customer is map
+        && data.customer.name is string
+        && data.customer.name.size() >= 2
+        && data.customer.name.size() <= 80
+        && data.customer.name.matches("^[\\p{L}\\p{M} '’.-]+$")
+        && data.customer.whatsapp is string
+        && data.customer.whatsapp.matches('^\\d{12,13}$')
+        && data.fulfillment is map
+        && data.fulfillment.mode in ['PICKUP', 'DELIVERY']
+        && data.payment is map
+        && data.payment.method in ['PIX', 'CARD', 'CASH']
+        && data.payment.needsChange is bool
+        && data.notes is string
+        && data.notes.size() <= 500
+        && (data.fulfillment.mode == 'PICKUP'
+          || (data.customer.address is map
+            && data.customer.address.street is string
+            && data.customer.address.street.size() >= 3
+            && data.customer.address.street.size() <= 120
+            && data.customer.address.number is string
+            && data.customer.address.number.size() >= 1
+            && data.customer.address.number.size() <= 20
+            && data.customer.address.neighborhood is string
+            && data.customer.address.neighborhood.size() >= 2
+            && data.customer.address.neighborhood.size() <= 80
+            && (!data.customer.address.keys().hasAny(['complement'])
+              || (data.customer.address.complement is string && data.customer.address.complement.size() <= 80))
+            && (!data.customer.address.keys().hasAny(['reference'])
+              || (data.customer.address.reference is string && data.customer.address.reference.size() <= 120))));
+    }
+    function validOrderTransition(orderId) {
       return (resource.data.status == 'NEW' && request.resource.data.status in ['CONFIRMED', 'CANCELLED'])
         || (resource.data.status == 'CONFIRMED' && request.resource.data.status in ['PREPARING', 'CANCELLED'])
         || (resource.data.status == 'PREPARING' && request.resource.data.status in ['READY', 'CANCELLED'])
-        || (resource.data.status == 'READY' && request.resource.data.status in ['OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED'])
-        || (resource.data.status == 'OUT_FOR_DELIVERY' && request.resource.data.status == 'COMPLETED');
+        || (resource.data.status == 'READY' && request.resource.data.status == 'COMPLETED' && resource.data.fulfillment.mode == 'PICKUP')
+        || (resource.data.status == 'READY' && request.resource.data.status == 'CANCELLED'
+          && (resource.data.fulfillment.mode == 'PICKUP'
+            || !exists(/databases/$(database)/documents/deliveries/$(orderId))
+            || getAfter(/databases/$(database)/documents/deliveries/$(orderId)).data.status == 'CANCELLED'))
+        || (resource.data.status == 'OUT_FOR_DELIVERY' && request.resource.data.status == 'COMPLETED'
+          && getAfter(/databases/$(database)/documents/deliveries/$(orderId)).data.status == 'DELIVERED')
+        || (resource.data.status == 'OUT_FOR_DELIVERY' && request.resource.data.status == 'CANCELLED'
+          && getAfter(/databases/$(database)/documents/deliveries/$(orderId)).data.status == 'CANCELLED');
+    }
+    function validDriverOrderPickup(orderId) {
+      return isDriver()
+        && resource.data.status == 'READY'
+        && resource.data.fulfillment.mode == 'DELIVERY'
+        && request.resource.data.status == 'OUT_FOR_DELIVERY'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'statusHistory'])
+        && getAfter(/databases/$(database)/documents/deliveries/$(orderId)).data.driverId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/deliveries/$(orderId)).data.status == 'PICKED_UP';
     }
     function validReservationTransition() {
       return (resource.data.status == 'REQUESTED' && request.resource.data.status in ['CONFIRMED', 'REFUSED', 'CANCELLED'])
@@ -52,6 +106,23 @@ service cloud.firestore {
         && (request.resource.data.customerApproval == 'ACCEPTED'
           ? request.resource.data.status == resource.data.status
           : request.resource.data.status == 'CANCELLED' && resource.data.status in ['NEW', 'CONFIRMED']);
+    }
+    function validDriverDeliveryUpdate() {
+      return isDriver()
+        && resource.data.driverId == request.auth.uid
+        && brand(resource.data)
+        && brand(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'driverId', 'driverName', 'updatedAt', 'acceptedAt', 'pickedUpAt', 'startedAt', 'arrivedAt', 'failureReason'])
+        && ((resource.data.status == 'ASSIGNED' && request.resource.data.status == 'ACCEPTED')
+          || (resource.data.status == 'ASSIGNED' && request.resource.data.status == 'READY_FOR_DELIVERY'
+            && !request.resource.data.keys().hasAny(['driverId', 'driverName']))
+          || (resource.data.status == 'ACCEPTED' && request.resource.data.status == 'PICKED_UP')
+          || (resource.data.status == 'PICKED_UP' && request.resource.data.status == 'ON_THE_WAY')
+          || (resource.data.status == 'PICKED_UP' && request.resource.data.status == 'DELIVERY_FAILED')
+          || (resource.data.status == 'ON_THE_WAY' && request.resource.data.status in ['ARRIVED', 'DELIVERY_FAILED'])
+          || (resource.data.status == 'ARRIVED' && request.resource.data.status == 'DELIVERY_FAILED'))
+        && (request.resource.data.status != 'DELIVERY_FAILED'
+          || (request.resource.data.failureReason is string && request.resource.data.failureReason.size() >= 3 && request.resource.data.failureReason.size() <= 200));
     }
 
     match /storePublicConfig/{id} {
@@ -120,6 +191,7 @@ service cloud.firestore {
         && brand(request.resource.data)
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.status == 'NEW'
+        && validOrderInput()
         && validUnit()
         && request.resource.data.keys().hasAll(['brandId', 'ownerUid', 'clientRequestId', 'publicCode', 'orderNumber', 'createdAt', 'updatedAt', 'unitId', 'customer', 'items', 'fulfillment', 'payment', 'pricing', 'status', 'customerApproval', 'source', 'notes', 'statusHistory'])
         && request.resource.data.keys().hasOnly(['brandId', 'ownerUid', 'clientRequestId', 'publicCode', 'orderNumber', 'createdAt', 'updatedAt', 'unitId', 'customer', 'items', 'fulfillment', 'payment', 'pricing', 'status', 'customerApproval', 'proposedChanges', 'editReason', 'source', 'notes', 'statusHistory'])
@@ -141,8 +213,183 @@ service cloud.firestore {
           && brand(resource.data)
           && brand(request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'statusHistory', 'cancelledAt', 'cancellationReason'])
-          && validOrderTransition()
-        ) || validAdminOrderEdit() || validCustomerOrderDecision();
+          && validOrderTransition(id)
+        ) || validAdminOrderEdit() || validCustomerOrderDecision() || validDriverOrderPickup(id);
+      allow delete: if false;
+    }
+
+    match /deliveryDrivers/{uid} {
+      allow read: if isAdmin() || (isDriver() && request.auth.uid == uid);
+      allow create: if isAdmin()
+        && brand(request.resource.data)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.email is string
+        && request.resource.data.phone is string
+        && request.resource.data.status == 'OFFLINE'
+        && request.resource.data.enabled == true;
+      allow update: if (isAdmin()
+          && brand(resource.data)
+          && brand(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'status', 'enabled', 'currentDeliveryId', 'updatedAt'])
+          && (!request.resource.data.keys().hasAny(['currentDeliveryId']) || request.resource.data.currentDeliveryId is string))
+        || (isDriver()
+          && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'currentDeliveryId', 'updatedAt'])
+          && ((resource.data.status in ['AVAILABLE', 'OFFLINE']
+              && !resource.data.keys().hasAny(['currentDeliveryId'])
+              && request.resource.data.status in ['AVAILABLE', 'OFFLINE']
+              && !request.resource.data.keys().hasAny(['currentDeliveryId']))
+            || (resource.data.status == 'BUSY'
+              && request.resource.data.status == 'AVAILABLE'
+              && resource.data.currentDeliveryId is string
+              && getAfter(/databases/$(database)/documents/deliveries/$(resource.data.currentDeliveryId)).data.status in ['READY_FOR_DELIVERY', 'DELIVERY_FAILED']
+              && !request.resource.data.keys().hasAny(['currentDeliveryId']))));
+      allow delete: if false;
+    }
+
+    match /deliveries/{id} {
+      allow read: if isAdmin() || (isDriver() && resource.data.driverId == request.auth.uid);
+      allow create: if isAdmin()
+        && brand(request.resource.data)
+        && request.resource.data.keys().hasAll(['brandId', 'unitId', 'orderId', 'orderNumber', 'status', 'driverId', 'driverName', 'customerName', 'address', 'totalCents', 'paymentMethod', 'createdAt', 'updatedAt', 'assignedAt'])
+        && request.resource.data.keys().hasOnly(['brandId', 'unitId', 'orderId', 'orderNumber', 'status', 'driverId', 'driverName', 'customerName', 'customerWhatsapp', 'address', 'totalCents', 'paymentMethod', 'createdAt', 'updatedAt', 'assignedAt'])
+        && request.resource.data.orderId == id
+        && request.resource.data.status == 'ASSIGNED'
+        && request.resource.data.driverId is string
+        && request.resource.data.totalCents is int
+        && request.resource.data.totalCents >= 0
+        && request.resource.data.paymentMethod in ['PIX', 'CARD', 'CASH']
+        && get(/databases/$(database)/documents/orders/$(id)).data.brandId == 'teiko'
+        && get(/databases/$(database)/documents/orders/$(id)).data.status == 'READY'
+        && get(/databases/$(database)/documents/orders/$(id)).data.fulfillment.mode == 'DELIVERY'
+        && get(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.enabled == true
+        && get(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.status == 'AVAILABLE'
+        && getAfter(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.status == 'BUSY'
+        && getAfter(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.currentDeliveryId == id;
+      allow update: if isAdmin()
+          && brand(resource.data)
+          && brand(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'driverId', 'driverName', 'assignedAt', 'updatedAt', 'failureReason', 'deliveredAt', 'acceptedAt', 'pickedUpAt', 'startedAt', 'arrivedAt'])
+          && ((resource.data.status in ['READY_FOR_DELIVERY', 'DELIVERY_FAILED'] && request.resource.data.status == 'ASSIGNED'
+              && request.resource.data.driverId is string
+              && get(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.enabled == true
+              && get(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.status == 'AVAILABLE'
+              && getAfter(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.status == 'BUSY'
+              && getAfter(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.currentDeliveryId == id)
+            || (resource.data.status in ['READY_FOR_DELIVERY', 'ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'ON_THE_WAY', 'ARRIVED', 'DELIVERY_FAILED'] && request.resource.data.status == 'CANCELLED')
+            || (resource.data.status == 'ARRIVED' && request.resource.data.status == 'DELIVERED'
+              && request.resource.data.deliveredAt is timestamp
+              && getAfter(/databases/$(database)/documents/deliveryReceiptRequests/$(id)).data.status == 'VERIFIED'))
+        || validDriverDeliveryUpdate();
+      allow delete: if false;
+    }
+
+    match /orderDeliveryCodes/{id} {
+      allow get: if isAdmin() || isOwner(resource.data)
+        || (signedIn()
+          && exists(/databases/$(database)/documents/orders/$(id))
+          && get(/databases/$(database)/documents/orders/$(id)).data.brandId == 'teiko'
+          && get(/databases/$(database)/documents/orders/$(id)).data.ownerUid == request.auth.uid);
+      allow list: if isAdmin() || isOwner(resource.data);
+      allow create: if isAdmin()
+        && brand(request.resource.data)
+        && request.resource.data.keys().hasAll(['brandId', 'ownerUid', 'orderId', 'code', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['brandId', 'ownerUid', 'orderId', 'code', 'createdAt'])
+        && request.resource.data.orderId == id
+        && request.resource.data.ownerUid == get(/databases/$(database)/documents/orders/$(id)).data.ownerUid
+        && request.resource.data.code is string
+        && request.resource.data.code.matches('^\\d{4}$')
+        && request.resource.data.createdAt is timestamp;
+      allow update, delete: if false;
+    }
+
+    match /deliverySecrets/{id} {
+      allow get: if isAdmin() && (!exists(/databases/$(database)/documents/deliverySecrets/$(id)) || brand(resource.data));
+      allow list: if isAdmin() && brand(resource.data);
+      allow create: if isAdmin()
+        && brand(request.resource.data)
+        && request.resource.data.keys().hasAll(['brandId', 'orderId', 'codeHash', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['brandId', 'orderId', 'codeHash', 'createdAt'])
+        && request.resource.data.orderId == id
+        && request.resource.data.codeHash is string
+        && request.resource.data.codeHash.matches('^[a-f0-9]{64}$')
+        && request.resource.data.createdAt is timestamp;
+      allow update: if isAdmin()
+        && brand(resource.data)
+        && brand(request.resource.data)
+        && request.resource.data.orderId == id
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['codeHash'])
+        && request.resource.data.codeHash is string
+        && request.resource.data.codeHash.matches('^[a-f0-9]{64}$');
+      allow delete: if false;
+    }
+
+    match /deliveryReceiptRequests/{id} {
+      allow get: if isAdmin() && (!exists(/databases/$(database)/documents/deliveryReceiptRequests/$(id)) || brand(resource.data))
+        || (isDriver() && get(/databases/$(database)/documents/deliveries/$(id)).data.driverId == request.auth.uid);
+      allow list: if isAdmin() && brand(resource.data);
+      allow create: if isDriver()
+        && brand(request.resource.data)
+        && request.resource.data.keys().hasAll(['brandId', 'deliveryId', 'orderId', 'driverId', 'codeHash', 'paymentConfirmed', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['brandId', 'deliveryId', 'orderId', 'driverId', 'codeHash', 'paymentConfirmed', 'status', 'createdAt'])
+        && request.resource.data.deliveryId == id
+        && request.resource.data.orderId == id
+        && request.resource.data.driverId == request.auth.uid
+        && request.resource.data.status == 'PENDING'
+        && request.resource.data.paymentConfirmed == true
+        && request.resource.data.codeHash is string
+        && request.resource.data.codeHash.matches('^[a-f0-9]{64}$')
+        && request.resource.data.createdAt is timestamp
+        && get(/databases/$(database)/documents/deliveries/$(id)).data.driverId == request.auth.uid
+        && get(/databases/$(database)/documents/deliveries/$(id)).data.status == 'ARRIVED';
+      allow update: if (isAdmin()
+        && brand(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy', 'driverId'])
+        && request.resource.data.status in ['VERIFIED', 'REJECTED']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt is timestamp
+        && ((request.resource.data.status == 'VERIFIED'
+            && resource.data.status == 'PENDING'
+            && getAfter(/databases/$(database)/documents/deliveries/$(id)).data.status == 'DELIVERED')
+          || (request.resource.data.status == 'REJECTED'
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['driverId'])
+            && (getAfter(/databases/$(database)/documents/deliveries/$(id)).data.status in ['ARRIVED', 'CANCELLED']))
+          || (request.resource.data.status == 'REJECTED'
+            && resource.data.status in ['PENDING', 'REJECTED']
+            && request.resource.data.driverId is string
+            && get(/databases/$(database)/documents/deliveries/$(id)).data.status == 'DELIVERY_FAILED'
+            && getAfter(/databases/$(database)/documents/deliveries/$(id)).data.status == 'ASSIGNED'
+            && getAfter(/databases/$(database)/documents/deliveries/$(id)).data.driverId == request.resource.data.driverId)))
+        || (isDriver()
+          && resource.data.driverId == request.auth.uid
+          && resource.data.status == 'REJECTED'
+          && get(/databases/$(database)/documents/deliveries/$(id)).data.driverId == request.auth.uid
+          && get(/databases/$(database)/documents/deliveries/$(id)).data.status == 'ARRIVED'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'codeHash', 'createdAt', 'reviewedAt', 'reviewedBy'])
+          && request.resource.data.status == 'PENDING'
+          && request.resource.data.codeHash is string
+          && request.resource.data.codeHash.matches('^[a-f0-9]{64}$')
+          && request.resource.data.createdAt is timestamp
+          && !request.resource.data.keys().hasAny(['reviewedAt', 'reviewedBy']));
+      allow delete: if isAdmin() && brand(resource.data) && resource.data.status == 'REJECTED';
+    }
+
+    match /cashControl/{id} {
+      allow read: if isAdmin()
+        && (!exists(/databases/$(database)/documents/cashControl/$(id)) || brand(resource.data));
+      allow create: if isAdmin()
+        && id == 'main'
+        && brand(request.resource.data)
+        && request.resource.data.openRegisterId is string
+        && request.resource.data.updatedAt is timestamp;
+      allow update: if isAdmin()
+        && brand(resource.data)
+        && brand(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['openRegisterId', 'updatedAt'])
+        && (!request.resource.data.keys().hasAny(['openRegisterId']) || request.resource.data.openRegisterId is string)
+        && request.resource.data.updatedAt is timestamp;
       allow delete: if false;
     }
 
@@ -208,12 +455,68 @@ service cloud.firestore {
       allow delete: if isAdmin() && brand(resource.data);
     }
     match /cashRegisters/{id} {
-      allow read: if isStaff();
-      allow write: if false;
+      allow read: if isAdmin() && brand(resource.data);
+      allow create: if isAdmin()
+        && brand(request.resource.data)
+        && request.resource.data.status == 'OPEN'
+        && request.resource.data.operatorUid == request.auth.uid
+        && request.resource.data.openingDate is string
+        && request.resource.data.openingDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.initialBalanceCents is int
+        && request.resource.data.initialBalanceCents >= 0
+        && request.resource.data.initialBalanceCents <= 10000000
+        && request.resource.data.expectedCashCents == request.resource.data.initialBalanceCents;
+      allow update: if isAdmin()
+        && brand(resource.data)
+        && brand(request.resource.data)
+        && resource.data.status == 'OPEN'
+        && ((request.resource.data.status == 'OPEN'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expectedCashCents', 'lastMovementAt', 'updatedAt'])
+            && request.resource.data.expectedCashCents is int
+            && request.resource.data.expectedCashCents >= 0
+            && request.resource.data.expectedCashCents <= 10000000)
+          || (request.resource.data.status == 'CLOSED'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'countedCashCents', 'differenceCents', 'closingNote', 'closingRequestId', 'closedAt', 'updatedAt'])
+            && request.resource.data.countedCashCents is int
+            && request.resource.data.countedCashCents >= 0
+            && request.resource.data.countedCashCents <= 10000000
+            && request.resource.data.differenceCents == request.resource.data.countedCashCents - resource.data.expectedCashCents
+            && request.resource.data.closedAt is timestamp));
+      allow delete: if false;
     }
     match /cashMovements/{id} {
-      allow read: if isStaff();
-      allow write: if false;
+      allow read: if isAdmin() && brand(resource.data);
+      allow create: if isAdmin()
+        && brand(request.resource.data)
+        && request.resource.data.registerId is string
+        && request.resource.data.operatorUid == request.auth.uid
+        && request.resource.data.type in ['OPENING', 'SALE', 'WITHDRAWAL', 'SUPPLY', 'CLOSING']
+        && request.resource.data.direction in ['IN', 'OUT']
+        && request.resource.data.amountCents is int
+        && request.resource.data.amountCents >= 0
+        && request.resource.data.amountCents <= 10000000
+        && request.resource.data.cashAmountCents is int
+        && request.resource.data.cashAmountCents >= 0
+        && request.resource.data.cashAmountCents <= 10000000
+        && request.resource.data.createdAt is timestamp
+        && (request.resource.data.type == 'OPENING'
+          ? getAfter(/databases/$(database)/documents/cashRegisters/$(request.resource.data.registerId)).data.status == 'OPEN'
+            && getAfter(/databases/$(database)/documents/cashRegisters/$(request.resource.data.registerId)).data.initialBalanceCents == request.resource.data.cashAmountCents
+          : request.resource.data.type == 'CLOSING'
+            ? getAfter(/databases/$(database)/documents/cashRegisters/$(request.resource.data.registerId)).data.status == 'CLOSED'
+              && request.resource.data.cashAmountCents == 0
+            : request.resource.data.type == 'SALE'
+              ? get(/databases/$(database)/documents/cashRegisters/$(request.resource.data.registerId)).data.status == 'OPEN'
+                && getAfter(/databases/$(database)/documents/cashRegisters/$(request.resource.data.registerId)).data.status == 'OPEN'
+                && request.resource.data.amountCents > 0
+                && request.resource.data.paymentMethod in ['CASH', 'PIX', 'CARD', 'OTHER']
+                && request.resource.data.cashAmountCents == (request.resource.data.paymentMethod == 'CASH' ? request.resource.data.amountCents : 0)
+              : get(/databases/$(database)/documents/cashRegisters/$(request.resource.data.registerId)).data.status == 'OPEN'
+                && getAfter(/databases/$(database)/documents/cashRegisters/$(request.resource.data.registerId)).data.status == 'OPEN'
+                && request.resource.data.type in ['WITHDRAWAL', 'SUPPLY']
+                && request.resource.data.amountCents > 0
+                && request.resource.data.cashAmountCents == request.resource.data.amountCents);
+      allow update, delete: if false;
     }
     match /{document=**} { allow read, write: if false; }
   }

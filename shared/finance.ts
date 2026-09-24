@@ -27,15 +27,23 @@ export const FINANCE_CATEGORIES = [
   'Outros',
 ] as const;
 
-export function parseBRLToCents(value: string): number {
-  const normalized = value.trim().replace(/R\$\s?/gi, '');
-  const numeric = normalized.includes(',')
+export function parseOptionalBRLToCents(value: string, maxCents = Number.MAX_SAFE_INTEGER): number | null {
+  const normalized = value.trim().replace(/^R\$\s*/i, '').replace(/\s/g, '');
+  if (!normalized || normalized.length > 18 || /[-+eE]/u.test(normalized)) return null;
+  const brazilian = /^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?$/u.test(normalized);
+  const decimal = /^\d+(?:\.\d{1,2})?$/u.test(normalized);
+  if (!brazilian && !decimal) return null;
+  const amount = Number(normalized.includes(',')
     ? normalized.replace(/\./g, '').replace(',', '.')
-    : normalized.replace(/[^0-9.-]/g, '');
-  const amount = Number(numeric);
-  if (!Number.isFinite(amount) || amount <= 0) return 0;
+    : normalized.replace(/\./g, ''));
+  if (!Number.isFinite(amount) || amount < 0 || amount > maxCents / 100) return null;
   const cents = Math.round(amount * 100);
-  return Number.isSafeInteger(cents) ? cents : 0;
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
+export function parseBRLToCents(value: string): number {
+  const cents = parseOptionalBRLToCents(value);
+  return cents && cents > 0 ? cents : 0;
 }
 
 export function formatDateKey(value: string): string {

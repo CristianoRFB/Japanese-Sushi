@@ -9,6 +9,7 @@ import {
 import {
   arrayUnion,
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -17,6 +18,7 @@ import {
   setDoc,
   where,
   query,
+  writeBatch,
 } from 'firebase/firestore';
 import { afterAll, beforeAll, describe, it } from 'vitest';
 
@@ -38,7 +40,7 @@ function orderData(ownerUid: string, status = 'NEW') {
     createdAt: now,
     updatedAt: now,
     unitId: 'santa-fe-do-sul',
-    customer: { name: 'Cliente Teiko', whatsapp: '17999999999' },
+    customer: { name: 'Cliente Teiko', whatsapp: '5517999999999', address: { street: 'Rua 23', number: '624', neighborhood: 'Centro' } },
     items: [{ productId: 'simple', productName: 'Sushi', quantity: 1 }],
     fulfillment: { mode: 'PICKUP' },
     payment: { method: 'PIX', needsChange: false },
@@ -338,5 +340,185 @@ describe('Firestore Rules Spark Teiko', () => {
         { ...reservationData('reservation-invalid-uid'), date: '2026-02-31' },
       ),
     );
+  });
+
+  it('bloqueia nome emoji, telefone inválido e texto excessivo mesmo com cliente modificado', async () => {
+    const uid = 'input-' + testRunId;
+    const customerDb = env.authenticatedContext(uid).firestore();
+    const base = orderData(uid);
+    await assertFails(setDoc(doc(customerDb, 'orders', 'emoji-' + testRunId), {
+      ...base, customer: { ...base.customer, name: '😀 João' },
+    }));
+    await assertFails(setDoc(doc(customerDb, 'orders', 'phone-' + testRunId), {
+      ...base, customer: { ...base.customer, whatsapp: '123' },
+    }));
+    await assertFails(setDoc(doc(customerDb, 'orders', 'notes-' + testRunId), {
+      ...base, notes: 'x'.repeat(501),
+    }));
+    await assertFails(setDoc(doc(customerDb, 'orders', 'address-' + testRunId), {
+      ...base,
+      fulfillment: { mode: 'DELIVERY' },
+      customer: { ...base.customer, address: { street: 'x', number: '', neighborhood: '!' } },
+    }));
+    await assertSucceeds(setDoc(doc(customerDb, 'orders', 'name-apostrophe-' + testRunId), {
+      ...base, customer: { ...base.customer, name: "D'Ávila" },
+    }));
+    await assertSucceeds(setDoc(doc(customerDb, 'orders', 'name-japanese-' + testRunId), {
+      ...base, customer: { ...base.customer, name: '山田太郎' },
+    }));
+  });
+
+  it('mantém o fluxo de entrega restrito ao motoboy atribuído e ao cliente dono do código', async () => {
+    const orderId = `delivery-order-${testRunId}`;
+    const driverId = `driver-${testRunId}`;
+    const order = {
+      ...orderData(`customer-${testRunId}`, 'READY'),
+      fulfillment: { mode: 'DELIVERY' },
+      customer: { name: 'Cliente Teiko', whatsapp: '17999999999', address: { street: 'Rua 23', number: '624', neighborhood: 'Centro' } },
+      payment: { method: 'CASH', needsChange: false },
+    };
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'orders', orderId), order);
+      await setDoc(doc(db, 'users', driverId), { brandId: 'teiko', role: 'driver', active: true });
+      await setDoc(doc(db, 'deliveryDrivers', driverId), { brandId: 'teiko', name: 'João Motoboy', email: 'joao@example.com', phone: '17999999999', enabled: true, status: 'AVAILABLE' });
+    });
+    const adminDb = env.authenticatedContext('admin-uid').firestore();
+    const now = Timestamp.now();
+    const batch = writeBatch(adminDb);
+    batch.update(doc(adminDb, 'deliveryDrivers', driverId), { status: 'BUSY', currentDeliveryId: orderId });
+    batch.set(doc(adminDb, 'deliveries', orderId), {
+      brandId: 'teiko', unitId: 'santa-fe-do-sul', orderId, orderNumber: '#TLOCAL01', status: 'ASSIGNED',
+      driverId, driverName: 'João Motoboy', customerName: 'Cliente Teiko',
+      address: { street: 'Rua 23', number: '624', neighborhood: 'Centro' }, totalCents: 1800,
+      paymentMethod: 'CASH', createdAt: now, updatedAt: now, assignedAt: now,
+    });
+    batch.set(doc(adminDb, 'orderDeliveryCodes', orderId), { brandId: 'teiko', ownerUid: order.ownerUid, orderId, code: '0042', createdAt: now });
+    batch.set(doc(adminDb, 'deliverySecrets', orderId), { brandId: 'teiko', orderId, codeHash: 'a'.repeat(64), createdAt: now });
+    await assertSucceeds(batch.commit());
+
+    const driverDb = env.authenticatedContext(driverId).firestore();
+    await assertSucceeds(getDoc(doc(driverDb, 'deliveries', orderId)));
+    await assertFails(getDoc(doc(driverDb, 'deliverySecrets', orderId)));
+    await assertSucceeds(updateDoc(doc(driverDb, 'deliveries', orderId), { status: 'ACCEPTED', acceptedAt: Timestamp.now(), updatedAt: Timestamp.now() }));
+
+    const pickupBatch = writeBatch(driverDb);
+    pickupBatch.update(doc(driverDb, 'deliveries', orderId), { status: 'PICKED_UP', pickedUpAt: Timestamp.now(), updatedAt: Timestamp.now() });
+    pickupBatch.update(doc(driverDb, 'orders', orderId), {
+      status: 'OUT_FOR_DELIVERY', updatedAt: Timestamp.now(),
+      statusHistory: arrayUnion({ status: 'OUT_FOR_DELIVERY', at: Timestamp.now(), actorUid: driverId, actorRole: 'driver' }),
+    });
+    await assertSucceeds(pickupBatch.commit());
+    await assertFails(updateDoc(doc(driverDb, 'deliveries', orderId), { status: 'DELIVERED', deliveredAt: Timestamp.now(), updatedAt: Timestamp.now() }));
+
+    const ownerDb = env.authenticatedContext(order.ownerUid).firestore();
+    await assertSucceeds(getDoc(doc(ownerDb, 'orderDeliveryCodes', orderId)));
+    await assertFails(getDoc(doc(env.authenticatedContext(`other-${testRunId}`).firestore(), 'orderDeliveryCodes', orderId)));
+  });
+
+  it('exige entrega ARRIVED para o código e aceita somente a fila individual do motoboy', async () => {
+    const orderId = `receipt-order-${testRunId}`;
+    const driverId = `receipt-driver-${testRunId}`;
+    const now = Timestamp.now();
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'orders', orderId), {
+        ...orderData(`receipt-customer-${testRunId}`, 'OUT_FOR_DELIVERY'), fulfillment: { mode: 'DELIVERY' },
+      });
+      await setDoc(doc(db, 'users', driverId), { brandId: 'teiko', role: 'driver', active: true });
+      await setDoc(doc(db, 'deliveryDrivers', driverId), { brandId: 'teiko', name: 'Motoboy', enabled: true, status: 'BUSY', currentDeliveryId: orderId });
+      await setDoc(doc(db, 'deliveries', orderId), {
+        brandId: 'teiko', unitId: 'santa-fe-do-sul', orderId, orderNumber: '#TLOCAL02', status: 'ARRIVED', driverId, driverName: 'Motoboy',
+        customerName: 'Cliente', address: { street: 'Rua 23', number: '1', neighborhood: 'Centro' }, totalCents: 1800,
+        paymentMethod: 'CASH', createdAt: now, updatedAt: now, assignedAt: now,
+      });
+    });
+    const driverDb = env.authenticatedContext(driverId).firestore();
+    await assertSucceeds(setDoc(doc(driverDb, 'deliveryReceiptRequests', orderId), {
+      brandId: 'teiko', deliveryId: orderId, orderId, driverId, codeHash: 'b'.repeat(64), paymentConfirmed: true, status: 'PENDING', createdAt: now,
+    }));
+    await assertFails(setDoc(doc(driverDb, 'deliveryReceiptRequests', `other-${orderId}`), {
+      brandId: 'teiko', deliveryId: `other-${orderId}`, orderId: `other-${orderId}`, driverId, codeHash: 'b'.repeat(64), paymentConfirmed: true, status: 'PENDING', createdAt: now,
+    }));
+    await assertSucceeds(getDoc(doc(driverDb, 'deliveryReceiptRequests', orderId)));
+  });
+
+  it('recupera uma entrega que falhou e permite que o novo motoboy envie outro código', async () => {
+    const orderId = `retry-order-${testRunId}`;
+    const previousDriverId = `previous-driver-${testRunId}`;
+    const nextDriverId = `next-driver-${testRunId}`;
+    const now = Timestamp.now();
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'orders', orderId), {
+        ...orderData(`retry-customer-${testRunId}`, 'OUT_FOR_DELIVERY'),
+        fulfillment: { mode: 'DELIVERY' },
+        customer: { name: 'D\'Ávila', whatsapp: '5517999999999', address: { street: 'Rua 23', number: '624', neighborhood: 'Centro' } },
+      });
+      for (const driverId of [previousDriverId, nextDriverId]) {
+        await setDoc(doc(db, 'users', driverId), { brandId: 'teiko', role: 'driver', active: true });
+        await setDoc(doc(db, 'deliveryDrivers', driverId), { brandId: 'teiko', name: 'Motoboy Teiko', email: `${driverId}@example.com`, phone: '17999999999', enabled: true, status: 'AVAILABLE' });
+      }
+      await setDoc(doc(db, 'deliveries', orderId), {
+        brandId: 'teiko', unitId: 'santa-fe-do-sul', orderId, orderNumber: '#TLOCAL03', status: 'DELIVERY_FAILED',
+        driverId: previousDriverId, driverName: 'Motoboy anterior', customerName: 'D\'Ávila',
+        address: { street: 'Rua 23', number: '624', neighborhood: 'Centro' }, totalCents: 1800,
+        paymentMethod: 'CASH', createdAt: now, updatedAt: now, assignedAt: now, failureReason: 'Cliente não atendeu.',
+      });
+      await setDoc(doc(db, 'deliveryReceiptRequests', orderId), {
+        brandId: 'teiko', deliveryId: orderId, orderId, driverId: previousDriverId,
+        codeHash: 'b'.repeat(64), paymentConfirmed: true, status: 'PENDING', createdAt: now,
+      });
+    });
+
+    const adminDb = env.authenticatedContext('admin-uid').firestore();
+    const assignedAt = Timestamp.now();
+    const reassign = writeBatch(adminDb);
+    reassign.update(doc(adminDb, 'deliveryDrivers', nextDriverId), { status: 'BUSY', currentDeliveryId: orderId, updatedAt: assignedAt });
+    reassign.update(doc(adminDb, 'deliveries', orderId), { status: 'ASSIGNED', driverId: nextDriverId, driverName: 'Novo motoboy', assignedAt, updatedAt: assignedAt });
+    reassign.update(doc(adminDb, 'deliveryReceiptRequests', orderId), { status: 'REJECTED', driverId: nextDriverId, reviewedAt: assignedAt, reviewedBy: 'admin-uid' });
+    await assertSucceeds(reassign.commit());
+
+    const nextDriverDb = env.authenticatedContext(nextDriverId).firestore();
+    await assertSucceeds(updateDoc(doc(nextDriverDb, 'deliveries', orderId), { status: 'ACCEPTED', acceptedAt: Timestamp.now(), updatedAt: Timestamp.now() }));
+    await assertSucceeds(updateDoc(doc(nextDriverDb, 'deliveries', orderId), { status: 'PICKED_UP', pickedUpAt: Timestamp.now(), updatedAt: Timestamp.now() }));
+    await assertSucceeds(updateDoc(doc(nextDriverDb, 'deliveries', orderId), { status: 'ON_THE_WAY', startedAt: Timestamp.now(), updatedAt: Timestamp.now() }));
+    await assertSucceeds(updateDoc(doc(nextDriverDb, 'deliveries', orderId), { status: 'ARRIVED', arrivedAt: Timestamp.now(), updatedAt: Timestamp.now() }));
+    await assertSucceeds(updateDoc(doc(nextDriverDb, 'deliveryReceiptRequests', orderId), {
+      status: 'PENDING', codeHash: 'c'.repeat(64), createdAt: Timestamp.now(),
+      reviewedAt: deleteField(), reviewedBy: deleteField(),
+    }));
+    await assertFails(updateDoc(doc(env.authenticatedContext(previousDriverId).firestore(), 'deliveries', orderId), { status: 'ON_THE_WAY', updatedAt: Timestamp.now() }));
+  });
+
+  it('registra abertura e venda no caixa atomicamente, sem expor dados a staff', async () => {
+    const adminDb = env.authenticatedContext('admin-uid').firestore();
+    const registerId = `register-${testRunId}`;
+    const openedAt = Timestamp.now();
+    const opening = writeBatch(adminDb);
+    opening.set(doc(adminDb, 'cashRegisters', registerId), {
+      brandId: 'teiko', status: 'OPEN', operatorUid: 'admin-uid', openingDate: '2026-09-24',
+      initialBalanceCents: 5000, expectedCashCents: 5000, openedAt, updatedAt: openedAt,
+    });
+    opening.set(doc(adminDb, 'cashMovements', `opening-${registerId}`), {
+      brandId: 'teiko', registerId, type: 'OPENING', direction: 'IN', amountCents: 5000, cashAmountCents: 5000,
+      operatorUid: 'admin-uid', createdAt: openedAt,
+    });
+    opening.set(doc(adminDb, 'cashControl', 'main'), { brandId: 'teiko', openRegisterId: registerId, updatedAt: openedAt });
+    await assertSucceeds(opening.commit());
+
+    const soldAt = Timestamp.now();
+    const sale = writeBatch(adminDb);
+    sale.update(doc(adminDb, 'cashRegisters', registerId), { expectedCashCents: 6900, lastMovementAt: soldAt, updatedAt: soldAt });
+    sale.set(doc(adminDb, 'cashMovements', `sale-${testRunId}`), {
+      brandId: 'teiko', registerId, type: 'SALE', direction: 'IN', amountCents: 1900, cashAmountCents: 1900,
+      paymentMethod: 'CASH', operatorUid: 'admin-uid', createdAt: soldAt,
+    });
+    await assertSucceeds(sale.commit());
+    await assertFails(getDoc(doc(env.authenticatedContext('staff-uid').firestore(), 'cashRegisters', registerId)));
+    await assertFails(setDoc(doc(adminDb, 'cashMovements', `bad-${testRunId}`), {
+      brandId: 'teiko', registerId, type: 'SALE', direction: 'IN', amountCents: -5, cashAmountCents: -5,
+      paymentMethod: 'CASH', operatorUid: 'admin-uid', createdAt: soldAt,
+    }));
   });
 });

@@ -4,7 +4,7 @@ export type CustomerOrderApproval = 'NONE' | 'PENDING' | 'ACCEPTED' | 'DECLINED'
 export type ReservationStatus = 'REQUESTED' | 'CONFIRMED' | 'REFUSED' | 'CANCELLED' | 'COMPLETED';
 export type FulfillmentMode = 'PICKUP' | 'DELIVERY';
 export type DeliveryMode = 'NONE' | 'CONFIRM' | 'FIXED' | 'ZONES';
-export type Role = 'admin' | 'staff';
+export type Role = 'admin' | 'staff' | 'driver';
 export interface Unit { id: string; brandId: string; name: string; city: string; address?: string; whatsapp?: string; instagram?: string; active: boolean; delivery: boolean; pickup: boolean }
 export interface DiningTable {
   id: string;

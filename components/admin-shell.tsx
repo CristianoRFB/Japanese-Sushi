@@ -1,9 +1,11 @@
 'use client';
 
 import {
+  Bike,
   Boxes,
   Bell,
   BadgePercent,
+  BookOpenText,
   CalendarDays,
   ChefHat,
   LayoutDashboard,
@@ -13,6 +15,7 @@ import {
   ShoppingBag,
   SlidersHorizontal,
   SquareStack,
+  UserRound,
   WalletCards,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
@@ -39,6 +42,13 @@ const navGroups = [
     ],
   },
   {
+    label: 'Entrega',
+    links: [
+      { href: '/admin/entregas', label: 'Central de entregas', icon: Bike },
+      { href: '/admin/entregadores', label: 'Motoboys', icon: UserRound },
+    ],
+  },
+  {
     label: 'Cardápio',
     links: [
       { href: '/admin/catalogo', label: 'Cardápio', icon: Boxes },
@@ -50,8 +60,10 @@ const navGroups = [
     label: 'Gestão',
     links: [
       { href: '/admin/financas', label: 'Finanças', icon: WalletCards },
+      { href: '/admin/caixa', label: 'Caixa', icon: WalletCards },
       { href: '/admin/integracao', label: 'Integrações', icon: Link2 },
       { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
+      { href: '/admin/ajuda', label: 'Ajuda', icon: BookOpenText },
     ],
   },
 ];
@@ -68,7 +80,8 @@ export function AdminShell({
   const pathname = usePathname();
   const [newOrderCount, setNewOrderCount] = useState(0);
   useEffect(() => {
-    if (!loading && (!user || !role)) window.location.href = '/admin/login';
+    if (!loading && role === 'driver') window.location.href = '/entregador';
+    else if (!loading && (!user || !role)) window.location.href = '/admin/login';
   }, [loading, user, role]);
   useEffect(() => {
     if (loading || !user || !role || !hasFirebaseConfig) return;
@@ -102,7 +115,7 @@ export function AdminShell({
         text="Validando sua sessão e permissão."
       />
     );
-  if (!user || !role) return null;
+  if (!user || !role || role === 'driver') return null;
   if (adminOnly && role !== 'admin')
     return (
       <AdminMessage
@@ -118,7 +131,7 @@ export function AdminShell({
         <a href="/admin" aria-label="Teiko Sushi, painel operacional">
           <BrandMark />
         </a>
-        <nav className="mt-8 space-y-6" aria-label="Seções do painel">
+        <nav className="teiko-scrollbar-none mt-8 min-h-0 flex-1 space-y-6 overflow-y-auto pb-5" aria-label="Seções do painel">
           {navGroups.map((group) => <div key={group.label}>
             <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[.18em] text-teiko-gold/75">{group.label}</p>
             <div className="space-y-1">
@@ -126,7 +139,7 @@ export function AdminShell({
             </div>
           </div>)}
         </nav>
-        <div className="mt-auto rounded-2xl bg-white/6 p-3">
+        <div className="mt-3 shrink-0 rounded-2xl bg-white/6 p-3">
           <span className="block truncate text-xs font-bold">{user.email}</span>
           <span className="mt-1 block text-[10px] uppercase tracking-widest text-[#c7a773]">
             {role}

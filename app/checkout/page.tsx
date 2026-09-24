@@ -34,6 +34,8 @@ import {
   normalizePhone,
   type FulfillmentMode,
 } from '@/shared/domain';
+import { parseOptionalBRLToCents } from '@/shared/finance';
+import { isValidHumanName, validateDeliveryAddress } from '@/shared/delivery';
 
 const paymentLabels = {
   PIX: 'Pix',
@@ -127,7 +129,7 @@ export default function CheckoutPage() {
   }
   const totalCents = preview.subtotalCents + deliveryFee;
   const availability = getStoreAvailability(now, config);
-  const changeForCents = parseCurrencyToCents(changeFor);
+  const changeForCents = parseOptionalBRLToCents(changeFor, 10_000_000);
 
   function updateField(name: keyof CheckoutFields, value: string) {
     setFields((current) => ({ ...current, [name]: value }));
@@ -477,7 +479,7 @@ export default function CheckoutPage() {
                 placeholder="(17) 99999-9999"
                 required
                 inputMode="tel"
-                maxLength={20}
+                maxLength={24}
                 error={fieldErrors.whatsapp}
               />
             </div>
@@ -516,8 +518,8 @@ export default function CheckoutPage() {
               )}
               <div className="grid gap-4 sm:grid-cols-[1fr_120px]">
                 <Field
-                  label="Rua/Avenida"
-                  name="street"
+                label="Rua/Avenida"
+                name="street"
                   value={fields.street}
                   onChange={(event) =>
                     updateField('street', event.target.value)
@@ -527,8 +529,8 @@ export default function CheckoutPage() {
                   error={fieldErrors.street}
                 />
                 <Field
-                  label="Número"
-                  name="number"
+                label="Número"
+                name="number"
                   value={fields.number}
                   onChange={(event) =>
                     updateField('number', event.target.value)
@@ -540,8 +542,8 @@ export default function CheckoutPage() {
               </div>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <Field
-                  label="Complemento"
-                  name="complement"
+                label="Complemento"
+                name="complement"
                   value={fields.complement}
                   onChange={(event) =>
                     updateField('complement', event.target.value)
@@ -550,8 +552,8 @@ export default function CheckoutPage() {
                   placeholder="Opcional"
                 />
                 <Field
-                  label="Bairro"
-                  name="neighborhood"
+                label="Bairro"
+                name="neighborhood"
                   value={fields.neighborhood}
                   onChange={(event) =>
                     updateField('neighborhood', event.target.value)
@@ -877,18 +879,6 @@ function SummaryLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function parseCurrencyToCents(value: string): number | null {
-  const normalized = value.trim().replace(/[^\d,.]/g, '');
-  if (!normalized) return null;
-  const decimal = normalized.includes(',')
-    ? normalized.replace(/\./g, '').replace(',', '.')
-    : normalized;
-  const amount = Number(decimal);
-  if (!Number.isFinite(amount) || amount < 0) return null;
-  const cents = Math.round(amount * 100);
-  return Number.isSafeInteger(cents) ? cents : null;
-}
-
 function validateCheckoutFields({
   fields,
   fulfillment,
@@ -904,12 +894,7 @@ function validateCheckoutFields({
 }): Partial<Record<CheckoutFieldError, string>> {
   const errors: Partial<Record<CheckoutFieldError, string>> = {};
   const name = fields.name.trim().replace(/\s+/g, ' ');
-  if (name.length < 2) errors.name = 'Informe seu nome.';
-  else if (!/\p{L}/u.test(name)) errors.name = 'Use pelo menos uma letra no nome.';
-  else if (Array.from(name).some((character) => {
-    const code = character.charCodeAt(0);
-    return code < 32 || code === 127;
-  })) errors.name = 'Remova caracteres inválidos do nome.';
+  if (!isValidHumanName(name)) errors.name = 'Informe um nome entre 2 e 80 caracteres, sem números ou símbolos.';
 
   try {
     normalizePhone(fields.whatsapp);
@@ -918,14 +903,12 @@ function validateCheckoutFields({
   }
 
   if (fulfillment === 'DELIVERY') {
-    if (fields.street.trim().length < 3) errors.street = 'Informe a rua ou avenida.';
-    if (!fields.number.trim()) errors.number = 'Informe o número.';
-    if (fields.neighborhood.trim().length < 2) errors.neighborhood = 'Informe o bairro.';
+    Object.assign(errors, validateDeliveryAddress({ street: fields.street, number: fields.number, neighborhood: fields.neighborhood, complement: fields.complement, reference: fields.reference }));
     if (deliveryMode === 'NONE') errors.zoneId = 'A entrega está indisponível no momento.';
     if (deliveryMode === 'ZONES' && deliveryZones === 0) errors.zoneId = 'A unidade ainda não configurou regiões de entrega.';
     else if (deliveryMode === 'ZONES' && !zoneId) errors.zoneId = 'Selecione a região de entrega.';
   }
-  if (fields.orderNotes.length > 500) errors.orderNotes = 'Use no máximo 500 caracteres.';
+  if (fields.orderNotes.length > 500 || /\p{Cc}/u.test(fields.orderNotes)) errors.orderNotes = 'Use até 500 caracteres e remova caracteres de controle.';
   return errors;
 }
 

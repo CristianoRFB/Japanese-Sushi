@@ -84,14 +84,21 @@ export default function OrderPage() {
   const [decisionError, setDecisionError] = useState('');
   const [decisionMessage, setDecisionMessage] = useState('');
   const [copied, setCopied] = useState(false);
+  const [deliveryCode, setDeliveryCode] = useState('');
   useEffect(() => {
     if (!hasFirebaseConfig) {
       setError('Firebase não configurado.');
       setLoading(false);
       return;
     }
+    try {
+      const cachedCode = localStorage.getItem(`teiko-delivery-code:${publicCode}`) ?? '';
+      if (/^\d{4}$/u.test(cachedCode)) setDeliveryCode(cachedCode);
+    } catch { /* Cache is an enhancement; the order remains available from Firestore. */ }
     let active = true;
     let stop = () => {};
+    let stopCode = () => {};
+    let codeListeningFor = '';
     void (async () => {
       try {
         const { db } = getFirebaseClient();
@@ -106,7 +113,25 @@ export default function OrderPage() {
           ),
           (snapshot) => {
             const item = snapshot.docs[0];
+            const itemData = item?.data();
             setOrder(item ? ({ id: item.id, ...item.data() } as PublicOrder) : null);
+            const deliveryCodeIsActive = itemData?.fulfillment?.mode === 'DELIVERY'
+              && !['COMPLETED', 'CANCELLED'].includes(String(itemData.status));
+            if (item && !deliveryCodeIsActive) {
+              stopCode();
+              codeListeningFor = `${item.id}:closed`;
+              setDeliveryCode('');
+              try { localStorage.removeItem(`teiko-delivery-code:${publicCode}`); } catch { /* Ignore unavailable browser storage. */ }
+            } else if (item && deliveryCodeIsActive && codeListeningFor !== item.id) {
+              codeListeningFor = item.id;
+              stopCode = onSnapshot(doc(db, 'orderDeliveryCodes', item.id), (codeSnapshot) => {
+                const nextCode = String(codeSnapshot.data()?.code ?? '');
+                setDeliveryCode(/^\d{4}$/u.test(nextCode) ? nextCode : '');
+                if (/^\d{4}$/u.test(nextCode)) {
+                  try { localStorage.setItem(`teiko-delivery-code:${publicCode}`, nextCode); } catch { /* Firestore remains the durable copy. */ }
+                }
+              }, () => setDeliveryCode(''));
+            }
             setError(
               item
                 ? ''
@@ -127,6 +152,7 @@ export default function OrderPage() {
     return () => {
       active = false;
       stop();
+      stopCode();
     };
   }, [publicCode, reloadToken]);
   function load() {
@@ -168,6 +194,15 @@ export default function OrderPage() {
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       setDecisionError('Selecione e guarde o código exibido acima para consultar o pedido.');
+    }
+  }
+  async function copyDeliveryCode() {
+    try {
+      await navigator.clipboard.writeText(deliveryCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setDecisionError('Não foi possível copiar automaticamente. Selecione os quatro números e copie manualmente.');
     }
   }
   function whatsappUrl() {
@@ -261,6 +296,7 @@ export default function OrderPage() {
           </div>
           <code className="mt-4 block overflow-x-auto rounded-xl bg-[#070a08] px-4 py-3 text-center text-sm font-black tracking-[.12em] text-[#d6e7bf]">{publicCode}</code>
         </section>
+        {order.fulfillment.mode === 'DELIVERY' && deliveryCode && !['COMPLETED', 'CANCELLED'].includes(order.status) && <section className="mt-4 rounded-[24px] border-2 border-[#b5232b]/25 bg-[#fffdf7] p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Importante · entrega</p><h2 className="mt-1 text-lg font-black">Código de confirmação</h2><p className="mt-1 max-w-lg text-sm leading-5 text-[#66716a]">Guarde este código e informe-o ao motoboy somente quando receber o pedido. Ele é necessário para concluir a entrega.</p></div><Button type="button" variant="outline" onClick={() => void copyDeliveryCode()} className="rounded-full border-[#b5232b]/25 text-[#b5232b]">{copied ? 'Copiado' : 'Copiar código'}</Button></div><code className="mt-4 block rounded-xl bg-[#0b100e] px-4 py-4 text-center text-3xl font-black tracking-[.45em] text-[#c7a773]">{deliveryCode}</code></section>}
         {order.customerApproval === 'PENDING' && order.proposedChanges && (
           <section className="mt-5 rounded-[28px] border-2 border-[#c7a773] bg-[#e8efe5] p-5 sm:p-6">
             <p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Atenção necessária</p>

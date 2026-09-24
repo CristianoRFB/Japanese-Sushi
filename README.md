@@ -1,6 +1,6 @@
 # Teiko Sushi
 
-Sistema operacional da Teiko Sushi — Santa Fé do Sul/SP — com cardápio administrável, carrinho, checkout, pedidos, acompanhamento, KDS, PDV, reservas, promoções e caixa financeiro.
+Sistema operacional da Teiko Sushi — Santa Fé do Sul/SP — com cardápio administrável, carrinho, checkout, pedidos, acompanhamento, KDS, PDV, reservas, promoções, caixa de turno e fluxo de delivery com portal individual de motoboy.
 
 ## Arquitetura
 
@@ -22,11 +22,24 @@ Sistema operacional da Teiko Sushi — Santa Fé do Sul/SP — com cardápio adm
 - `/reserva` — solicitação persistente de reserva.
 - `/admin/login` — acesso da equipe.
 - `/admin`, `/admin/pedidos`, `/admin/kds`, `/admin/pdv` — operação de pedidos.
+- `/admin/entregas`, `/admin/entregadores` — despacho, acompanhamento e gestão de acessos individuais.
+- `/entregador/login`, `/entregador`, `/entregador/entrega/:id` — portal mobile do motoboy, etapas da corrida, navegação e confirmação.
+- `/admin/caixa` — fundo inicial, vendas por meio, suprimentos, sangrias, fechamento e conferência do turno.
+- `/admin/ajuda` — guias rápidos da operação.
 - `/admin/reservas` — confirmar, recusar e concluir reservas.
 - `/admin/catalogo`, `/admin/adicionais`, `/admin/promocoes`, `/admin/financas` e `/admin/configuracoes` — gestão da unidade.
 - `/admin/integracao` — preparação segura para integrações futuras, desativada por padrão.
 
 O início também oferece busca pelo código ou número do pedido e recupera os últimos códigos salvos no cache individual do navegador.
+
+## Caixa e delivery
+
+- O Caixa registra valores em centavos, permite somente um turno aberto, impede sangria acima do saldo físico e usa identificadores idempotentes para evitar duplicação após falha de conexão. Pix e cartão entram nas vendas e em Finanças, sem aumentar o dinheiro esperado na gaveta.
+- A cozinha marca o pedido como pronto; a Central de entregas atribui um motoboy disponível. O motoboy aceita/recusa, confirma retirada, inicia a rota, marca chegada e envia o código de quatro dígitos do cliente.
+- O código secreto é armazenado como hash e nunca fica disponível ao motoboy. A equipe confirma o código e o pagamento antes de concluir o pedido e liberar a corrida; a conclusão atualiza pedido, caixa (quando dinheiro) e Finanças numa única transação Firestore.
+- A Açaíteria usa Cloud Functions no fluxo de entregas. A Teiko não habilita Functions em produção: as regras do Firestore restringem a leitura e as transições, e a conferência final é feita pela equipe dentro do painel. Não há rastreamento GPS em segundo plano nem notificações push quando o app está fechado.
+
+O fluxo de produção usa somente o Firebase dedicado `sushi-cbfd2`, Firestore `(default)` e Authentication. Não conecte Rules/deploy ao projeto da Açaíteria; não habilite Blaze, Storage, Functions ou Cloud Run.
 
 ## Desenvolvimento
 
