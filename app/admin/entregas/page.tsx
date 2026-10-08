@@ -64,6 +64,7 @@ export default function DeliveriesPage() {
     return canDispatch && order.fulfillment?.mode === 'DELIVERY' && order.customerApproval !== 'PENDING';
   }), [deliveries, orders]);
   const activeDeliveries = deliveries.filter((delivery) => !['DELIVERED', 'CANCELLED'].includes(delivery.status)).sort((a, b) => timestampSeconds(b.updatedAt) - timestampSeconds(a.updatedAt));
+  const historyDeliveries = deliveries.filter((delivery) => ['DELIVERED', 'CANCELLED', 'DELIVERY_FAILED'].includes(delivery.status)).sort((a, b) => timestampSeconds(b.updatedAt) - timestampSeconds(a.updatedAt));
   const assignmentCount = eligibleOrders.filter((order) => !activeDeliveries.some((delivery) => delivery.orderId === order.id && !['READY_FOR_DELIVERY', 'DELIVERY_FAILED'].includes(delivery.status))).length;
   const availableDrivers = drivers.filter((driver) => driver.enabled && driver.status === 'AVAILABLE' && !driver.currentDeliveryId);
 
@@ -123,6 +124,11 @@ export default function DeliveriesPage() {
         <PanelHeading icon={<ShieldCheck />} eyebrow="Validação antes de concluir" title="Código e pagamento para conferir" count={receipts.length} />
         <div className="mt-4 grid gap-3 xl:grid-cols-2">{receipts.map((receipt) => <ReceiptCard key={receipt.id} receipt={receipt} delivery={deliveries.find((delivery) => delivery.id === receipt.deliveryId)} busy={busy === receipt.id} onVerify={(confirmed) => void verify(receipt, confirmed)} />)}{!receipts.length && <Empty text="Nenhum cliente aguarda a conferência final neste momento." />}</div>
       </section>
+
+      <section className="mt-8">
+        <PanelHeading icon={<Clock3 />} eyebrow="Rastreabilidade" title="Histórico recente" count={historyDeliveries.length} />
+        <div className="mt-4 grid gap-3 xl:grid-cols-2">{historyDeliveries.slice(0, 30).map((delivery) => <HistoryDelivery key={delivery.id} delivery={delivery} />)}{!historyDeliveries.length && <Empty text="As corridas concluídas ou falhas aparecerão aqui." />}</div>
+      </section>
     </>}
   </AdminShell>;
 }
@@ -147,6 +153,10 @@ function ActiveDelivery({ delivery, busy, onCancel }: { delivery: DeliveryRecord
 function ReceiptCard({ receipt, delivery, busy, onVerify }: { receipt: DeliveryReceiptRequest; delivery?: DeliveryRecord; busy: boolean; onVerify: (confirmed: boolean) => void }) {
   const [confirmed, setConfirmed] = useState(false);
   return <article className="rounded-[26px] border border-[#c7a773]/50 bg-[#fffdf7] p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><span className="inline-flex rounded-full bg-[#f3f0e8] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#76510a]">Conferência humana necessária</span><h3 className="mt-3 text-lg font-black">{delivery?.orderNumber ?? receipt.orderId}</h3><p className="mt-1 text-sm text-[#66716a]">{delivery?.customerName ?? 'Cliente'} · {delivery?.driverName ?? 'Motoboy'}</p></div><ShieldCheck className="size-6 text-[#b5232b]" /></div><div className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-[#66716a]"><p>Peça ao cliente os quatro números do código de entrega e confirme o valor recebido no comprovante, maquininha ou dinheiro entregue pelo motoboy.</p><p className="mt-2 font-bold text-[#111613]">O código não é exibido para a equipe: o sistema compara o hash e evita registrar tentativas em texto aberto.</p></div><label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-[#070a08]/10 p-3 text-xs font-bold leading-5"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-0.5 size-4 accent-[#b5232b]" />Conferi pessoalmente o código com o cliente e confirmei o recebimento do pagamento.</label><Button type="button" disabled={busy || !confirmed} onClick={() => onVerify(confirmed)} className="mt-4 min-h-11 w-full rounded-full bg-[#0b100e] font-black text-white">{busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} Validar e concluir pedido</Button></article>;
+}
+
+function HistoryDelivery({ delivery }: { delivery: DeliveryRecord }) {
+  return <article className="rounded-[24px] border border-[#070a08]/8 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-black">{delivery.orderNumber}</h3><p className="mt-1 text-sm text-[#66716a]">{delivery.customerName} · {delivery.driverName || 'Motoboy não identificado'}</p></div><span className={`rounded-full px-3 py-1.5 text-xs font-black ${delivery.status === 'DELIVERED' ? 'bg-[#e7f1df] text-[#27523a]' : 'bg-[#fff0ef] text-[#9d1723]'}`}>{deliveryStatusLabels[delivery.status]}</span></div><p className="mt-3 text-sm text-[#66716a]">{delivery.address.street}, {delivery.address.number} · {delivery.address.neighborhood}</p>{delivery.failureReason && <p className="mt-3 rounded-xl bg-[#fff0ef] p-3 text-xs font-bold text-[#9d1723]">Motivo registrado: {delivery.failureReason}</p>}</article>;
 }
 
 function Empty({ text }: { text: string }) { return <div className="rounded-[24px] border border-dashed border-[#070a08]/15 bg-white p-8 text-center text-sm text-[#66716a] md:col-span-2"><RefreshCw className="mx-auto size-5 text-[#b5232b]" /><p className="mt-3">{text}</p></div>; }
