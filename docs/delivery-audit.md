@@ -1,9 +1,15 @@
 # Auditoria do módulo de entregas — Teiko Sushi
 
-Data da auditoria: 2026-10-07  
-Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`  
-HEAD recuperado antes da auditoria: `ff5bf87` (`feat: add cashier and courier operations`)  
-Branch: `main` · pull fast-forward concluído · working tree limpo antes das correções.
+Data da auditoria: 2026-10-08
+Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
+RC auditado: `4c19046dacee9033e529cde816b82aea7a321cc7` (`feat: add delivery history to admin center`)
+Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
+
+## Veredito do RC atual
+
+**BLOQUEADO para venda em produção.** O RC abre em `http://localhost:3001/` e a tela pública foi operada no navegador. A entrada administrativa exibe apenas e-mail/senha e informa que as credenciais são gerenciadas pelo Firebase; não há credencial administrativa versionada ou disponível neste workspace.
+
+O bloqueio é comercial e operacional, não uma falha de build local: o cardápio real ainda não foi configurado, o checkout ainda grava uma prévia de preço pelo cliente e o ambiente Firebase/deploy de produção não foi comprovado.
 
 O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplicados somente os requisitos funcionais de auditoria de motoboy ao produto atual, Teiko Sushi; branding, dados e regras do Açaí foram descartados.
 
@@ -49,6 +55,9 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 ## Validações executadas
 
+- `git pull --ff-only` — sem atualizações; RC confirmado em `4c19046dacee9033e529cde816b82aea7a321cc7`.
+- Navegador local — passou para a home pública em `http://localhost:3001/`; a página mostra o cardápio de desenvolvimento e preços pendentes.
+- `/admin/login` — passou visualmente; acesso exige e-mail e senha do Firebase e não expõe credenciais no código.
 - `npm run lint` — passou.
 - `npm run typecheck` — passou.
 - `npm test` — 7 arquivos, 29 testes passaram.
