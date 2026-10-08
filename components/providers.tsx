@@ -406,6 +406,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (roleDoc) => {
           if (currentGeneration !== generation) return;
           const data = roleDoc.data();
+          stopDriverDoc?.();
+          stopDriverDoc = null;
           if (!roleDoc.exists() || data?.brandId !== TEIKO_BRAND_ID || data.active !== true || !isTeamRole(data.role)) {
             setState({ user: null, role: null, loading: false });
             void signOut(auth);
@@ -417,7 +419,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
           setState({ user, role: null, loading: true });
-          stopDriverDoc?.();
           stopDriverDoc = onSnapshot(
             doc(db, 'deliveryDrivers', user.uid),
             (driverDoc) => {
