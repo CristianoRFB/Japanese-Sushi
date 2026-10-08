@@ -67,6 +67,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - `npm run test:functions` — 1 arquivo, 7 testes passaram.
 - `npm --prefix functions run build` — passou.
 - `firebase emulators:exec --only auth,firestore,functions "npm --prefix functions run test:e2e"` — 3 cenários de criação de pedido passaram, incluindo idempotência e rejeição de preço adulterado.
+- `npx wrangler deploy --dry-run --config dist/server/wrangler.json` — passou; release Cloudflare gerado com 394 módulos, 5,1 MB de upload e sem bindings pendentes. Nenhuma publicação real foi feita.
 - `npm run test:rules` — 1 arquivo, 14 testes passaram no Firestore Emulator com Java 21.
 - `npm run build` — passou; apenas aviso não bloqueante de chunks acima de 500 kB.
 - `npm audit --omit=dev --audit-level=high` — encontrou 26 vulnerabilidades (1 crítica, 21 altas, 3 moderadas, 1 baixa); não foi aplicado `npm audit fix --force` por risco de alterações incompatíveis.
@@ -77,7 +78,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 1. Cadastrar e conferir o catálogo, preços, adicionais, horários, unidade, pagamentos e regras de delivery oficiais; o seed de desenvolvimento usa preços `0` e o README exige configuração manual.
 2. Publicar e observar `createOrder` no Firebase oficial; a proteção já está implementada e validada no emulator, mas ainda não há evidência de deploy, App Check e logs em produção.
 3. Configurar uma chave Firebase Web válida, Auth Email/Password + Anonymous, primeiro admin e documentos de produção; `.env.local` não está versionado neste workspace.
-4. Escolher e executar o deploy oficial de Hosting, Firestore e Functions; Functions de segunda geração exigem plano de faturamento e revisão de limites/custos.
+4. Executar o deploy oficial separado: frontend com Wrangler na conta Cloudflare correta; Firestore/Functions com Firebase. Functions de segunda geração exigem plano de faturamento e revisão de limites/custos.
 5. Resolver as vulnerabilidades de dependências, preferencialmente por atualizações compatíveis e nova rodada completa de testes.
 6. Executar uma jornada real com cliente, admin e motoboy, incluindo código errado/certo, falha, reatribuição, dinheiro e duas sessões concorrentes.
 7. Decidir se a operação exige push quando o portal estiver fechado; se sim, implementar FCM/Web Push antes da venda.

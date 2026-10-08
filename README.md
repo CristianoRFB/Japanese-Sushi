@@ -5,6 +5,7 @@ Sistema operacional da Teiko Sushi — Santa Fé do Sul/SP — com cardápio adm
 ## Arquitetura
 
 - React 19, TypeScript, Vinext/Vite e Tailwind.
+- Frontend executado como Worker Cloudflare; `npm run build` gera `dist/server/wrangler.json` e `npm run deploy:frontend` publica o release.
 - Firebase dedicado `sushi-cbfd2`, usando Authentication, Firestore `(default)` e Cloud Functions na região `southamerica-east1`.
 - Firebase Web SDK inicializado como singleton em `lib/firebase/client.ts`.
 - Cliente anônimo para pedidos e reservas; Email/Password para a equipe.
@@ -64,6 +65,7 @@ No projeto `sushi-cbfd2`:
 4. Firestore Database → `(default)` → criar `users/{UID}` com `brandId: teiko`, `role: admin`, `active: true`.
 5. Firestore Database → `(default)` → preencher `storePublicConfig/main` e o catálogo oficial antes de abrir pedidos.
 6. Habilitar o plano necessário para Cloud Functions e publicar `firebase deploy --only functions,firestore` após compilar `functions`.
+7. Autenticar o Wrangler na conta Cloudflare correta e publicar o frontend com `npm run deploy:frontend`.
 
 Não criar banco nomeado adicional. Não ativar Storage ou Cloud Run. Se Functions forem publicadas, revisar faturamento, App Check e limites antes de abrir pedidos.
 
@@ -80,3 +82,5 @@ npm --prefix functions run build
 ```
 
 As Functions em `functions/` fazem parte do fluxo de pedidos. Antes do go-live, publique o bundle compilado e execute o teste de criação de pedido contra os emuladores e o projeto oficial.
+
+O deploy do frontend é separado do Firebase: use a conta Cloudflare da unidade, confira o nome do Worker gerado (`teiko-sushi`) e configure as variáveis públicas Firebase no ambiente de build. O dry-run local deve ser executado antes da publicação.
