@@ -24,7 +24,10 @@ import {
   type ReservationStatus,
 } from '../../shared/domain.js';
 
-if (!getApps().length) initializeApp();
+if (!getApps().length)
+  initializeApp({
+    projectId: process.env.GCLOUD_PROJECT || 'sushi-cbfd2',
+  });
 const db = getFirestore();
 const region = 'southamerica-east1';
 const enforceAppCheck = process.env.ENFORCE_APP_CHECK === 'true';

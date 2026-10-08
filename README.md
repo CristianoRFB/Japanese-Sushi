@@ -79,10 +79,10 @@ npm run test:functions # somente contratos legados locais, se necessário
 npm run test:rules
 npm run build
 npm --prefix functions run build
-npx firebase emulators:exec --config firebase.e2e.json --project sushi-cbfd2 --only auth,firestore,functions "npm --prefix functions run test:e2e"
+npm run test:e2e
 npm run preflight:production
 ```
 
-As Functions em `functions/` fazem parte do fluxo de pedidos. O `firebase.e2e.json` usa portas isoladas (Auth 9199, Firestore 8280 e Functions 5101) para não interromper outros emuladores locais; o teste cobre persistência, idempotência e rejeição de preço adulterado. Antes do go-live, publique o bundle compilado e repita o teste contra o projeto oficial.
+As Functions em `functions/` fazem parte do fluxo de pedidos. O `npm run test:e2e` escolhe portas livres em cada execução, inicia uma configuração temporária e encerra os emuladores ao final; o teste cobre persistência, idempotência e rejeição de preço adulterado. Antes do go-live, publique o bundle compilado e repita o teste contra o projeto oficial.
 
 O deploy do frontend é separado do Firebase: use a conta Cloudflare da unidade, confira o nome do Worker gerado (`teiko-sushi`) e configure as variáveis públicas Firebase no ambiente de build. O dry-run local deve ser executado antes da publicação.

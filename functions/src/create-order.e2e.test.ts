@@ -7,12 +7,27 @@ if (!getApps().length)
     projectId: process.env.GCLOUD_PROJECT || 'sushi-cbfd2',
   });
 const db = getFirestore();
-const functionsPort = process.env.FUNCTIONS_EMULATOR_PORT || '5001';
-const authPort = process.env.AUTH_EMULATOR_PORT || '9099';
+function emulatorBaseUrl(hostVariable: string, portVariable: string, fallbackPort: string) {
+  const configuredPort = process.env[portVariable];
+  if (configuredPort) return `http://127.0.0.1:${configuredPort}`;
+  const configuredHost = process.env[hostVariable];
+  return `http://${configuredHost || `127.0.0.1:${fallbackPort}`}`;
+}
+
+const functionsBaseUrl = emulatorBaseUrl(
+  'FUNCTIONS_EMULATOR_HOST',
+  'FUNCTIONS_EMULATOR_PORT',
+  '5001',
+);
+const authBaseUrl = emulatorBaseUrl(
+  'FIREBASE_AUTH_EMULATOR_HOST',
+  'AUTH_EMULATOR_PORT',
+  '9099',
+);
 const endpoint =
-  `http://127.0.0.1:${functionsPort}/sushi-cbfd2/southamerica-east1/createOrder`;
+  `${functionsBaseUrl}/sushi-cbfd2/southamerica-east1/createOrder`;
 const authEndpoint =
-  `http://127.0.0.1:${authPort}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=owner-test-key`;
+  `${authBaseUrl}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=owner-test-key`;
 const basePayload = {
   unitId: 'santa-fe-do-sul',
   customer: { name: 'Cliente Teiko', whatsapp: '17999999999' },
@@ -25,8 +40,25 @@ const basePayload = {
 };
 let idToken = '';
 
+async function fetchJson(url: string, init: RequestInit) {
+  const response = await fetch(url, {
+    ...init,
+    signal: AbortSignal.timeout(15_000),
+  });
+  const text = await response.text();
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw new Error(
+      `E2E recebeu resposta não-JSON em ${url}: ${response.status} ${text.slice(0, 160)}`,
+    );
+  }
+  return { response, body };
+}
+
 async function call(data: unknown) {
-  const response = await fetch(endpoint, {
+  const { response, body } = await fetchJson(endpoint, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -36,7 +68,7 @@ async function call(data: unknown) {
   });
   return {
     status: response.status,
-    body: (await response.json()) as {
+    body: body as {
       result?: Record<string, unknown>;
       error?: { message?: string };
     },
@@ -44,15 +76,14 @@ async function call(data: unknown) {
 }
 
 beforeAll(async () => {
-  const authResponse = await fetch(authEndpoint, {
+  const { response: authResponse, body: authBody } = await fetchJson(authEndpoint, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ returnSecureToken: true }),
   });
-  const authBody = (await authResponse.json()) as { idToken?: string };
-  if (!authResponse.ok || !authBody.idToken)
+  if (!authResponse.ok || !(authBody as { idToken?: string }).idToken)
     throw new Error('Não foi possível criar a sessão anônima do E2E.');
-  idToken = authBody.idToken;
+  idToken = (authBody as { idToken: string }).idToken;
   await db.doc('storePublicConfig/main').set({
     brandId: 'teiko',
     storeName: 'Teiko Sushi',
@@ -100,7 +131,7 @@ beforeAll(async () => {
     modifierGroupIds: [],
     unitIds: ['santa-fe-do-sul'],
   });
-});
+}, 60_000);
 
 describe('createOrder da Teiko', () => {
   it('persiste um pedido e devolve o código público', async () => {
