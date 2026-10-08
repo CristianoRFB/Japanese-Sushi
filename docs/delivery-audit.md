@@ -2,7 +2,7 @@
 
 Data da auditoria: 2026-10-08
 Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
-RC auditado: `4c19046dacee9033e529cde816b82aea7a321cc7` (`feat: add delivery history to admin center`)
+RC auditado: `ea070f7` (`feat: route order creation through server`)
 Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
 
 ## Veredito do RC atual
@@ -57,7 +57,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 ## Validações executadas
 
-- `git pull --ff-only` — sem atualizações; RC confirmado em `4c19046dacee9033e529cde816b82aea7a321cc7`.
+- `git pull --ff-only` — sem atualizações; RC confirmado em `ea070f7`.
 - Navegador local — passou para a home pública em `http://localhost:3001/`; a página mostra o cardápio de desenvolvimento e preços pendentes.
 - `/admin/login` — passou visualmente; acesso exige e-mail e senha do Firebase e não expõe credenciais no código.
 - `npm run lint` — passou.
