@@ -42,6 +42,8 @@ export const driverStatusLabels: Record<DeliveryDriverStatus, string> = {
   INACTIVE: 'Acesso suspenso',
 };
 
+export const MAX_DELIVERY_CODE_ATTEMPTS = 5;
+
 export interface DeliveryAddress {
   street: string;
   number: string;
@@ -129,6 +131,8 @@ export interface DeliveryReceiptRequest {
   codeHash: string;
   paymentConfirmed: boolean;
   status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  attempts: number;
+  locked: boolean;
   createdAt?: unknown;
   reviewedAt?: unknown;
   reviewedBy?: string;

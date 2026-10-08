@@ -4,7 +4,7 @@ import {
 
 import { getFirebaseClient } from '@/lib/firebase/client';
 import { TEIKO_BRAND_ID } from '@/shared/domain';
-import { isDeliveryCode, validateDeliveryAddress, validateDeliveryFailureReason, type DeliveryAddress, type DeliveryRecord } from '@/shared/delivery';
+import { isDeliveryCode, MAX_DELIVERY_CODE_ATTEMPTS, validateDeliveryAddress, validateDeliveryFailureReason, type DeliveryAddress, type DeliveryRecord } from '@/shared/delivery';
 import { isValidCashAmount } from '@/shared/cash-register';
 
 function randomDeliveryCode() {
@@ -76,6 +76,8 @@ export async function assignReadyOrder(input: { orderId: string; driverId: strin
       transaction.update(receiptRef, {
         status: 'REJECTED',
         driverId: input.driverId,
+        attempts: 0,
+        locked: false,
         reviewedAt: now,
         reviewedBy: input.actorUid,
       });
@@ -165,7 +167,15 @@ export async function reviewDeliveryReceipt(input: { deliveryId: string; actorUi
     if (receipt.status !== 'PENDING' || delivery.status !== 'ARRIVED' || order.status !== 'OUT_FOR_DELIVERY') throw new Error('O pedido ou o comprovante mudou de estado. Atualize a central.');
     const now = Timestamp.now();
     if (receipt.driverId !== delivery.driverId || !receipt.codeHash || receipt.codeHash !== secretSnap.data().codeHash) {
-      transaction.update(requestRef, { status: 'REJECTED', reviewedAt: now, reviewedBy: input.actorUid });
+      const attempts = Number.isInteger(receipt.attempts) ? Number(receipt.attempts) : 0;
+      const nextAttempts = Math.min(MAX_DELIVERY_CODE_ATTEMPTS, attempts + 1);
+      transaction.update(requestRef, {
+        status: 'REJECTED',
+        attempts: nextAttempts,
+        locked: nextAttempts >= MAX_DELIVERY_CODE_ATTEMPTS,
+        reviewedAt: now,
+        reviewedBy: input.actorUid,
+      });
       return { verified: false, idempotent: false };
     }
     const totalCents = Number(order.pricing?.totalCents);
@@ -197,7 +207,7 @@ export async function reviewDeliveryReceipt(input: { deliveryId: string; actorUi
         sourceOrderId: input.deliveryId, operatorUid: input.actorUid, createdAt: now,
       });
     }
-    transaction.set(doc(db, 'financeEntries', `delivery-${input.deliveryId}`), {
+    transaction.set(doc(db, 'financeEntries', input.deliveryId), {
       brandId: TEIKO_BRAND_ID, kind: 'INCOME', category: 'Delivery',
       description: `Pedido ${delivery.orderNumber}`, amountCents: totalCents,
       date: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()),
@@ -336,11 +346,16 @@ export async function submitDeliveryCode(input: { deliveryId: string; driverId: 
       codeHash,
       paymentConfirmed: input.paymentConfirmed,
       status: 'PENDING',
+      attempts: 0,
+      locked: false,
       createdAt: now,
     };
     if (request.exists()) {
       if (request.data().status !== 'REJECTED' || request.data().driverId !== input.driverId) {
         throw new Error('Já existe uma conferência pendente para esta corrida. Aguarde a administração.');
+      }
+      if (request.data().locked === true || Number(request.data().attempts ?? 0) >= MAX_DELIVERY_CODE_ATTEMPTS) {
+        throw new Error('O código foi bloqueado após tentativas inválidas. Peça à loja para reatribuir a corrida.');
       }
       transaction.update(requestRef, {
         status: 'PENDING', codeHash, createdAt: now,

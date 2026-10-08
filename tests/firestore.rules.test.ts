@@ -398,9 +398,19 @@ describe('Firestore Rules Spark Teiko', () => {
     await assertSucceeds(batch.commit());
 
     const driverDb = env.authenticatedContext(driverId).firestore();
+    const ownerDb = env.authenticatedContext(order.ownerUid).firestore();
+    await assertSucceeds(getDoc(doc(ownerDb, 'deliveries', orderId)));
+    await assertFails(getDoc(doc(env.authenticatedContext(`other-owner-${testRunId}`).firestore(), 'deliveries', orderId)));
     await assertSucceeds(getDoc(doc(driverDb, 'deliveries', orderId)));
     await assertFails(getDoc(doc(driverDb, 'deliverySecrets', orderId)));
     await assertSucceeds(updateDoc(doc(driverDb, 'deliveries', orderId), { status: 'ACCEPTED', acceptedAt: Timestamp.now(), updatedAt: Timestamp.now() }));
+    await assertFails(updateDoc(doc(driverDb, 'deliveries', orderId), {
+      driverId: `hijacked-${testRunId}`,
+      driverName: 'Outro motoboy',
+      status: 'PICKED_UP',
+      pickedUpAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    }));
 
     const pickupBatch = writeBatch(driverDb);
     pickupBatch.update(doc(driverDb, 'deliveries', orderId), { status: 'PICKED_UP', pickedUpAt: Timestamp.now(), updatedAt: Timestamp.now() });
@@ -411,7 +421,6 @@ describe('Firestore Rules Spark Teiko', () => {
     await assertSucceeds(pickupBatch.commit());
     await assertFails(updateDoc(doc(driverDb, 'deliveries', orderId), { status: 'DELIVERED', deliveredAt: Timestamp.now(), updatedAt: Timestamp.now() }));
 
-    const ownerDb = env.authenticatedContext(order.ownerUid).firestore();
     await assertSucceeds(getDoc(doc(ownerDb, 'orderDeliveryCodes', orderId)));
     await assertFails(getDoc(doc(env.authenticatedContext(`other-${testRunId}`).firestore(), 'orderDeliveryCodes', orderId)));
   });
@@ -435,12 +444,30 @@ describe('Firestore Rules Spark Teiko', () => {
     });
     const driverDb = env.authenticatedContext(driverId).firestore();
     await assertSucceeds(setDoc(doc(driverDb, 'deliveryReceiptRequests', orderId), {
-      brandId: 'teiko', deliveryId: orderId, orderId, driverId, codeHash: 'b'.repeat(64), paymentConfirmed: true, status: 'PENDING', createdAt: now,
+      brandId: 'teiko', deliveryId: orderId, orderId, driverId, codeHash: 'b'.repeat(64), paymentConfirmed: true, status: 'PENDING', attempts: 0, locked: false, createdAt: now,
     }));
     await assertFails(setDoc(doc(driverDb, 'deliveryReceiptRequests', `other-${orderId}`), {
-      brandId: 'teiko', deliveryId: `other-${orderId}`, orderId: `other-${orderId}`, driverId, codeHash: 'b'.repeat(64), paymentConfirmed: true, status: 'PENDING', createdAt: now,
+      brandId: 'teiko', deliveryId: `other-${orderId}`, orderId: `other-${orderId}`, driverId, codeHash: 'b'.repeat(64), paymentConfirmed: true, status: 'PENDING', attempts: 0, locked: false, createdAt: now,
     }));
     await assertSucceeds(getDoc(doc(driverDb, 'deliveryReceiptRequests', orderId)));
+
+    const adminDb = env.authenticatedContext('admin-uid').firestore();
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      if (attempt > 1) {
+        await assertSucceeds(updateDoc(doc(driverDb, 'deliveryReceiptRequests', orderId), {
+          status: 'PENDING', codeHash: `${String(attempt).repeat(64)}`.slice(0, 64), createdAt: Timestamp.now(),
+          reviewedAt: deleteField(), reviewedBy: deleteField(),
+        }));
+      }
+      await assertSucceeds(updateDoc(doc(adminDb, 'deliveryReceiptRequests', orderId), {
+        status: 'REJECTED', attempts: attempt, locked: attempt === 5,
+        reviewedAt: Timestamp.now(), reviewedBy: 'admin-uid',
+      }));
+    }
+    await assertFails(updateDoc(doc(driverDb, 'deliveryReceiptRequests', orderId), {
+      status: 'PENDING', codeHash: 'd'.repeat(64), createdAt: Timestamp.now(),
+      reviewedAt: deleteField(), reviewedBy: deleteField(),
+    }));
   });
 
   it('recupera uma entrega que falhou e permite que o novo motoboy envie outro código', async () => {
@@ -467,7 +494,7 @@ describe('Firestore Rules Spark Teiko', () => {
       });
       await setDoc(doc(db, 'deliveryReceiptRequests', orderId), {
         brandId: 'teiko', deliveryId: orderId, orderId, driverId: previousDriverId,
-        codeHash: 'b'.repeat(64), paymentConfirmed: true, status: 'PENDING', createdAt: now,
+        codeHash: 'b'.repeat(64), paymentConfirmed: true, status: 'PENDING', attempts: 0, locked: false, createdAt: now,
       });
     });
 
@@ -476,7 +503,7 @@ describe('Firestore Rules Spark Teiko', () => {
     const reassign = writeBatch(adminDb);
     reassign.update(doc(adminDb, 'deliveryDrivers', nextDriverId), { status: 'BUSY', currentDeliveryId: orderId, updatedAt: assignedAt });
     reassign.update(doc(adminDb, 'deliveries', orderId), { status: 'ASSIGNED', driverId: nextDriverId, driverName: 'Novo motoboy', assignedAt, updatedAt: assignedAt });
-    reassign.update(doc(adminDb, 'deliveryReceiptRequests', orderId), { status: 'REJECTED', driverId: nextDriverId, reviewedAt: assignedAt, reviewedBy: 'admin-uid' });
+    reassign.update(doc(adminDb, 'deliveryReceiptRequests', orderId), { status: 'REJECTED', driverId: nextDriverId, attempts: 0, locked: false, reviewedAt: assignedAt, reviewedBy: 'admin-uid' });
     await assertSucceeds(reassign.commit());
 
     const nextDriverDb = env.authenticatedContext(nextDriverId).firestore();
@@ -489,6 +516,44 @@ describe('Firestore Rules Spark Teiko', () => {
       reviewedAt: deleteField(), reviewedBy: deleteField(),
     }));
     await assertFails(updateDoc(doc(env.authenticatedContext(previousDriverId).firestore(), 'deliveries', orderId), { status: 'ON_THE_WAY', updatedAt: Timestamp.now() }));
+  });
+
+  it('exige hash correto, pedido concluído e lançamento financeiro na confirmação final', async () => {
+    const orderId = `final-order-${testRunId}`;
+    const driverId = `final-driver-${testRunId}`;
+    const now = Timestamp.now();
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'orders', orderId), {
+        ...orderData(`final-customer-${testRunId}`, 'OUT_FOR_DELIVERY'), fulfillment: { mode: 'DELIVERY' },
+      });
+      await setDoc(doc(db, 'users', driverId), { brandId: 'teiko', role: 'driver', active: true });
+      await setDoc(doc(db, 'deliveryDrivers', driverId), { brandId: 'teiko', name: 'Motoboy Final', enabled: true, status: 'BUSY', currentDeliveryId: orderId });
+      await setDoc(doc(db, 'deliveries', orderId), {
+        brandId: 'teiko', unitId: 'santa-fe-do-sul', orderId, orderNumber: '#TFINAL', status: 'ARRIVED', driverId, driverName: 'Motoboy Final',
+        customerName: 'Cliente Final', address: { street: 'Rua 23', number: '1', neighborhood: 'Centro' }, totalCents: 1800,
+        paymentMethod: 'PIX', createdAt: now, updatedAt: now, assignedAt: now,
+      });
+      await setDoc(doc(db, 'deliverySecrets', orderId), { brandId: 'teiko', orderId, codeHash: 'c'.repeat(64), createdAt: now });
+      await setDoc(doc(db, 'deliveryReceiptRequests', orderId), {
+        brandId: 'teiko', deliveryId: orderId, orderId, driverId, codeHash: 'c'.repeat(64), paymentConfirmed: true,
+        status: 'PENDING', attempts: 0, locked: false, createdAt: now,
+      });
+    });
+    const adminDb = env.authenticatedContext('admin-uid').firestore();
+    await assertFails(updateDoc(doc(adminDb, 'deliveryReceiptRequests', orderId), {
+      status: 'VERIFIED', reviewedAt: Timestamp.now(), reviewedBy: 'admin-uid',
+    }));
+    const finishedAt = Timestamp.now();
+    const finish = writeBatch(adminDb);
+    finish.update(doc(adminDb, 'deliveryReceiptRequests', orderId), { status: 'VERIFIED', reviewedAt: finishedAt, reviewedBy: 'admin-uid' });
+    finish.update(doc(adminDb, 'deliveries', orderId), { status: 'DELIVERED', deliveredAt: finishedAt, updatedAt: finishedAt });
+    finish.update(doc(adminDb, 'orders', orderId), { status: 'COMPLETED', updatedAt: finishedAt, statusHistory: arrayUnion({ status: 'COMPLETED', at: finishedAt, actorUid: 'admin-uid', actorRole: 'admin' }) });
+    finish.set(doc(adminDb, 'financeEntries', orderId), {
+      brandId: 'teiko', kind: 'INCOME', category: 'Delivery', description: 'Pedido final', amountCents: 1800,
+      date: '2026-10-07', status: 'PAID', sourceOrderId: orderId, createdAt: finishedAt, updatedAt: finishedAt,
+    });
+    await assertSucceeds(finish.commit());
   });
 
   it('registra abertura e venda no caixa atomicamente, sem expor dados a staff', async () => {

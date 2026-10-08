@@ -63,7 +63,8 @@ service cloud.firestore {
             || !exists(/databases/$(database)/documents/deliveries/$(orderId))
             || getAfter(/databases/$(database)/documents/deliveries/$(orderId)).data.status == 'CANCELLED'))
         || (resource.data.status == 'OUT_FOR_DELIVERY' && request.resource.data.status == 'COMPLETED'
-          && getAfter(/databases/$(database)/documents/deliveries/$(orderId)).data.status == 'DELIVERED')
+          && getAfter(/databases/$(database)/documents/deliveries/$(orderId)).data.status == 'DELIVERED'
+          && getAfter(/databases/$(database)/documents/financeEntries/$(orderId)).data.sourceOrderId == orderId)
         || (resource.data.status == 'OUT_FOR_DELIVERY' && request.resource.data.status == 'CANCELLED'
           && getAfter(/databases/$(database)/documents/deliveries/$(orderId)).data.status == 'CANCELLED');
     }
@@ -113,6 +114,11 @@ service cloud.firestore {
         && brand(resource.data)
         && brand(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'driverId', 'driverName', 'updatedAt', 'acceptedAt', 'pickedUpAt', 'startedAt', 'arrivedAt', 'failureReason'])
+        && ((request.resource.data.status == 'READY_FOR_DELIVERY'
+          && !request.resource.data.keys().hasAny(['driverId', 'driverName']))
+          || (request.resource.data.driverId == resource.data.driverId
+            && request.resource.data.driverId == request.auth.uid
+            && request.resource.data.driverName == resource.data.driverName))
         && ((resource.data.status == 'ASSIGNED' && request.resource.data.status == 'ACCEPTED')
           || (resource.data.status == 'ASSIGNED' && request.resource.data.status == 'READY_FOR_DELIVERY'
             && !request.resource.data.keys().hasAny(['driverId', 'driverName']))
@@ -173,7 +179,10 @@ service cloud.firestore {
         && request.resource.data.amountCents is int
         && request.resource.data.amountCents > 0
         && request.resource.data.date is string
-        && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$');
+        && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && (!request.resource.data.keys().hasAny(['sourceOrderId'])
+          || (request.resource.data.sourceOrderId is string
+            && request.resource.data.sourceOrderId == id));
       allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data)
         && request.resource.data.kind in ['INCOME', 'EXPENSE']
         && request.resource.data.status in ['PAID', 'PENDING']
@@ -250,7 +259,10 @@ service cloud.firestore {
     }
 
     match /deliveries/{id} {
-      allow read: if isAdmin() || (isDriver() && resource.data.driverId == request.auth.uid);
+      allow read: if isAdmin() || (isDriver() && resource.data.driverId == request.auth.uid)
+        || (signedIn() && exists(/databases/$(database)/documents/orders/$(id))
+          && get(/databases/$(database)/documents/orders/$(id)).data.ownerUid == request.auth.uid
+          && get(/databases/$(database)/documents/orders/$(id)).data.brandId == 'teiko');
       allow create: if isAdmin()
         && brand(request.resource.data)
         && request.resource.data.keys().hasAll(['brandId', 'unitId', 'orderId', 'orderNumber', 'status', 'driverId', 'driverName', 'customerName', 'address', 'totalCents', 'paymentMethod', 'createdAt', 'updatedAt', 'assignedAt'])
@@ -281,7 +293,9 @@ service cloud.firestore {
             || (resource.data.status in ['READY_FOR_DELIVERY', 'ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'ON_THE_WAY', 'ARRIVED', 'DELIVERY_FAILED'] && request.resource.data.status == 'CANCELLED')
             || (resource.data.status == 'ARRIVED' && request.resource.data.status == 'DELIVERED'
               && request.resource.data.deliveredAt is timestamp
-              && getAfter(/databases/$(database)/documents/deliveryReceiptRequests/$(id)).data.status == 'VERIFIED'))
+              && getAfter(/databases/$(database)/documents/deliveryReceiptRequests/$(id)).data.status == 'VERIFIED'
+              && getAfter(/databases/$(database)/documents/orders/$(id)).data.status == 'COMPLETED'
+              && getAfter(/databases/$(database)/documents/financeEntries/$(id)).data.sourceOrderId == id))
         || validDriverDeliveryUpdate();
       allow delete: if false;
     }
@@ -332,12 +346,14 @@ service cloud.firestore {
       allow list: if isAdmin() && brand(resource.data);
       allow create: if isDriver()
         && brand(request.resource.data)
-        && request.resource.data.keys().hasAll(['brandId', 'deliveryId', 'orderId', 'driverId', 'codeHash', 'paymentConfirmed', 'status', 'createdAt'])
-        && request.resource.data.keys().hasOnly(['brandId', 'deliveryId', 'orderId', 'driverId', 'codeHash', 'paymentConfirmed', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['brandId', 'deliveryId', 'orderId', 'driverId', 'codeHash', 'paymentConfirmed', 'status', 'attempts', 'locked', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['brandId', 'deliveryId', 'orderId', 'driverId', 'codeHash', 'paymentConfirmed', 'status', 'attempts', 'locked', 'createdAt'])
         && request.resource.data.deliveryId == id
         && request.resource.data.orderId == id
         && request.resource.data.driverId == request.auth.uid
         && request.resource.data.status == 'PENDING'
+        && request.resource.data.attempts == 0
+        && request.resource.data.locked == false
         && request.resource.data.paymentConfirmed == true
         && request.resource.data.codeHash is string
         && request.resource.data.codeHash.matches('^[a-f0-9]{64}$')
@@ -346,19 +362,26 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/deliveries/$(id)).data.status == 'ARRIVED';
       allow update: if (isAdmin()
         && brand(resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy', 'driverId'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy', 'driverId', 'attempts', 'locked'])
         && request.resource.data.status in ['VERIFIED', 'REJECTED']
         && request.resource.data.reviewedBy == request.auth.uid
         && request.resource.data.reviewedAt is timestamp
-        && ((request.resource.data.status == 'VERIFIED'
+          && ((request.resource.data.status == 'VERIFIED'
             && resource.data.status == 'PENDING'
-            && getAfter(/databases/$(database)/documents/deliveries/$(id)).data.status == 'DELIVERED')
+            && resource.data.codeHash == get(/databases/$(database)/documents/deliverySecrets/$(id)).data.codeHash
+            && getAfter(/databases/$(database)/documents/deliveries/$(id)).data.status == 'DELIVERED'
+            && getAfter(/databases/$(database)/documents/orders/$(id)).data.status == 'COMPLETED'
+            && getAfter(/databases/$(database)/documents/financeEntries/$(id)).data.sourceOrderId == id)
           || (request.resource.data.status == 'REJECTED'
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['driverId'])
+            && request.resource.data.attempts == (resource.data.keys().hasAny(['attempts']) ? resource.data.attempts : 0) + 1
+            && request.resource.data.locked == (request.resource.data.attempts >= 5)
             && (getAfter(/databases/$(database)/documents/deliveries/$(id)).data.status in ['ARRIVED', 'CANCELLED']))
           || (request.resource.data.status == 'REJECTED'
             && resource.data.status in ['PENDING', 'REJECTED']
             && request.resource.data.driverId is string
+            && request.resource.data.attempts == 0
+            && request.resource.data.locked == false
             && get(/databases/$(database)/documents/deliveries/$(id)).data.status == 'DELIVERY_FAILED'
             && getAfter(/databases/$(database)/documents/deliveries/$(id)).data.status == 'ASSIGNED'
             && getAfter(/databases/$(database)/documents/deliveries/$(id)).data.driverId == request.resource.data.driverId)))
@@ -369,6 +392,8 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/deliveries/$(id)).data.status == 'ARRIVED'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'codeHash', 'createdAt', 'reviewedAt', 'reviewedBy'])
           && request.resource.data.status == 'PENDING'
+          && resource.data.locked == false
+          && (resource.data.keys().hasAny(['attempts']) ? resource.data.attempts : 0) < 5
           && request.resource.data.codeHash is string
           && request.resource.data.codeHash.matches('^[a-f0-9]{64}$')
           && request.resource.data.createdAt is timestamp

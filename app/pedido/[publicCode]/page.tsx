@@ -32,6 +32,7 @@ import {
   hasFirebaseConfig,
 } from '@/lib/firebase/client';
 import { formatBRL, type CustomerOrderApproval, type OrderStatus, type PricedItem } from '@/shared/domain';
+import { deliveryStatusLabels, type DeliveryStatus } from '@/shared/delivery';
 
 interface PublicOrder {
   id: string;
@@ -50,6 +51,11 @@ interface PublicOrder {
     reason?: string;
   };
   updatedAt?: string;
+}
+interface PublicDelivery {
+  status: DeliveryStatus;
+  driverName?: string;
+  updatedAt?: unknown;
 }
 const steps: Array<{
   statuses: OrderStatus[];
@@ -85,6 +91,7 @@ export default function OrderPage() {
   const [decisionMessage, setDecisionMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const [deliveryCode, setDeliveryCode] = useState('');
+  const [delivery, setDelivery] = useState<PublicDelivery | null>(null);
   useEffect(() => {
     if (!hasFirebaseConfig) {
       setError('Firebase não configurado.');
@@ -98,7 +105,9 @@ export default function OrderPage() {
     let active = true;
     let stop = () => {};
     let stopCode = () => {};
+    let stopDelivery = () => {};
     let codeListeningFor = '';
+    let deliveryListeningFor = '';
     void (async () => {
       try {
         const { db } = getFirebaseClient();
@@ -115,6 +124,17 @@ export default function OrderPage() {
             const item = snapshot.docs[0];
             const itemData = item?.data();
             setOrder(item ? ({ id: item.id, ...item.data() } as PublicOrder) : null);
+            if (item && itemData?.fulfillment?.mode === 'DELIVERY' && deliveryListeningFor !== item.id) {
+              stopDelivery();
+              deliveryListeningFor = item.id;
+              stopDelivery = onSnapshot(doc(db, 'deliveries', item.id), (deliverySnapshot) => {
+                setDelivery(deliverySnapshot.exists() ? ({ status: deliverySnapshot.data().status, driverName: deliverySnapshot.data().driverName, updatedAt: deliverySnapshot.data().updatedAt } as PublicDelivery) : null);
+              }, () => setDelivery(null));
+            } else if (!item || itemData?.fulfillment?.mode !== 'DELIVERY') {
+              stopDelivery();
+              deliveryListeningFor = '';
+              setDelivery(null);
+            }
             const deliveryCodeIsActive = itemData?.fulfillment?.mode === 'DELIVERY'
               && !['COMPLETED', 'CANCELLED'].includes(String(itemData.status));
             if (item && !deliveryCodeIsActive) {
@@ -153,6 +173,7 @@ export default function OrderPage() {
       active = false;
       stop();
       stopCode();
+      stopDelivery();
     };
   }, [publicCode, reloadToken]);
   function load() {
@@ -297,6 +318,7 @@ export default function OrderPage() {
           <code className="mt-4 block overflow-x-auto rounded-xl bg-[#070a08] px-4 py-3 text-center text-sm font-black tracking-[.12em] text-[#d6e7bf]">{publicCode}</code>
         </section>
         {order.fulfillment.mode === 'DELIVERY' && deliveryCode && !['COMPLETED', 'CANCELLED'].includes(order.status) && <section className="mt-4 rounded-[24px] border-2 border-[#b5232b]/25 bg-[#fffdf7] p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Importante · entrega</p><h2 className="mt-1 text-lg font-black">Código de confirmação</h2><p className="mt-1 max-w-lg text-sm leading-5 text-[#66716a]">Guarde este código e informe-o ao motoboy somente quando receber o pedido. Ele é necessário para concluir a entrega.</p></div><Button type="button" variant="outline" onClick={() => void copyDeliveryCode()} className="rounded-full border-[#b5232b]/25 text-[#b5232b]">{copied ? 'Copiado' : 'Copiar código'}</Button></div><code className="mt-4 block rounded-xl bg-[#0b100e] px-4 py-4 text-center text-3xl font-black tracking-[.45em] text-[#c7a773]">{deliveryCode}</code></section>}
+        {order.fulfillment.mode === 'DELIVERY' && delivery && !['COMPLETED', 'CANCELLED'].includes(order.status) && <section className="mt-4 rounded-[24px] border border-[#070a08]/10 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Acompanhamento da entrega</p><div className="mt-2 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black">{deliveryStatusLabels[delivery.status]}</h2><p className="mt-1 text-sm text-[#66716a]">{delivery.driverName ? `Motoboy: ${delivery.driverName}` : 'A loja ainda está escolhendo o motoboy.'}</p></div><span className="rounded-full bg-[#e7f1df] px-3 py-1.5 text-xs font-black text-[#27523a]">Atualização em tempo real</span></div></section>}
         {order.customerApproval === 'PENDING' && order.proposedChanges && (
           <section className="mt-5 rounded-[28px] border-2 border-[#c7a773] bg-[#e8efe5] p-5 sm:p-6">
             <p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Atenção necessária</p>
