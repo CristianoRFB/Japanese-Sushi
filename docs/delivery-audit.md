@@ -2,7 +2,7 @@
 
 Data da auditoria: 2026-10-08
 Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
-RC auditado: `779d59c` (`fix: avoid stale driver role listener`)
+RC auditado: `473aa01` (`feat: add navigation fallback for drivers`)
 Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
 
 ## Veredito do RC atual
@@ -43,6 +43,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - `firebase.json` agora declara Functions de segunda geração em `southamerica-east1`; o custo/plano e o deploy oficial continuam pendentes.
 - Foi criada a coleção append-only `deliveryEvents`, com leitura restrita ao admin e ao motoboy vinculado; inclusão e imutabilidade são validadas pelas Rules.
 - A Central de entregas agora exibe a trilha recente por corrida, com etapa, motivo e horário, sem expor o UID interno do ator.
+- O portal do motoboy agora abre rota de direção real no Google Maps a partir do endereço da corrida e oferece Waze como fallback.
 
 ## Matriz final local
 
@@ -58,12 +59,13 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 | Financeiro e caixa | [PARCIAL] | A conclusão exige lançamento financeiro; ainda falta exercício ponta a ponta com caixa de produção e auditoria específica da movimentação de dinheiro. |
 | Histórico de eventos imutável | [OK local] | `deliveryEvents` é criada nas operações de despacho, aceite, recusa, etapas, falha, código e conclusão; Rules bloqueiam update/delete, há cenário dedicado de imutabilidade e a Central exibe a trilha recente. |
 | Mobile 360/390/430 e teclado | [PARCIAL] | Login do motoboy foi inspecionado visualmente em 360×800, 390×844 e 430×932 sem overflow/clipping; portal autenticado e teclado aberto ainda dependem de Firebase/credenciais reais. |
+| Mapas e navegação | [PARCIAL] | O portal gera deep link de direções para o endereço real e fallback Waze em `app/entregador/page.tsx`; a abertura em dispositivo móvel autenticado ainda depende de Firebase/credenciais reais. |
 | PWA/offline | [PARCIAL] | Manifest, service worker e fallback foram adicionados; ações Firestore não são enfileiradas offline e devem ser repetidas somente após reconexão. |
 | Perfil próprio do motoboy | [OK] | O portal exibe nome, telefone e e-mail ativos; edição continua centralizada na administração. |
 
 ## Validações executadas
 
-- `git pull --ff-only` — sem atualizações; RC confirmado em `779d59c`.
+- `git pull --ff-only` — sem atualizações; RC confirmado em `473aa01`.
 - Navegador local — passou para a home pública em `http://localhost:3001/`; a página mostra o cardápio de desenvolvimento e preços pendentes.
 - Navegador local — login do motoboy passou visualmente em 360×800, 390×844 e 430×932; o ambiente sem Firebase mantém o botão desabilitado como esperado.
 - `/admin/login` — passou visualmente; acesso exige e-mail e senha do Firebase e não expõe credenciais no código.
