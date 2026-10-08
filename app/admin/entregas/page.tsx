@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { cancelDelivery, assignReadyOrder, reviewDeliveryReceipt } from '@/lib/delivery-operations';
 import { getFirebaseClient } from '@/lib/firebase/client';
 import { TEIKO_BRAND_ID, type OrderStatus } from '@/shared/domain';
-import { deliveryStatusLabels, type DeliveryDriver, type DeliveryRecord, type DeliveryReceiptRequest } from '@/shared/delivery';
+import { deliveryStatusLabels, type DeliveryDriver, type DeliveryEvent, type DeliveryRecord, type DeliveryReceiptRequest } from '@/shared/delivery';
 
 interface ReadyOrder {
   id: string;
@@ -29,6 +29,7 @@ export default function DeliveriesPage() {
   const [orders, setOrders] = useState<ReadyOrder[]>([]);
   const [drivers, setDrivers] = useState<DeliveryDriver[]>([]);
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
+  const [events, setEvents] = useState<DeliveryEvent[]>([]);
   const [receipts, setReceipts] = useState<DeliveryReceiptRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
@@ -39,7 +40,7 @@ export default function DeliveriesPage() {
     try { db = getFirebaseClient().db; }
     catch { setError('Firebase da Teiko não está configurado neste ambiente.'); setLoading(false); return; }
     let loaded = 0;
-    const settle = () => { loaded += 1; if (loaded >= 4) setLoading(false); };
+    const settle = () => { loaded += 1; if (loaded >= 5) setLoading(false); };
     const stops = [
       onSnapshot(query(collection(db, 'orders'), where('brandId', '==', TEIKO_BRAND_ID), where('status', 'in', ['READY', 'OUT_FOR_DELIVERY']), limit(100)), (snap) => {
         setOrders(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as ReadyOrder)); settle();
@@ -53,6 +54,9 @@ export default function DeliveriesPage() {
       onSnapshot(query(collection(db, 'deliveryReceiptRequests'), where('brandId', '==', TEIKO_BRAND_ID), where('status', '==', 'PENDING'), limit(100)), (snap) => {
         setReceipts(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as DeliveryReceiptRequest)); settle();
       }, () => { setError('Não foi possível consultar os códigos aguardando conferência.'); settle(); }),
+      onSnapshot(query(collection(db, 'deliveryEvents'), where('brandId', '==', TEIKO_BRAND_ID), limit(500)), (snap) => {
+        setEvents(snap.docs.map((item) => ({ id: item.id, ...item.data() }) as DeliveryEvent)); settle();
+      }, () => { setError('Não foi possível carregar a trilha de auditoria das corridas.'); settle(); }),
     ];
     return () => stops.forEach((stop) => stop());
   }, []);
@@ -127,7 +131,7 @@ export default function DeliveriesPage() {
 
       <section className="mt-8">
         <PanelHeading icon={<Clock3 />} eyebrow="Rastreabilidade" title="Histórico recente" count={historyDeliveries.length} />
-        <div className="mt-4 grid gap-3 xl:grid-cols-2">{historyDeliveries.slice(0, 30).map((delivery) => <HistoryDelivery key={delivery.id} delivery={delivery} />)}{!historyDeliveries.length && <Empty text="As corridas concluídas ou falhas aparecerão aqui." />}</div>
+        <div className="mt-4 grid gap-3 xl:grid-cols-2">{historyDeliveries.slice(0, 30).map((delivery) => <HistoryDelivery key={delivery.id} delivery={delivery} events={events.filter((event) => event.deliveryId === delivery.id)} />)}{!historyDeliveries.length && <Empty text="As corridas concluídas ou falhas aparecerão aqui." />}</div>
       </section>
     </>}
   </AdminShell>;
@@ -155,12 +159,18 @@ function ReceiptCard({ receipt, delivery, busy, onVerify }: { receipt: DeliveryR
   return <article className="rounded-[26px] border border-[#c7a773]/50 bg-[#fffdf7] p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><span className="inline-flex rounded-full bg-[#f3f0e8] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#76510a]">Conferência humana necessária</span><h3 className="mt-3 text-lg font-black">{delivery?.orderNumber ?? receipt.orderId}</h3><p className="mt-1 text-sm text-[#66716a]">{delivery?.customerName ?? 'Cliente'} · {delivery?.driverName ?? 'Motoboy'}</p></div><ShieldCheck className="size-6 text-[#b5232b]" /></div><div className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-[#66716a]"><p>Peça ao cliente os quatro números do código de entrega e confirme o valor recebido no comprovante, maquininha ou dinheiro entregue pelo motoboy.</p><p className="mt-2 font-bold text-[#111613]">O código não é exibido para a equipe: o sistema compara o hash e evita registrar tentativas em texto aberto.</p></div><label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-[#070a08]/10 p-3 text-xs font-bold leading-5"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-0.5 size-4 accent-[#b5232b]" />Conferi pessoalmente o código com o cliente e confirmei o recebimento do pagamento.</label><Button type="button" disabled={busy || !confirmed} onClick={() => onVerify(confirmed)} className="mt-4 min-h-11 w-full rounded-full bg-[#0b100e] font-black text-white">{busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} Validar e concluir pedido</Button></article>;
 }
 
-function HistoryDelivery({ delivery }: { delivery: DeliveryRecord }) {
-  return <article className="rounded-[24px] border border-[#070a08]/8 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-black">{delivery.orderNumber}</h3><p className="mt-1 text-sm text-[#66716a]">{delivery.customerName} · {delivery.driverName || 'Motoboy não identificado'}</p></div><span className={`rounded-full px-3 py-1.5 text-xs font-black ${delivery.status === 'DELIVERED' ? 'bg-[#e7f1df] text-[#27523a]' : 'bg-[#fff0ef] text-[#9d1723]'}`}>{deliveryStatusLabels[delivery.status]}</span></div><p className="mt-3 text-sm text-[#66716a]">{delivery.address.street}, {delivery.address.number} · {delivery.address.neighborhood}</p>{delivery.failureReason && <p className="mt-3 rounded-xl bg-[#fff0ef] p-3 text-xs font-bold text-[#9d1723]">Motivo registrado: {delivery.failureReason}</p>}</article>;
+function HistoryDelivery({ delivery, events }: { delivery: DeliveryRecord; events: DeliveryEvent[] }) {
+  const timeline = [...events].sort((a, b) => timestampSeconds(b.occurredAt) - timestampSeconds(a.occurredAt));
+  return <article className="rounded-[24px] border border-[#070a08]/8 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-black">{delivery.orderNumber}</h3><p className="mt-1 text-sm text-[#66716a]">{delivery.customerName} · {delivery.driverName || 'Motoboy não identificado'}</p></div><span className={`rounded-full px-3 py-1.5 text-xs font-black ${delivery.status === 'DELIVERED' ? 'bg-[#e7f1df] text-[#27523a]' : 'bg-[#fff0ef] text-[#9d1723]'}`}>{deliveryStatusLabels[delivery.status]}</span></div><p className="mt-3 text-sm text-[#66716a]">{delivery.address.street}, {delivery.address.number} · {delivery.address.neighborhood}</p>{delivery.failureReason && <p className="mt-3 rounded-xl bg-[#fff0ef] p-3 text-xs font-bold text-[#9d1723]">Motivo registrado: {delivery.failureReason}</p>}{timeline.length > 0 && <div className="mt-4 border-t border-[#070a08]/8 pt-4"><p className="text-[10px] font-black uppercase tracking-[.16em] text-[#b5232b]">Trilha da corrida</p><ol className="mt-3 space-y-2">{timeline.slice(0, 8).map((event) => <li key={event.id} className="flex items-start justify-between gap-3 rounded-xl bg-[#faf9f5] px-3 py-2.5 text-xs"><span><strong className="block text-[#111613]">{deliveryEventLabel(event)}</strong>{event.reason && <span className="mt-0.5 block text-[#66716a]">{event.reason}</span>}</span><time className="shrink-0 text-right text-[#66716a]">{formatEventTime(event.occurredAt)}</time></li>)}</ol></div>}</article>;
 }
 
 function Empty({ text }: { text: string }) { return <div className="rounded-[24px] border border-dashed border-[#070a08]/15 bg-white p-8 text-center text-sm text-[#66716a] md:col-span-2"><RefreshCw className="mx-auto size-5 text-[#b5232b]" /><p className="mt-3">{text}</p></div>; }
 function timestampSeconds(value: unknown) { return typeof value === 'object' && value !== null && 'seconds' in value && typeof value.seconds === 'number' ? value.seconds : 0; }
+function formatEventTime(value: unknown) { const seconds = timestampSeconds(value); return seconds ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(seconds * 1000)) : 'Agora'; }
+function deliveryEventLabel(event: DeliveryEvent) {
+  const labels: Record<string, string> = { ASSIGNED: 'Corrida atribuída', REASSIGNED: 'Corrida reatribuída', CANCELLED_BY_ADMIN: 'Cancelada pelo admin', CODE_REJECTED: 'Código rejeitado', DELIVERY_VERIFIED: 'Entrega verificada', ACCEPTED: 'Aceita pelo motoboy', DECLINED: 'Recusada pelo motoboy', PICKED_UP: 'Pedido retirado', ON_THE_WAY: 'Em rota', ARRIVED: 'Chegou ao endereço', DELIVERY_FAILED: 'Falha registrada', RECEIPT_SUBMITTED: 'Código enviado para conferência' };
+  return labels[event.kind] ?? deliveryStatusLabels[event.toStatus] ?? event.kind;
+}
 function friendlyError(cause: unknown, fallback: string) {
   if (!(cause instanceof Error)) return fallback;
   if (/permission-denied|unauthenticated/i.test(cause.message)) return 'Sua sessão não tem permissão de administração. Entre novamente com uma conta Teiko autorizada.';
