@@ -7,10 +7,12 @@ if (!getApps().length)
     projectId: process.env.GCLOUD_PROJECT || 'sushi-cbfd2',
   });
 const db = getFirestore();
+const functionsPort = process.env.FUNCTIONS_EMULATOR_PORT || '5001';
+const authPort = process.env.AUTH_EMULATOR_PORT || '9099';
 const endpoint =
-  'http://127.0.0.1:5001/sushi-cbfd2/southamerica-east1/createOrder';
+  `http://127.0.0.1:${functionsPort}/sushi-cbfd2/southamerica-east1/createOrder`;
 const authEndpoint =
-  'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=owner-test-key';
+  `http://127.0.0.1:${authPort}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=owner-test-key`;
 const basePayload = {
   unitId: 'santa-fe-do-sul',
   customer: { name: 'Cliente Teiko', whatsapp: '17999999999' },
