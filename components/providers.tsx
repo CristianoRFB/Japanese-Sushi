@@ -1,10 +1,9 @@
 'use client';
 
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import {
   collection,
   doc,
-  getDoc,
   onSnapshot,
   query,
   where,
@@ -368,6 +367,9 @@ const AuthContext = createContext<AuthState>({
   role: null,
   loading: true,
 });
+function isTeamRole(value: unknown): value is Role {
+  return value === 'admin' || value === 'staff' || value === 'driver';
+}
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -380,7 +382,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const { auth, db } = getFirebaseClient();
-    return onAuthStateChanged(auth, async (user) => {
+    let generation = 0;
+    let stopUserDoc: (() => void) | null = null;
+    let stopDriverDoc: (() => void) | null = null;
+    const stopAuth = onAuthStateChanged(auth, (user) => {
+      generation += 1;
+      const currentGeneration = generation;
+      stopUserDoc?.();
+      stopDriverDoc?.();
+      stopUserDoc = null;
+      stopDriverDoc = null;
       if (!user) {
         setState({ user: null, role: null, loading: false });
         return;
@@ -389,19 +400,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState({ user, role: null, loading: false });
         return;
       }
-      try {
-        const roleDoc = await getDoc(doc(db, 'users', user.uid));
-        const role =
-          roleDoc.exists() &&
-          roleDoc.data().brandId === TEIKO_BRAND_ID &&
-          roleDoc.data().active === true
-            ? (roleDoc.data().role as Role)
-            : null;
-        setState({ user, role, loading: false });
-      } catch {
-        setState({ user, role: null, loading: false });
-      }
+      setState({ user, role: null, loading: true });
+      stopUserDoc = onSnapshot(
+        doc(db, 'users', user.uid),
+        (roleDoc) => {
+          if (currentGeneration !== generation) return;
+          const data = roleDoc.data();
+          if (!roleDoc.exists() || data?.brandId !== TEIKO_BRAND_ID || data.active !== true || !isTeamRole(data.role)) {
+            setState({ user: null, role: null, loading: false });
+            void signOut(auth);
+            return;
+          }
+          const role = data.role;
+          if (role !== 'driver') {
+            setState({ user, role, loading: false });
+            return;
+          }
+          setState({ user, role: null, loading: true });
+          stopDriverDoc?.();
+          stopDriverDoc = onSnapshot(
+            doc(db, 'deliveryDrivers', user.uid),
+            (driverDoc) => {
+              if (currentGeneration !== generation) return;
+              const driverData = driverDoc.data();
+              if (!driverDoc.exists() || driverData?.brandId !== TEIKO_BRAND_ID || driverData.enabled !== true) {
+                setState({ user: null, role: null, loading: false });
+                void signOut(auth);
+                return;
+              }
+              setState({ user, role: 'driver', loading: false });
+            },
+            () => setState({ user, role: null, loading: false }),
+          );
+        },
+        () => setState({ user, role: null, loading: false }),
+      );
     });
+    return () => {
+      generation += 1;
+      stopUserDoc?.();
+      stopDriverDoc?.();
+      stopAuth();
+    };
   }, []);
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
 }

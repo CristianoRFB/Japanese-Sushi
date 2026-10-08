@@ -34,6 +34,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - O portal do motoboy ganhou navegação inferior para celular, com âncoras de corrida, histórico e perfil, além de espaço seguro para a barra inferior.
 - Falhas de entrega agora registram `failedAt`; a reatribuição limpa esse timestamp junto com o motivo da tentativa anterior.
 - As Rules agora exigem `failedAt` com timestamp quando a corrida entra em `DELIVERY_FAILED` e impedem reatribuição com motivo/timestamp obsoletos; o cenário foi incluído no teste do Firestore Emulator.
+- A sessão da equipe agora acompanha `users/{uid}` em tempo real; usuário inativo, role inválida ou motoboy desativado perde a sessão efetiva imediatamente, sem depender de refresh.
 - O pedido de confirmação passou a ter `attempts` e `locked`; após cinco rejeições, uma nova tentativa é bloqueada até reatribuição administrativa.
 - O hash correto é exigido pela Rule na aprovação. A conclusão exige, na mesma operação, entrega `DELIVERED`, pedido `COMPLETED` e lançamento financeiro cujo `sourceOrderId` é o próprio pedido.
 - A reatribuição reinicia o contador da nova corrida sem apagar o documento existente.
@@ -47,7 +48,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 | Área | Status | Prova/limitação |
 |---|---|---|
-| RBAC, isolamento do motoboy, cliente dono e cliente alheio | [OK] | 13 cenários em `tests/firestore.rules.test.ts`, incluindo leitura do dono e bloqueio de usuário alheio. |
+| RBAC, isolamento do motoboy, cliente dono e cliente alheio | [OK local] | 15 cenários em `tests/firestore.rules.test.ts`, incluindo leitura do dono, bloqueio de usuário alheio, usuário inativo e motoboy desativado. A sessão também revalida role/cadastro em tempo real no `AuthProvider`. |
 | Sequestro de entrega e transições inválidas | [OK] | Rules testadas contra alteração de vínculo e conclusão direta pelo motoboy. |
 | Tentativas de código | [OK] | Cinco rejeições são permitidas; a sexta submissão é bloqueada por Rules e pela operação. |
 | Reatribuição após falha | [OK] | Fluxo e Rules testados para liberar o motoboy anterior e aceitar novo vínculo. |
@@ -74,7 +75,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - `npx wrangler deploy --dry-run --config dist/server/wrangler.json` — passou; release Cloudflare gerado com 394 módulos, 5,1 MB de upload e sem bindings pendentes. Nenhuma publicação real foi feita.
 - `npm run preflight:production` — bloqueou corretamente sem configuração Firebase; com valores de teste e projeto `sushi-cbfd2`, passou sem imprimir segredos.
 - `npm run deploy:frontend` e `npm run deploy:backend` — comandos de publicação documentados; não executados, pois exigem credenciais das contas Cloudflare/Firebase e efeito externo autorizado.
-- `npm run test:rules` — 1 arquivo, 14 testes passaram no Firestore Emulator com Java 21.
+- `npm run test:rules` — 1 arquivo, 15 testes passaram no Firestore Emulator com Java 21.
 - `npm run build` — passou; apenas aviso não bloqueante de chunks acima de 500 kB.
 - `npm audit fix` — atualizou somente dependências compatíveis no lockfile e reduziu o audit de produção para 18 vulnerabilidades; as restantes ainda exigem versões incompatíveis (`--force`) e não foi aplicado esse modo.
 - `npm run test:integration` e `npm run test:e2e` — scripts raiz inexistentes; o E2E aplicável das Functions foi executado explicitamente acima.

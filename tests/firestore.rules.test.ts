@@ -216,6 +216,36 @@ describe('Firestore Rules Spark Teiko', () => {
     }));
   });
 
+  it('revoga sessão efetiva de usuário inativo e motoboy desativado', async () => {
+    const inactiveUid = `inactive-${testRunId}`;
+    const disabledDriverId = `disabled-driver-${testRunId}`;
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'users', inactiveUid), { brandId: 'teiko', role: 'admin', active: false });
+      await setDoc(doc(db, 'financeEntries', `private-${testRunId}`), {
+        brandId: 'teiko', kind: 'INCOME', category: 'Privado', description: 'Privado',
+        amountCents: 100, date: '2026-09-17', status: 'PAID',
+      });
+      await setDoc(doc(db, 'users', disabledDriverId), { brandId: 'teiko', role: 'driver', active: true });
+      await setDoc(doc(db, 'deliveryDrivers', disabledDriverId), {
+        brandId: 'teiko', name: 'Motoboy Suspenso', email: 'suspenso@example.com', phone: '17999999999',
+        enabled: false, status: 'OFFLINE',
+      });
+      await setDoc(doc(db, 'deliveries', `private-delivery-${testRunId}`), {
+        brandId: 'teiko', unitId: 'santa-fe-do-sul', orderId: `private-delivery-${testRunId}`,
+        orderNumber: '#TSECURE', status: 'ASSIGNED', driverId: disabledDriverId, driverName: 'Motoboy Suspenso',
+        customerName: 'Cliente', address: { street: 'Rua 23', number: '1', neighborhood: 'Centro' },
+        totalCents: 1800, paymentMethod: 'PIX', createdAt: Timestamp.now(), updatedAt: Timestamp.now(), assignedAt: Timestamp.now(),
+      });
+    });
+    await assertFails(getDoc(doc(env.authenticatedContext(inactiveUid).firestore(), 'financeEntries', `private-${testRunId}`)));
+    const disabledDriverDb = env.authenticatedContext(disabledDriverId).firestore();
+    await assertFails(getDoc(doc(disabledDriverDb, 'deliveries', `private-delivery-${testRunId}`)));
+    await assertFails(updateDoc(doc(disabledDriverDb, 'deliveryDrivers', disabledDriverId), {
+      status: 'AVAILABLE', updatedAt: Timestamp.now(),
+    }));
+  });
+
   it('permite staff operar status válido e bloqueia transição inválida', async () => {
     const staffDb = env.authenticatedContext('staff-uid').firestore();
     await assertSucceeds(
