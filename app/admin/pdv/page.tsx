@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  Timestamp,
-} from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { ArrowRight, Loader2, ShoppingBag } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
@@ -17,7 +12,7 @@ import {
   getFirebaseClient,
   hasFirebaseConfig,
 } from '@/lib/firebase/client';
-import { calculateItemPrice, formatBRL } from '@/shared/domain';
+import { formatBRL } from '@/shared/domain';
 
 export default function PosPage() {
   const { catalog, config } = useCatalog();
@@ -67,35 +62,15 @@ export default function PosPage() {
     };
     try {
       if (!hasFirebaseConfig) throw new Error('Firebase não configurado.');
-      const { db } = getFirebaseClient();
-      const user = await ensureAnonymousUser();
-      const priced = calculateItemPrice(payload.items[0], catalog);
-      const publicCode = payload.clientRequestId.replace(/-/g, '');
-      const orderNumber = `#T${publicCode.slice(0, 8).toUpperCase()}`;
-      await addDoc(collection(db, 'orders'), {
-        brandId: 'teiko',
-        ownerUid: user.uid,
-        ...payload,
-        publicCode,
-        orderNumber,
-        notes: payload.notes ?? '',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        items: [priced],
-        pricing: {
-          subtotalCents: priced.totalPriceCents,
-          deliveryFeeCents: 0,
-          totalCents: priced.totalPriceCents,
-          currency: 'BRL',
-          quoteType: 'CLIENT_PREVIEW',
-        },
-        status: 'NEW',
-        customerApproval: 'NONE',
-        statusHistory: [
-          { status: 'NEW', at: Timestamp.now(), actor: user.uid },
-        ],
-      });
-      setResult(`${orderNumber} criado · ${formatBRL(priced.totalPriceCents)}`);
+      const { functions } = getFirebaseClient();
+      await ensureAnonymousUser();
+      const createOrder = httpsCallable<typeof payload, {
+        orderNumber: string;
+        publicCode: string;
+        totalCents: number;
+      }>(functions, 'createOrder');
+      const result = (await createOrder(payload)).data;
+      setResult(`${result.orderNumber} criado · ${formatBRL(result.totalCents)}`);
       (event.target as HTMLFormElement).reset();
     } catch (cause) {
       setError(

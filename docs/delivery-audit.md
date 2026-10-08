@@ -9,7 +9,7 @@ Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
 
 **BLOQUEADO para venda em produção.** O RC abre em `http://localhost:3001/` e a tela pública foi operada no navegador. A entrada administrativa exibe apenas e-mail/senha e informa que as credenciais são gerenciadas pelo Firebase; não há credencial administrativa versionada ou disponível neste workspace.
 
-O bloqueio é comercial e operacional, não uma falha de build local: o cardápio real ainda não foi configurado, o checkout ainda grava uma prévia de preço pelo cliente e o ambiente Firebase/deploy de produção não foi comprovado.
+O bloqueio é comercial e operacional, não uma falha de build local: o cardápio real ainda não foi configurado, o deploy das Functions ainda não foi comprovado no Firebase oficial e a jornada real de produção ainda não foi executada.
 
 O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplicados somente os requisitos funcionais de auditoria de motoboy ao produto atual, Teiko Sushi; branding, dados e regras do Açaí foram descartados.
 
@@ -35,6 +35,8 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - O hash correto é exigido pela Rule na aprovação. A conclusão exige, na mesma operação, entrega `DELIVERED`, pedido `COMPLETED` e lançamento financeiro cujo `sourceOrderId` é o próprio pedido.
 - A reatribuição reinicia o contador da nova corrida sem apagar o documento existente.
 - Foi adicionado manifest, service worker com fallback público offline e aviso de conexão no portal do motoboy. Dados administrativos e pedidos privados não são cacheados.
+- O checkout público e o PDV passaram a chamar `createOrder`; o preço é recalculado no servidor e a criação direta de pedidos pelo cliente foi bloqueada nas Rules.
+- `firebase.json` agora declara Functions de segunda geração em `southamerica-east1`; o custo/plano e o deploy oficial continuam pendentes.
 
 ## Matriz final local
 
@@ -62,17 +64,19 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - `npm run typecheck` — passou.
 - `npm test` — 7 arquivos, 29 testes passaram.
 - `npm run test:functions` — 1 arquivo, 7 testes passaram.
+- `npm --prefix functions run build` — passou.
+- `firebase emulators:exec --only auth,firestore,functions "npm --prefix functions run test:e2e"` — 3 cenários de criação de pedido passaram, incluindo idempotência e rejeição de preço adulterado.
 - `npm run test:rules` — 1 arquivo, 13 testes passaram no Firestore Emulator com Java 21.
 - `npm run build` — passou; apenas aviso não bloqueante de chunks acima de 500 kB.
 - `npm audit --omit=dev --audit-level=high` — encontrou 26 vulnerabilidades (1 crítica, 21 altas, 3 moderadas, 1 baixa); não foi aplicado `npm audit fix --force` por risco de alterações incompatíveis.
-- `npm run test:integration` e `npm run test:e2e` — scripts inexistentes no `package.json`.
+- `npm run test:integration` e `npm run test:e2e` — scripts raiz inexistentes; o E2E aplicável das Functions foi executado explicitamente acima.
 
 ## Bloqueios antes de vender
 
 1. Cadastrar e conferir o catálogo, preços, adicionais, horários, unidade, pagamentos e regras de delivery oficiais; o seed de desenvolvimento usa preços `0` e o README exige configuração manual.
-2. Corrigir a aceitação de pedidos: hoje o checkout grava diretamente pelo cliente e o preço é `CLIENT_PREVIEW`; é necessário recalcular/validar o catálogo no servidor antes de tratar o pedido como comercialmente confirmado.
+2. Publicar e observar `createOrder` no Firebase oficial; a proteção já está implementada e validada no emulator, mas ainda não há evidência de deploy, App Check e logs em produção.
 3. Configurar uma chave Firebase Web válida, Auth Email/Password + Anonymous, primeiro admin e documentos de produção; `.env.local` não está versionado neste workspace.
-4. Escolher e executar o deploy oficial. `firebase.json` não configura Hosting nem Functions; o README declara Functions como legado/local.
+4. Escolher e executar o deploy oficial de Hosting, Firestore e Functions; Functions de segunda geração exigem plano de faturamento e revisão de limites/custos.
 5. Resolver as vulnerabilidades de dependências, preferencialmente por atualizações compatíveis e nova rodada completa de testes.
 6. Executar uma jornada real com cliente, admin e motoboy, incluindo código errado/certo, falha, reatribuição, dinheiro e duas sessões concorrentes.
 7. Decidir se a operação exige push quando o portal estiver fechado; se sim, implementar FCM/Web Push antes da venda.

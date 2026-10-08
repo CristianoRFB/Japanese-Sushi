@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  Timestamp,
-} from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import {
   ArrowLeft,
   Bike,
@@ -44,6 +39,15 @@ const paymentLabels = {
 } as const;
 type PaymentMethod = keyof typeof paymentLabels;
 type CheckoutFieldError = keyof CheckoutFields | 'zoneId';
+
+interface CreateOrderResult {
+  orderNumber: string;
+  publicCode: string;
+  subtotalCents: number;
+  deliveryFeeCents: number;
+  totalCents: number;
+  idempotent: boolean;
+}
 
 interface CheckoutFields {
   name: string;
@@ -208,6 +212,7 @@ export default function CheckoutPage() {
     sessionStorage.setItem('teiko-checkout-request-id', clientRequestId);
     const payload = {
       clientRequestId,
+      source: 'WEB' as const,
       customer: {
         name: fields.name.trim().replace(/\s+/g, ' '),
         whatsapp: normalizePhone(fields.whatsapp),
@@ -245,47 +250,14 @@ export default function CheckoutPage() {
 
     setSubmitting(true);
     try {
-      const { auth, db } = getFirebaseClient();
-      const user = await ensureAnonymousUser();
-      const publicCode = clientRequestId.replace(/-/g, '');
-      const orderNumber = `#T${publicCode.slice(0, 8).toUpperCase()}`;
-      await addDoc(collection(db, 'orders'), {
-        brandId: 'teiko',
-        ownerUid: user.uid,
-        clientRequestId,
-        publicCode,
-        orderNumber,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        unitId: config.defaultUnitId,
-        customer: payload.customer,
-        items: preview.items,
-        fulfillment: {
-          ...payload.fulfillment,
-          deliveryFeePending:
-            fulfillment === 'DELIVERY' &&
-            config.deliveryConfig.mode === 'CONFIRM',
-        },
-        payment: payload.payment,
-        pricing: {
-          subtotalCents: preview.subtotalCents,
-          deliveryFeeCents: deliveryFee,
-          totalCents,
-          currency: 'BRL',
-          quoteType: 'CLIENT_PREVIEW',
-        },
-        status: 'NEW',
-        customerApproval: 'NONE',
-        source: 'WEB',
-        notes: payload.notes ?? '',
-        statusHistory: [
-          {
-            status: 'NEW',
-            at: Timestamp.now(),
-            actor: auth.currentUser?.uid ?? user.uid,
-          },
-        ],
-      });
+      const { functions } = getFirebaseClient();
+      await ensureAnonymousUser();
+      const createOrder = httpsCallable<typeof payload, CreateOrderResult>(
+        functions,
+        'createOrder',
+      );
+      const result = (await createOrder(payload)).data;
+      const { publicCode, orderNumber } = result;
       cart.clear();
       sessionStorage.removeItem('teiko-checkout-request-id');
       try {

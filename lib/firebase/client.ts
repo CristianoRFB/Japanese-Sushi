@@ -13,6 +13,11 @@ import {
   getFirestore,
   type Firestore,
 } from 'firebase/firestore';
+import {
+  connectFunctionsEmulator,
+  getFunctions,
+  type Functions,
+} from 'firebase/functions';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 const firebaseConfig = {
@@ -36,12 +41,14 @@ export const useDevelopmentSeed =
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
+let functions: Functions | null = null;
 let emulatorsConnected = false;
 
 export function getFirebaseClient(): {
   app: FirebaseApp;
   auth: Auth;
   db: Firestore;
+  functions: Functions;
 } {
   if (!hasFirebaseConfig)
     throw new Error(
@@ -50,6 +57,7 @@ export function getFirebaseClient(): {
   app = getApps()[0] ?? initializeApp(firebaseConfig);
   auth ??= getAuth(app);
   db ??= getFirestore(app);
+  functions ??= getFunctions(app, 'southamerica-east1');
 
   if (
     process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === 'true' &&
@@ -59,6 +67,7 @@ export function getFirebaseClient(): {
       disableWarnings: true,
     });
     connectFirestoreEmulator(db, '127.0.0.1', 8180);
+    connectFunctionsEmulator(functions, '127.0.0.1', 5001);
     emulatorsConnected = true;
   }
 
@@ -77,7 +86,7 @@ export function getFirebaseClient(): {
       /* already initialized */
     }
   }
-  return { app, auth, db };
+  return { app, auth, db, functions };
 }
 
 export async function ensureAnonymousUser(): Promise<User> {

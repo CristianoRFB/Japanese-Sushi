@@ -206,27 +206,9 @@ service cloud.firestore {
     match /orders/{id} {
       allow get: if (isStaff() && brand(resource.data)) || isOwner(resource.data);
       allow list: if (isStaff() && brand(resource.data)) || isOwner(resource.data);
-      allow create: if signedIn()
-        && brand(request.resource.data)
-        && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.status == 'NEW'
-        && validOrderInput()
-        && validUnit()
-        && request.resource.data.keys().hasAll(['brandId', 'ownerUid', 'clientRequestId', 'publicCode', 'orderNumber', 'createdAt', 'updatedAt', 'unitId', 'customer', 'items', 'fulfillment', 'payment', 'pricing', 'status', 'customerApproval', 'source', 'notes', 'statusHistory'])
-        && request.resource.data.keys().hasOnly(['brandId', 'ownerUid', 'clientRequestId', 'publicCode', 'orderNumber', 'createdAt', 'updatedAt', 'unitId', 'customer', 'items', 'fulfillment', 'payment', 'pricing', 'status', 'customerApproval', 'proposedChanges', 'editReason', 'source', 'notes', 'statusHistory'])
-        && request.resource.data.publicCode is string
-        && request.resource.data.publicCode.size() >= 20
-        && request.resource.data.publicCode.size() <= 80
-        && request.resource.data.orderNumber is string
-        && request.resource.data.items is list
-        && request.resource.data.items.size() > 0
-        && request.resource.data.items.size() <= 30
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp
-        && request.resource.data.pricing.currency == 'BRL'
-        && request.resource.data.pricing.totalCents is int
-        && request.resource.data.pricing.totalCents >= 0
-        && request.resource.data.pricing.totalCents <= 10000000;
+      // Pedidos comerciais entram somente pela Function createOrder, que
+      // recalcula o catálogo e o preço com credenciais de servidor.
+      allow create: if false;
       allow update: if (
           isStaff()
           && brand(resource.data)

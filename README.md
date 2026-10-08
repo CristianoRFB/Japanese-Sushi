@@ -5,12 +5,12 @@ Sistema operacional da Teiko Sushi — Santa Fé do Sul/SP — com cardápio adm
 ## Arquitetura
 
 - React 19, TypeScript, Vinext/Vite e Tailwind.
-- Firebase dedicado `sushi-cbfd2`, usando somente Authentication e Firestore `(default)`.
+- Firebase dedicado `sushi-cbfd2`, usando Authentication, Firestore `(default)` e Cloud Functions na região `southamerica-east1`.
 - Firebase Web SDK inicializado como singleton em `lib/firebase/client.ts`.
 - Cliente anônimo para pedidos e reservas; Email/Password para a equipe.
 - Regras deny-by-default: o cliente só lê seus próprios pedidos/reservas e não altera status.
-- Preços no checkout são uma prévia do cliente; a equipe confirma o valor antes do preparo.
-- Firebase Storage, Functions em produção, Cloud Run, gateway de pagamento, Maps e WhatsApp Business API não são usados.
+- O checkout exibe uma prévia, mas a Function `createOrder` recalcula catálogo, promoções e preço antes de gravar o pedido.
+- Firebase Storage, Cloud Run, gateway de pagamento, Maps e WhatsApp Business API não são usados.
 - `brandId: teiko` permanece apenas como campo de domínio; o isolamento físico é o projeto dedicado.
 
 ## Rotas
@@ -37,9 +37,9 @@ O início também oferece busca pelo código ou número do pedido e recupera os 
 - O Caixa registra valores em centavos, permite somente um turno aberto, impede sangria acima do saldo físico e usa identificadores idempotentes para evitar duplicação após falha de conexão. Pix e cartão entram nas vendas e em Finanças, sem aumentar o dinheiro esperado na gaveta.
 - A cozinha marca o pedido como pronto; a Central de entregas atribui um motoboy disponível. O motoboy aceita/recusa, confirma retirada, inicia a rota, marca chegada e envia o código de quatro dígitos do cliente.
 - O código secreto é armazenado como hash e nunca fica disponível ao motoboy. A equipe confirma o código e o pagamento antes de concluir o pedido e liberar a corrida; a conclusão atualiza pedido, caixa (quando dinheiro) e Finanças numa única transação Firestore.
-- A Açaíteria usa Cloud Functions no fluxo de entregas. A Teiko não habilita Functions em produção: as regras do Firestore restringem a leitura e as transições, e a conferência final é feita pela equipe dentro do painel. Não há rastreamento GPS em segundo plano nem notificações push quando o app está fechado.
+- A Function `createOrder` é a única porta de entrada para pedidos comerciais e impede preço adulterado pelo navegador. As regras do Firestore restringem a leitura e as transições, e a conferência final é feita pela equipe dentro do painel. Não há rastreamento GPS em segundo plano nem notificações push quando o app está fechado.
 
-O fluxo de produção usa somente o Firebase dedicado `sushi-cbfd2`, Firestore `(default)` e Authentication. Não conecte Rules/deploy ao projeto da Açaíteria; não habilite Blaze, Storage, Functions ou Cloud Run.
+O fluxo de produção usa somente o Firebase dedicado `sushi-cbfd2`, Firestore `(default)`, Authentication e Functions. Não conecte Rules/deploy ao projeto da Açaíteria. Functions de segunda geração exigem um projeto Firebase com faturamento habilitado; confirme esse custo antes do go-live.
 
 ## Desenvolvimento
 
@@ -63,8 +63,9 @@ No projeto `sushi-cbfd2`:
 3. Copiar o UID desse usuário.
 4. Firestore Database → `(default)` → criar `users/{UID}` com `brandId: teiko`, `role: admin`, `active: true`.
 5. Firestore Database → `(default)` → preencher `storePublicConfig/main` e o catálogo oficial antes de abrir pedidos.
+6. Habilitar o plano necessário para Cloud Functions e publicar `firebase deploy --only functions,firestore` após compilar `functions`.
 
-Não criar banco nomeado adicional. Não ativar Blaze, cartão, Storage ou Functions em produção.
+Não criar banco nomeado adicional. Não ativar Storage ou Cloud Run. Se Functions forem publicadas, revisar faturamento, App Check e limites antes de abrir pedidos.
 
 ## Qualidade
 
@@ -75,6 +76,7 @@ npm test
 npm run test:functions # somente contratos legados locais, se necessário
 npm run test:rules
 npm run build
+npm --prefix functions run build
 ```
 
-As Functions mantidas em `functions/` são código legado/local para contratos históricos e não estão configuradas no `firebase.json`, não são importadas pelo frontend e não devem ser publicadas.
+As Functions em `functions/` fazem parte do fluxo de pedidos. Antes do go-live, publique o bundle compilado e execute o teste de criação de pedido contra os emuladores e o projeto oficial.

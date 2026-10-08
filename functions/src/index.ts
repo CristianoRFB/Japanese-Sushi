@@ -54,7 +54,7 @@ export const createOrderSchema = z
     unitId: z.string().min(1).max(100),
     customer: z.object({
       name: z.string().trim().min(2).max(80),
-      whatsapp: z.string().min(8).max(30),
+      whatsapp: z.string().trim().max(30),
       address: z
         .object({
           street: z.string().trim().min(2).max(120),
@@ -200,6 +200,11 @@ function requestIdFrom(data: unknown): string {
 export const createOrder = onCall(
   { region, timeoutSeconds: 30, memory: '256MiB', enforceAppCheck },
   async (request) => {
+    if (!request.auth?.uid)
+      throw new HttpsError(
+        'unauthenticated',
+        'Sua sessão expirou. Atualize a página e tente novamente.',
+      );
     const requestId = requestIdFrom(request.data);
     const parsed = createOrderSchema.safeParse(request.data);
     if (!parsed.success) {
@@ -336,9 +341,9 @@ export const createOrder = onCall(
         `O cardápio mudou. O novo total é ${(totalCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. Revise e confirme novamente.`,
       );
     }
-    let whatsapp: string;
+    let whatsapp = '';
     try {
-      whatsapp = normalizePhone(input.customer.whatsapp);
+      if (input.customer.whatsapp) whatsapp = normalizePhone(input.customer.whatsapp);
     } catch (cause) {
       throw new HttpsError(
         'invalid-argument',
@@ -360,7 +365,7 @@ export const createOrder = onCall(
       unitId: input.unitId,
       customer: {
         name: input.customer.name,
-        whatsapp,
+        ...(whatsapp ? { whatsapp } : {}),
         ...(input.fulfillment.mode === 'DELIVERY'
           ? { address: input.customer.address }
           : {}),
@@ -387,6 +392,7 @@ export const createOrder = onCall(
         { status: 'NEW', at: Timestamp.now(), actor: 'customer' },
       ],
       clientRequestId: input.clientRequestId,
+      ownerUid: request.auth.uid,
     };
     let finalOrderId = orderRef.id;
     await db.runTransaction(async (transaction) => {

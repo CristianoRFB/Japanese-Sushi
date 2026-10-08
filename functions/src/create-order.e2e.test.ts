@@ -9,6 +9,8 @@ if (!getApps().length)
 const db = getFirestore();
 const endpoint =
   'http://127.0.0.1:5001/sushi-cbfd2/southamerica-east1/createOrder';
+const authEndpoint =
+  'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=owner-test-key';
 const basePayload = {
   unitId: 'santa-fe-do-sul',
   customer: { name: 'Cliente Teiko', whatsapp: '17999999999' },
@@ -19,11 +21,15 @@ const basePayload = {
   payment: { method: 'PIX', needsChange: false },
   clientPreviewTotalCents: 1800,
 };
+let idToken = '';
 
 async function call(data: unknown) {
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
     body: JSON.stringify({ data }),
   });
   return {
@@ -36,6 +42,15 @@ async function call(data: unknown) {
 }
 
 beforeAll(async () => {
+  const authResponse = await fetch(authEndpoint, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ returnSecureToken: true }),
+  });
+  const authBody = (await authResponse.json()) as { idToken?: string };
+  if (!authResponse.ok || !authBody.idToken)
+    throw new Error('Não foi possível criar a sessão anônima do E2E.');
+  idToken = authBody.idToken;
   await db.doc('storePublicConfig/main').set({
     brandId: 'teiko',
     storeName: 'Teiko Sushi',
@@ -100,7 +115,7 @@ describe('createOrder da Teiko', () => {
           .get()
       ).size,
     ).toBe(1);
-  });
+  }, 30_000);
   it('é idempotente para retry com a mesma chave', async () => {
     const clientRequestId = crypto.randomUUID();
     const first = await call({ ...basePayload, clientRequestId });

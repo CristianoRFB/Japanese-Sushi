@@ -134,6 +134,12 @@ beforeAll(async () => {
 
 afterAll(() => env.cleanup());
 
+async function seedOrder(id: string, order: ReturnType<typeof orderData>) {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'orders', id), order);
+  });
+}
+
 describe('Firestore Rules Spark Teiko', () => {
   it('permite catálogo público, mas nega pedidos alheios e promoção de cliente', async () => {
     const publicDb = env.unauthenticatedContext().firestore();
@@ -145,7 +151,8 @@ describe('Firestore Rules Spark Teiko', () => {
 
     const customerDb = env.authenticatedContext('customer-uid').firestore();
     const customerOrder = orderData('customer-uid');
-    await assertSucceeds(
+    await seedOrder(`customer-order-${testRunId}`, customerOrder);
+    await assertFails(
       setDoc(doc(customerDb, 'orders', `customer-order-${testRunId}`), customerOrder),
     );
     await assertSucceeds(getDoc(doc(customerDb, 'orders', `customer-order-${testRunId}`)));
@@ -243,7 +250,8 @@ describe('Firestore Rules Spark Teiko', () => {
     const ownerDb = env.authenticatedContext('customer-edit-uid').firestore();
     const staffDb = env.authenticatedContext('staff-uid').firestore();
     const original = orderData('customer-edit-uid');
-    await assertSucceeds(setDoc(doc(ownerDb, 'orders', `edit-order-${testRunId}`), original));
+    await seedOrder(`edit-order-${testRunId}`, original);
+    await assertFails(setDoc(doc(ownerDb, 'orders', `edit-order-${testRunId}`), original));
     const proposal = {
       state: 'PENDING',
       items: original.items,
@@ -360,10 +368,10 @@ describe('Firestore Rules Spark Teiko', () => {
       fulfillment: { mode: 'DELIVERY' },
       customer: { ...base.customer, address: { street: 'x', number: '', neighborhood: '!' } },
     }));
-    await assertSucceeds(setDoc(doc(customerDb, 'orders', 'name-apostrophe-' + testRunId), {
+    await assertFails(setDoc(doc(customerDb, 'orders', 'name-apostrophe-' + testRunId), {
       ...base, customer: { ...base.customer, name: "D'Ávila" },
     }));
-    await assertSucceeds(setDoc(doc(customerDb, 'orders', 'name-japanese-' + testRunId), {
+    await assertFails(setDoc(doc(customerDb, 'orders', 'name-japanese-' + testRunId), {
       ...base, customer: { ...base.customer, name: '山田太郎' },
     }));
   });
