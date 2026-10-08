@@ -2,7 +2,7 @@
 
 Data da auditoria: 2026-10-08
 Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
-RC auditado: `5d444a3` (`fix: revoke stale delivery sessions`)
+RC auditado: `cabbb37` (`docs: record mobile login sweep`)
 Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
 
 ## Veredito do RC atual
@@ -63,7 +63,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 ## Validações executadas
 
-- `git pull --ff-only` — sem atualizações; RC confirmado em `5d444a3`.
+- `git pull --ff-only` — sem atualizações; RC confirmado em `cabbb37`.
 - Navegador local — passou para a home pública em `http://localhost:3001/`; a página mostra o cardápio de desenvolvimento e preços pendentes.
 - Navegador local — login do motoboy passou visualmente em 360×800, 390×844 e 430×932; o ambiente sem Firebase mantém o botão desabilitado como esperado.
 - `/admin/login` — passou visualmente; acesso exige e-mail e senha do Firebase e não expõe credenciais no código.
