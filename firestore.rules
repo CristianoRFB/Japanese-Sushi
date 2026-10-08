@@ -113,7 +113,7 @@ service cloud.firestore {
         && resource.data.driverId == request.auth.uid
         && brand(resource.data)
         && brand(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'driverId', 'driverName', 'updatedAt', 'acceptedAt', 'pickedUpAt', 'startedAt', 'arrivedAt', 'failureReason'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'driverId', 'driverName', 'updatedAt', 'acceptedAt', 'pickedUpAt', 'startedAt', 'arrivedAt', 'failedAt', 'failureReason'])
         && ((request.resource.data.status == 'READY_FOR_DELIVERY'
           && !request.resource.data.keys().hasAny(['driverId', 'driverName']))
           || (request.resource.data.driverId == resource.data.driverId
@@ -128,7 +128,8 @@ service cloud.firestore {
           || (resource.data.status == 'ON_THE_WAY' && request.resource.data.status in ['ARRIVED', 'DELIVERY_FAILED'])
           || (resource.data.status == 'ARRIVED' && request.resource.data.status == 'DELIVERY_FAILED'))
         && (request.resource.data.status != 'DELIVERY_FAILED'
-          || (request.resource.data.failureReason is string && request.resource.data.failureReason.size() >= 3 && request.resource.data.failureReason.size() <= 200));
+          || (request.resource.data.failureReason is string && request.resource.data.failureReason.size() >= 3 && request.resource.data.failureReason.size() <= 200
+            && request.resource.data.failedAt is timestamp));
     }
     function validAdminDeliveryCancellation(id) {
       return getAfter(/databases/$(database)/documents/orders/$(id)).data.status == 'CANCELLED'
@@ -275,13 +276,14 @@ service cloud.firestore {
       allow update: if isAdmin()
           && brand(resource.data)
           && brand(request.resource.data)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'driverId', 'driverName', 'assignedAt', 'updatedAt', 'failureReason', 'deliveredAt', 'acceptedAt', 'pickedUpAt', 'startedAt', 'arrivedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'driverId', 'driverName', 'assignedAt', 'updatedAt', 'failedAt', 'failureReason', 'deliveredAt', 'acceptedAt', 'pickedUpAt', 'startedAt', 'arrivedAt'])
           && ((resource.data.status in ['READY_FOR_DELIVERY', 'DELIVERY_FAILED'] && request.resource.data.status == 'ASSIGNED'
               && request.resource.data.driverId is string
               && get(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.enabled == true
               && get(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.status == 'AVAILABLE'
               && getAfter(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.status == 'BUSY'
-              && getAfter(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.currentDeliveryId == id)
+              && getAfter(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.currentDeliveryId == id
+              && !request.resource.data.keys().hasAny(['failedAt', 'failureReason']))
             || (resource.data.status in ['READY_FOR_DELIVERY', 'ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'ON_THE_WAY', 'ARRIVED', 'DELIVERY_FAILED'] && request.resource.data.status == 'CANCELLED'
               && validAdminDeliveryCancellation(id))
             || (resource.data.status == 'ARRIVED' && request.resource.data.status == 'DELIVERED'

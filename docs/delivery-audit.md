@@ -33,6 +33,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - A tela do cliente passa a acompanhar `deliveries/{orderId}` em tempo real, exibindo etapa e motoboy somente para o dono do pedido.
 - O portal do motoboy ganhou navegação inferior para celular, com âncoras de corrida, histórico e perfil, além de espaço seguro para a barra inferior.
 - Falhas de entrega agora registram `failedAt`; a reatribuição limpa esse timestamp junto com o motivo da tentativa anterior.
+- As Rules agora exigem `failedAt` com timestamp quando a corrida entra em `DELIVERY_FAILED` e impedem reatribuição com motivo/timestamp obsoletos; o cenário foi incluído no teste do Firestore Emulator.
 - O pedido de confirmação passou a ter `attempts` e `locked`; após cinco rejeições, uma nova tentativa é bloqueada até reatribuição administrativa.
 - O hash correto é exigido pela Rule na aprovação. A conclusão exige, na mesma operação, entrega `DELIVERED`, pedido `COMPLETED` e lançamento financeiro cujo `sourceOrderId` é o próprio pedido.
 - A reatribuição reinicia o contador da nova corrida sem apagar o documento existente.

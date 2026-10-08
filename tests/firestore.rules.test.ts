@@ -429,6 +429,12 @@ describe('Firestore Rules Spark Teiko', () => {
     });
     await assertSucceeds(pickupBatch.commit());
     await assertFails(updateDoc(doc(driverDb, 'deliveries', orderId), { status: 'DELIVERED', deliveredAt: Timestamp.now(), updatedAt: Timestamp.now() }));
+    await assertFails(updateDoc(doc(driverDb, 'deliveries', orderId), {
+      status: 'DELIVERY_FAILED', failureReason: 'Cliente ausente.', updatedAt: Timestamp.now(),
+    }));
+    await assertSucceeds(updateDoc(doc(driverDb, 'deliveries', orderId), {
+      status: 'DELIVERY_FAILED', failedAt: Timestamp.now(), failureReason: 'Cliente ausente.', updatedAt: Timestamp.now(),
+    }));
     await assertFails(updateDoc(doc(adminDb, 'deliveries', orderId), { status: 'CANCELLED', updatedAt: Timestamp.now() }));
     const cancelledAt = Timestamp.now();
     const cancellation = writeBatch(adminDb);
@@ -552,7 +558,7 @@ describe('Firestore Rules Spark Teiko', () => {
         brandId: 'teiko', unitId: 'santa-fe-do-sul', orderId, orderNumber: '#TLOCAL03', status: 'DELIVERY_FAILED',
         driverId: previousDriverId, driverName: 'Motoboy anterior', customerName: 'D\'Ávila',
         address: { street: 'Rua 23', number: '624', neighborhood: 'Centro' }, totalCents: 1800,
-        paymentMethod: 'CASH', createdAt: now, updatedAt: now, assignedAt: now, failureReason: 'Cliente não atendeu.',
+        paymentMethod: 'CASH', createdAt: now, updatedAt: now, assignedAt: now, failedAt: now, failureReason: 'Cliente não atendeu.',
       });
       await setDoc(doc(db, 'deliveryReceiptRequests', orderId), {
         brandId: 'teiko', deliveryId: orderId, orderId, driverId: previousDriverId,
@@ -564,7 +570,10 @@ describe('Firestore Rules Spark Teiko', () => {
     const assignedAt = Timestamp.now();
     const reassign = writeBatch(adminDb);
     reassign.update(doc(adminDb, 'deliveryDrivers', nextDriverId), { status: 'BUSY', currentDeliveryId: orderId, updatedAt: assignedAt });
-    reassign.update(doc(adminDb, 'deliveries', orderId), { status: 'ASSIGNED', driverId: nextDriverId, driverName: 'Novo motoboy', assignedAt, updatedAt: assignedAt });
+    reassign.update(doc(adminDb, 'deliveries', orderId), {
+      status: 'ASSIGNED', driverId: nextDriverId, driverName: 'Novo motoboy', assignedAt, updatedAt: assignedAt,
+      failedAt: deleteField(), failureReason: deleteField(),
+    });
     reassign.update(doc(adminDb, 'deliveryReceiptRequests', orderId), { status: 'REJECTED', driverId: nextDriverId, attempts: 0, locked: false, reviewedAt: assignedAt, reviewedBy: 'admin-uid' });
     await assertSucceeds(reassign.commit());
 
