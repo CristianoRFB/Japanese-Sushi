@@ -3,7 +3,7 @@
 import { signOut } from 'firebase/auth';
 import { collection, doc, limit, onSnapshot, query, where } from 'firebase/firestore';
 import { Bike, Check, Clock3, LogOut, MapPin, PackageCheck, Phone, RefreshCw, ShieldCheck, ToggleLeft, ToggleRight } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { useAuth } from '@/components/providers';
@@ -25,6 +25,7 @@ export default function DriverPortalPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [online, setOnline] = useState(true);
+  const announcedDeliveryRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) window.location.replace('/entregador/login');
@@ -61,6 +62,19 @@ export default function DriverPortalPage() {
       setReceipt(snap.exists() ? ({ id: snap.id, ...snap.data() } as DeliveryReceiptRequest) : null);
     }, () => setError('Não foi possível consultar a validação. A corrida continua salva; atualize a página.'));
   }, [user, currentId, currentStatus]);
+
+  useEffect(() => {
+    const nextDeliveryId = driver?.currentDeliveryId ?? null;
+    if (!nextDeliveryId) {
+      announcedDeliveryRef.current = null;
+      return;
+    }
+    if (announcedDeliveryRef.current !== nextDeliveryId) {
+      setNotice('Nova corrida atribuída. Confira o endereço e responda à solicitação.');
+      setError('');
+      announcedDeliveryRef.current = nextDeliveryId;
+    }
+  }, [driver?.currentDeliveryId]);
 
   useEffect(() => {
     if (requestedDeliveryId && currentId === requestedDeliveryId) {
@@ -101,7 +115,8 @@ export default function DriverPortalPage() {
       <div className="mt-7 flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Em tempo real</p><h2 className="teiko-display mt-1 text-3xl">{current ? 'Corrida atual' : 'Nenhuma corrida ativa'}</h2></div><span className="grid size-11 place-items-center rounded-2xl bg-[#0b100e] text-[#c7a773]"><Clock3 /></span></div>
       {current ? <DeliveryCard delivery={current} busy={busy} receipt={receipt} onPerform={perform} onSendCode={sendCode} driverId={driver.id} /> : <div className="mt-4 rounded-[28px] border border-dashed border-[#070a08]/15 bg-white p-9 text-center"><PackageCheck className="mx-auto size-9 text-[#b5232b]" /><h3 className="mt-4 text-lg font-black">Tudo em dia</h3><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#66716a]">Quando a loja atribuir uma corrida, ela aparecerá aqui. Sua fila mostra somente pedidos ligados à sua conta.</p></div>}
 
-      <section className="mt-8"><h2 className="text-lg font-black">Histórico recente</h2><div className="mt-3 grid gap-2">{deliveries.filter((delivery) => ['DELIVERED', 'CANCELLED', 'DELIVERY_FAILED'].includes(delivery.status)).slice(0, 8).map((delivery) => <article key={delivery.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-white p-4"><div><strong className="text-sm">{delivery.orderNumber}</strong><p className="mt-1 text-xs text-[#66716a]">{delivery.customerName} · {delivery.address.neighborhood}</p></div><span className="rounded-full bg-[#f3f0e8] px-3 py-1.5 text-xs font-black">{deliveryStatusLabels[delivery.status]}</span></article>)}{!deliveries.some((delivery) => ['DELIVERED', 'CANCELLED', 'DELIVERY_FAILED'].includes(delivery.status)) && <p className="rounded-2xl bg-white p-5 text-sm text-[#66716a]">Suas entregas concluídas aparecerão aqui.</p>}</div></section>
+      <section className="mt-8"><h2 className="text-lg font-black">Histórico recente</h2><div className="mt-3 grid gap-2">{deliveries.filter((delivery) => ['DELIVERED', 'CANCELLED', 'DELIVERY_FAILED'].includes(delivery.status)).slice(0, 8).map((delivery) => <article key={delivery.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-white p-4"><div><strong className="text-sm">{delivery.orderNumber}</strong><p className="mt-1 text-xs text-[#66716a]">{delivery.customerName} · {delivery.address.neighborhood}</p>{delivery.failureReason && <p className="mt-1 text-xs font-bold text-[#9d1723]">Motivo: {delivery.failureReason}</p>}</div><span className="rounded-full bg-[#f3f0e8] px-3 py-1.5 text-xs font-black">{deliveryStatusLabels[delivery.status]}</span></article>)}{!deliveries.some((delivery) => ['DELIVERED', 'CANCELLED', 'DELIVERY_FAILED'].includes(delivery.status)) && <p className="rounded-2xl bg-white p-5 text-sm text-[#66716a]">Suas entregas concluídas aparecerão aqui.</p>}</div></section>
+      <section className="mt-8 rounded-[26px] bg-white p-5 shadow-sm sm:p-6"><p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Seu cadastro</p><h2 className="mt-1 text-lg font-black">Perfil do motoboy</h2><dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3"><div><dt className="text-xs font-bold text-[#66716a]">Nome</dt><dd className="mt-1 font-black">{driver.name}</dd></div><div><dt className="text-xs font-bold text-[#66716a]">Telefone</dt><dd className="mt-1 font-black">{driver.phone}</dd></div><div><dt className="text-xs font-bold text-[#66716a]">E-mail</dt><dd className="mt-1 break-all font-black">{driver.email}</dd></div></dl><p className="mt-4 text-xs leading-5 text-[#66716a]">Para alterar seus dados, peça à administração. O perfil exibido aqui é o cadastro ativo usado nas entregas.</p></section>
     </div>
   </main>;
 }

@@ -18,7 +18,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 | Cliente acompanha pedido | [PARCIAL] | `app/pedido/[publicCode]/page.tsx` acompanhava o pedido e o código, mas não o documento `deliveries` nem o nome/status do motoboy. |
 | Regras de vínculo do motoboy | [QUEBRADA] | A atualização permitia que o motoboy enviasse `driverId`/`driverName` alterados durante uma transição válida. |
 | Financeiro de entrega | [PARCIAL] | A transação escrevia pedido, entrega e financeiro; as Rules não exigiam o lançamento determinístico para aceitar conclusão. |
-| Notificação fora da tela | [AUSENTE] | Não há FCM/Web Push; havia apenas listeners/toasts enquanto o painel estava aberto. |
+| Notificação fora da tela | [PARCIAL] | Não há FCM/Web Push; agora há alerta in-app para nova corrida enquanto o portal está aberto. |
 | PWA/service worker | [AUSENTE] | Não havia manifest nem service worker. |
 
 ## Correções aplicadas
@@ -40,12 +40,12 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 | Reatribuição após falha | [OK] | Fluxo e Rules testados para liberar o motoboy anterior e aceitar novo vínculo. |
 | Cliente em tempo real | [OK] | Listener do pedido e listener protegido de `deliveries/{orderId}` implementados. Execução real depende do Firebase configurado. |
 | Login/fluxo ponta a ponta em produção | [PARCIAL] | Não há credencial/ambiente de produção disponível nesta auditoria. |
-| Push quando o app está fechado | [PARCIAL] | Não implementado; o fallback é atualização em tempo real enquanto a tela está aberta. |
+| Push quando o app está fechado | [PARCIAL] | Não implementado; o fallback é alerta in-app e atualização em tempo real enquanto a tela está aberta. |
 | Financeiro e caixa | [PARCIAL] | A conclusão exige lançamento financeiro; ainda falta exercício ponta a ponta com caixa de produção e auditoria específica da movimentação de dinheiro. |
 | Histórico de eventos imutável | [PARCIAL] | Há timestamps e documentos de entrega, mas não existe coleção `DeliveryEvent` append-only. |
 | Mobile 360/390/430 e teclado | [PARCIAL] | Layout tem breakpoints e alvos de toque; não foi executada varredura visual automatizada nessas três larguras. |
 | PWA/offline | [PARCIAL] | Manifest, service worker e fallback foram adicionados; ações Firestore não são enfileiradas offline e devem ser repetidas somente após reconexão. |
-| Perfil próprio do motoboy | [AUSENTE] | Administração edita o cadastro; não há tela de edição de perfil no portal. |
+| Perfil próprio do motoboy | [OK] | O portal exibe nome, telefone e e-mail ativos; edição continua centralizada na administração. |
 
 ## Validações executadas
 
