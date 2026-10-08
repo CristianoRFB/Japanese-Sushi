@@ -65,7 +65,7 @@ No projeto `sushi-cbfd2`:
 4. Firestore Database → `(default)` → criar `users/{UID}` com `brandId: teiko`, `role: admin`, `active: true`.
 5. Firestore Database → `(default)` → preencher `storePublicConfig/main` e o catálogo oficial antes de abrir pedidos.
 6. Habilitar o plano necessário para Cloud Functions e publicar `firebase deploy --only functions,firestore` após compilar `functions`.
-7. Autenticar o Wrangler na conta Cloudflare correta e publicar o frontend com `npm run deploy:frontend`.
+7. Autenticar o Wrangler na conta Cloudflare correta e publicar o frontend com `npm run deploy:frontend`; o preflight bloqueia projeto errado, emulador ou seed de desenvolvimento.
 
 Não criar banco nomeado adicional. Não ativar Storage ou Cloud Run. Se Functions forem publicadas, revisar faturamento, App Check e limites antes de abrir pedidos.
 
@@ -79,6 +79,7 @@ npm run test:functions # somente contratos legados locais, se necessário
 npm run test:rules
 npm run build
 npm --prefix functions run build
+npm run preflight:production
 ```
 
 As Functions em `functions/` fazem parte do fluxo de pedidos. Antes do go-live, publique o bundle compilado e execute o teste de criação de pedido contra os emuladores e o projeto oficial.
