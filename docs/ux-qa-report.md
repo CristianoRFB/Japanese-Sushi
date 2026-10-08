@@ -89,7 +89,7 @@ Foi feita uma comparação de capacidades entre a base local da Açaíteria e o 
 - Caixa financeiro em `/admin/financas`, com receitas, despesas, filtros por mês, situação paga/pendente e categorias de vendas de sushi, insumos frescos e embalagens.
 - Busca pública por código ou número do pedido e recuperação dos últimos códigos no cache individual do navegador.
 - Central de notificações com fila de pedidos novos, contador, aceite e recusa rápida, mantendo o detalhe completo para edição e proposta de alteração.
-- Área `/admin/integracao` documentando o estado desativado das integrações externas, sem habilitar Functions de produção, Cloud Run, Storage ou credenciais de terceiros.
+- Área `/admin/integracao` documentando o estado desativado das integrações externas; Functions são usadas somente para criação canônica de pedidos, enquanto Cloud Run, Storage e credenciais de terceiros permanecem fora do escopo.
 - Regras Firestore para `financeEntries`, restritas ao admin da marca Teiko e com validação de tipo, status, valor positivo e data.
 
 Também foi confirmado que o catálogo visual usa imagens locais reais e que não há caracteres emoji no código de aplicação pesquisado.
@@ -98,14 +98,17 @@ Também foi confirmado que o catálogo visual usa imagens locais reais e que nã
 
 - `npm run lint`: passou.
 - `npm run typecheck`: passou.
-- `npm test -- --run`: passou antes desta rodada; após a inclusão do caixa, deve ser repetido junto com o build.
+- `npm test`: 7 arquivos e 29 testes passaram no RC atual.
 - `npm --prefix functions run build`: passou.
 - `npm --prefix functions test`: 1 arquivo e 7 testes passaram.
+- `npm run test:rules`: 14 cenários passaram no Firestore Emulator.
+- `firebase emulators:exec --only auth,firestore,functions "npm --prefix functions run test:e2e"`: 3 cenários passaram, incluindo idempotência e rejeição de preço adulterado.
+- `npx wrangler deploy --dry-run --config dist/server/wrangler.json`: passou sem bindings pendentes.
 - Revalidação HTTP no Site publicado: `/`, `/admin/login`, `/admin/financas`, `/admin/integracao`, `/admin/pedidos`, `/admin/kds`, `/admin/pdv` e `/admin/reservas` retornaram `200` após a publicação desta rodada.
 
 ### Pontos de atenção encontrados
 
-- A criação de pedido no frontend ainda é uma escrita direta no Firestore para preservar o modo sem Functions em produção. Isso mantém a operação no plano gratuito, mas não substitui uma validação canônica de preço no servidor; antes de abrir vendas reais, a regra deve ser endurecida ou a próxima passada do Firebase deve validar o fluxo com segurança.
+- A criação de pedido no frontend chama `createOrder`; o servidor recalcula o catálogo e o preço, e as Rules bloqueiam escrita direta. Ainda falta publicar e observar a Function no Firebase oficial.
 - A busca por número do pedido depende da sessão anônima persistida no mesmo navegador; o código público continua sendo a forma portátil de consulta.
 - O banco oficial ainda precisa receber o catálogo, preços, configuração pública e usuário admin reais. O seed é somente demonstrativo.
 
@@ -121,7 +124,7 @@ Também foi confirmado que o catálogo visual usa imagens locais reais e que nã
 
 - Firebase oficial permanece `sushi-cbfd2`, Firestore `(default)`.
 - Nenhum runtime, Rules ou deploy foi conectado ao Firebase da Açaí.
-- Não foram habilitados Blaze, Functions em produção, Cloud Run ou Storage.
+- Functions estão configuradas no código e no emulator, mas ainda não foram publicadas no Firebase oficial; Cloud Run e Storage continuam desativados.
 - O seed local usa apenas os dados oficiais fornecidos nesta etapa para endereço e horário; preços e integrações reais continuam aguardando a próxima passada de configuração do Firebase.
 
 ## Referências de UX consultadas
@@ -134,4 +137,4 @@ Também foi confirmado que o catálogo visual usa imagens locais reais e que nã
 
 ## Veredito
 
-A personalização e os fluxos principais estão prontos para a próxima passada de configuração do Firebase oficial. O sistema ainda não deve ser tratado como produção até receber catálogo/preços completos e até validar as integrações reais de pagamento e entrega.
+A personalização e os fluxos principais estão prontos para a próxima passada de configuração do Firebase oficial. O sistema ainda não deve ser tratado como produção até receber catálogo/preços completos, publicar as Functions e validar as integrações reais de pagamento e entrega.
