@@ -69,6 +69,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - `firebase emulators:exec --only auth,firestore,functions "npm --prefix functions run test:e2e"` — 3 cenários de criação de pedido passaram, incluindo idempotência e rejeição de preço adulterado.
 - `npx wrangler deploy --dry-run --config dist/server/wrangler.json` — passou; release Cloudflare gerado com 394 módulos, 5,1 MB de upload e sem bindings pendentes. Nenhuma publicação real foi feita.
 - `npm run preflight:production` — bloqueou corretamente sem configuração Firebase; com valores de teste e projeto `sushi-cbfd2`, passou sem imprimir segredos.
+- `npm run deploy:frontend` e `npm run deploy:backend` — comandos de publicação documentados; não executados, pois exigem credenciais das contas Cloudflare/Firebase e efeito externo autorizado.
 - `npm run test:rules` — 1 arquivo, 14 testes passaram no Firestore Emulator com Java 21.
 - `npm run build` — passou; apenas aviso não bloqueante de chunks acima de 500 kB.
 - `npm audit --omit=dev --audit-level=high` — encontrou 26 vulnerabilidades (1 crítica, 21 altas, 3 moderadas, 1 baixa); não foi aplicado `npm audit fix --force` por risco de alterações incompatíveis.
