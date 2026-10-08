@@ -293,6 +293,31 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /deliveryEvents/{eventId} {
+      allow read: if isAdmin()
+        || (isDriver() && resource.data.driverId == request.auth.uid);
+      allow create: if brand(request.resource.data)
+        && request.resource.data.keys().hasAll(['eventId', 'brandId', 'deliveryId', 'orderId', 'toStatus', 'kind', 'actorUid', 'actorRole', 'occurredAt'])
+        && request.resource.data.keys().hasOnly(['eventId', 'brandId', 'deliveryId', 'orderId', 'driverId', 'fromStatus', 'toStatus', 'kind', 'actorUid', 'actorRole', 'reason', 'occurredAt'])
+        && request.resource.data.eventId == eventId
+        && request.resource.data.deliveryId == request.resource.data.orderId
+        && request.resource.data.toStatus in ['READY_FOR_DELIVERY', 'ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'ON_THE_WAY', 'ARRIVED', 'DELIVERED', 'DELIVERY_FAILED', 'CANCELLED']
+        && request.resource.data.kind is string
+        && request.resource.data.kind.size() >= 3
+        && request.resource.data.kind.size() <= 60
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorRole in ['admin', 'driver']
+        && request.resource.data.occurredAt is timestamp
+        && getAfter(/databases/$(database)/documents/deliveries/$(request.resource.data.deliveryId)).data.status == request.resource.data.toStatus
+        && (isAdmin()
+          ? request.resource.data.actorRole == 'admin'
+          : (isDriver()
+            && request.resource.data.actorRole == 'driver'
+            && request.resource.data.driverId == request.auth.uid
+            && get(/databases/$(database)/documents/deliveries/$(request.resource.data.deliveryId)).data.driverId == request.auth.uid));
+      allow update, delete: if false;
+    }
+
     match /orderDeliveryCodes/{id} {
       allow get: if isAdmin() || isOwner(resource.data)
         || (signedIn()

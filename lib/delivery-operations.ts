@@ -1,10 +1,10 @@
 import {
-  arrayUnion, deleteField, doc, runTransaction, Timestamp,
+  arrayUnion, collection, deleteField, doc, runTransaction, Timestamp, type Transaction,
 } from 'firebase/firestore';
 
 import { getFirebaseClient } from '@/lib/firebase/client';
 import { TEIKO_BRAND_ID } from '@/shared/domain';
-import { isDeliveryCode, MAX_DELIVERY_CODE_ATTEMPTS, validateDeliveryAddress, validateDeliveryFailureReason, type DeliveryAddress, type DeliveryRecord } from '@/shared/delivery';
+import { isDeliveryCode, MAX_DELIVERY_CODE_ATTEMPTS, validateDeliveryAddress, validateDeliveryFailureReason, type DeliveryAddress, type DeliveryEventRole, type DeliveryRecord, type DeliveryStatus } from '@/shared/delivery';
 import { isValidCashAmount } from '@/shared/cash-register';
 
 function randomDeliveryCode() {
@@ -20,6 +20,30 @@ export async function hashDeliveryCode(code: string) {
 }
 
 async function codeHash(code: string) { return hashDeliveryCode(code); }
+
+function appendDeliveryEvent(
+  db: ReturnType<typeof getFirebaseClient>['db'],
+  transaction: Transaction,
+  input: {
+    deliveryId: string;
+    orderId: string;
+    driverId?: string;
+    fromStatus?: DeliveryStatus;
+    toStatus: DeliveryStatus;
+    kind: string;
+    actorUid: string;
+    actorRole: DeliveryEventRole;
+    reason?: string;
+  },
+) {
+  const eventRef = doc(collection(db, 'deliveryEvents'));
+  transaction.set(eventRef, {
+    brandId: TEIKO_BRAND_ID,
+    eventId: eventRef.id,
+    ...input,
+    occurredAt: Timestamp.now(),
+  });
+}
 
 export async function assignReadyOrder(input: { orderId: string; driverId: string; actorUid: string }) {
   const { db } = getFirebaseClient();
@@ -114,6 +138,16 @@ export async function assignReadyOrder(input: { orderId: string; driverId: strin
       brandId: TEIKO_BRAND_ID, orderId: input.orderId, codeHash: finalHash, createdAt: now,
     });
     else if (secretSnap.data().codeHash !== finalHash) transaction.update(secretRef, { codeHash: finalHash });
+    appendDeliveryEvent(db, transaction, {
+      deliveryId: input.orderId,
+      orderId: input.orderId,
+      driverId: input.driverId,
+      fromStatus: isRetry ? 'DELIVERY_FAILED' : 'READY_FOR_DELIVERY',
+      toStatus: 'ASSIGNED',
+      kind: isRetry ? 'REASSIGNED' : 'ASSIGNED',
+      actorUid: input.actorUid,
+      actorRole: 'admin',
+    });
     return { deliveryId: input.orderId, idempotent: false };
   });
 }
@@ -143,6 +177,17 @@ export async function cancelDelivery(input: { delivery: DeliveryRecord; actorUid
       transaction.update(driverRef, { status: 'AVAILABLE', currentDeliveryId: deleteField(), updatedAt: now });
     }
     if (requestSnap?.exists() && requestSnap.data().status === 'PENDING') transaction.update(requestRef, { status: 'REJECTED', reviewedAt: now, reviewedBy: input.actorUid });
+    appendDeliveryEvent(db, transaction, {
+      deliveryId: input.delivery.id,
+      orderId: input.delivery.orderId,
+      driverId: input.delivery.driverId,
+      fromStatus: deliverySnap.data().status as DeliveryStatus,
+      toStatus: 'CANCELLED',
+      kind: 'CANCELLED_BY_ADMIN',
+      actorUid: input.actorUid,
+      actorRole: 'admin',
+      reason,
+    });
   });
 }
 
@@ -175,6 +220,16 @@ export async function reviewDeliveryReceipt(input: { deliveryId: string; actorUi
         locked: nextAttempts >= MAX_DELIVERY_CODE_ATTEMPTS,
         reviewedAt: now,
         reviewedBy: input.actorUid,
+      });
+      appendDeliveryEvent(db, transaction, {
+        deliveryId: input.deliveryId,
+        orderId: input.deliveryId,
+        driverId: delivery.driverId,
+        toStatus: 'ARRIVED',
+        kind: 'CODE_REJECTED',
+        actorUid: input.actorUid,
+        actorRole: 'admin',
+        reason: 'Código ou pagamento não conferido.',
       });
       return { verified: false, idempotent: false };
     }
@@ -221,6 +276,17 @@ export async function reviewDeliveryReceipt(input: { deliveryId: string; actorUi
       statusHistory: arrayUnion({ status: 'COMPLETED', at: now, actorUid: input.actorUid, actorRole: 'admin', reason: 'Recebimento confirmado pela equipe.' }),
     });
     transaction.update(driverRef, { status: 'AVAILABLE', currentDeliveryId: deleteField(), updatedAt: now });
+    appendDeliveryEvent(db, transaction, {
+      deliveryId: input.deliveryId,
+      orderId: input.deliveryId,
+      driverId: delivery.driverId,
+      fromStatus: 'ARRIVED',
+      toStatus: 'DELIVERED',
+      kind: 'DELIVERY_VERIFIED',
+      actorUid: input.actorUid,
+      actorRole: 'admin',
+      reason: 'Recebimento e código conferidos pela equipe.',
+    });
     return { verified: true, idempotent: false };
   });
 }
@@ -252,6 +318,16 @@ export async function respondToDelivery(input: { deliveryId: string; driverId: s
     const now = Timestamp.now();
     if (input.accept) {
       transaction.update(deliveryRef, { status: 'ACCEPTED', acceptedAt: now, updatedAt: now });
+      appendDeliveryEvent(db, transaction, {
+        deliveryId: input.deliveryId,
+        orderId: input.deliveryId,
+        driverId: input.driverId,
+        fromStatus: 'ASSIGNED',
+        toStatus: 'ACCEPTED',
+        kind: 'ACCEPTED',
+        actorUid: input.driverId,
+        actorRole: 'driver',
+      });
       return 'ACCEPTED' as const;
     }
     transaction.update(deliveryRef, {
@@ -261,6 +337,16 @@ export async function respondToDelivery(input: { deliveryId: string; driverId: s
       updatedAt: now,
     });
     transaction.update(driverRef, { status: 'AVAILABLE', currentDeliveryId: deleteField(), updatedAt: now });
+    appendDeliveryEvent(db, transaction, {
+      deliveryId: input.deliveryId,
+      orderId: input.deliveryId,
+      driverId: input.driverId,
+      fromStatus: 'ASSIGNED',
+      toStatus: 'READY_FOR_DELIVERY',
+      kind: 'DECLINED',
+      actorUid: input.driverId,
+      actorRole: 'driver',
+    });
     return 'READY_FOR_DELIVERY' as const;
   });
 }
@@ -317,6 +403,17 @@ export async function advanceDriverDelivery(input: {
     } else if (input.next === 'DELIVERY_FAILED') {
       transaction.update(driverRef, { status: 'AVAILABLE', currentDeliveryId: deleteField(), updatedAt: now });
     }
+    appendDeliveryEvent(db, transaction, {
+      deliveryId: input.deliveryId,
+      orderId: input.deliveryId,
+      driverId: input.driverId,
+      fromStatus: from as DeliveryStatus,
+      toStatus: input.next,
+      kind: input.next === 'DELIVERY_FAILED' ? 'DELIVERY_FAILED' : input.next,
+      actorUid: input.driverId,
+      actorRole: 'driver',
+      ...(input.next === 'DELIVERY_FAILED' ? { reason } : {}),
+    });
     return input.next;
   });
 }
@@ -362,6 +459,15 @@ export async function submitDeliveryCode(input: { deliveryId: string; driverId: 
         reviewedAt: deleteField(), reviewedBy: deleteField(),
       });
     } else transaction.set(requestRef, receipt);
+    appendDeliveryEvent(db, transaction, {
+      deliveryId: input.deliveryId,
+      orderId: input.deliveryId,
+      driverId: input.driverId,
+      toStatus: 'ARRIVED',
+      kind: 'RECEIPT_SUBMITTED',
+      actorUid: input.driverId,
+      actorRole: 'driver',
+    });
     return { pendingReview: true };
   });
 }

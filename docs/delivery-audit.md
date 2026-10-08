@@ -37,6 +37,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - Foi adicionado manifest, service worker com fallback público offline e aviso de conexão no portal do motoboy. Dados administrativos e pedidos privados não são cacheados.
 - O checkout público e o PDV passaram a chamar `createOrder`; o preço é recalculado no servidor e a criação direta de pedidos pelo cliente foi bloqueada nas Rules.
 - `firebase.json` agora declara Functions de segunda geração em `southamerica-east1`; o custo/plano e o deploy oficial continuam pendentes.
+- Foi criada a coleção append-only `deliveryEvents`, com leitura restrita ao admin e ao motoboy vinculado; inclusão e imutabilidade são validadas pelas Rules.
 
 ## Matriz final local
 
@@ -50,7 +51,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 | Login/fluxo ponta a ponta em produção | [PARCIAL] | Não há credencial/ambiente de produção disponível nesta auditoria. |
 | Push quando o app está fechado | [PARCIAL] | Não implementado; o fallback é alerta in-app e atualização em tempo real enquanto a tela está aberta. |
 | Financeiro e caixa | [PARCIAL] | A conclusão exige lançamento financeiro; ainda falta exercício ponta a ponta com caixa de produção e auditoria específica da movimentação de dinheiro. |
-| Histórico de eventos imutável | [PARCIAL] | Há timestamps e documentos de entrega, mas não existe coleção `DeliveryEvent` append-only. |
+| Histórico de eventos imutável | [OK local] | `deliveryEvents` é criada nas operações de despacho, aceite, recusa, etapas, falha, código e conclusão; Rules bloqueiam update/delete e há cenário dedicado de imutabilidade. |
 | Mobile 360/390/430 e teclado | [PARCIAL] | Layout tem breakpoints e alvos de toque; não foi executada varredura visual automatizada nessas três larguras. |
 | PWA/offline | [PARCIAL] | Manifest, service worker e fallback foram adicionados; ações Firestore não são enfileiradas offline e devem ser repetidas somente após reconexão. |
 | Perfil próprio do motoboy | [OK] | O portal exibe nome, telefone e e-mail ativos; edição continua centralizada na administração. |
@@ -66,7 +67,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - `npm run test:functions` — 1 arquivo, 7 testes passaram.
 - `npm --prefix functions run build` — passou.
 - `firebase emulators:exec --only auth,firestore,functions "npm --prefix functions run test:e2e"` — 3 cenários de criação de pedido passaram, incluindo idempotência e rejeição de preço adulterado.
-- `npm run test:rules` — 1 arquivo, 13 testes passaram no Firestore Emulator com Java 21.
+- `npm run test:rules` — 1 arquivo, 14 testes passaram no Firestore Emulator com Java 21.
 - `npm run build` — passou; apenas aviso não bloqueante de chunks acima de 500 kB.
 - `npm audit --omit=dev --audit-level=high` — encontrou 26 vulnerabilidades (1 crítica, 21 altas, 3 moderadas, 1 baixa); não foi aplicado `npm audit fix --force` por risco de alterações incompatíveis.
 - `npm run test:integration` e `npm run test:e2e` — scripts raiz inexistentes; o E2E aplicável das Functions foi executado explicitamente acima.

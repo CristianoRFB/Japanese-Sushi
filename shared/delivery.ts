@@ -109,6 +109,23 @@ export interface DeliveryRecord {
   failureReason?: string;
 }
 
+export type DeliveryEventRole = 'admin' | 'driver';
+
+export interface DeliveryEvent {
+  id: string;
+  brandId: string;
+  deliveryId: string;
+  orderId: string;
+  driverId?: string;
+  fromStatus?: DeliveryStatus;
+  toStatus: DeliveryStatus;
+  kind: string;
+  actorUid: string;
+  actorRole: DeliveryEventRole;
+  reason?: string;
+  occurredAt?: unknown;
+}
+
 export interface DeliveryDriver {
   id: string;
   brandId: string;

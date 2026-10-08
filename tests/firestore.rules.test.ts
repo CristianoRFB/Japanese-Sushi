@@ -9,6 +9,7 @@ import {
 import {
   arrayUnion,
   collection,
+  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -483,6 +484,52 @@ describe('Firestore Rules Spark Teiko', () => {
       status: 'PENDING', codeHash: 'd'.repeat(64), createdAt: Timestamp.now(),
       reviewedAt: deleteField(), reviewedBy: deleteField(),
     }));
+  });
+
+  it('mantém a trilha de eventos de delivery somente para inclusão', async () => {
+    const orderId = `event-order-${testRunId}`;
+    const driverId = `event-driver-${testRunId}`;
+    const now = Timestamp.now();
+    const ownerUid = `event-owner-${testRunId}`;
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'orders', orderId), {
+        ...orderData(ownerUid, 'OUT_FOR_DELIVERY'),
+        fulfillment: { mode: 'DELIVERY' },
+      });
+      await setDoc(doc(db, 'users', driverId), { brandId: 'teiko', role: 'driver', active: true });
+      await setDoc(doc(db, 'deliveryDrivers', driverId), {
+        brandId: 'teiko', name: 'Motoboy Eventos', enabled: true, status: 'BUSY', currentDeliveryId: orderId,
+      });
+      await setDoc(doc(db, 'deliveries', orderId), {
+        brandId: 'teiko', unitId: 'santa-fe-do-sul', orderId, orderNumber: '#TEVENT', status: 'ASSIGNED',
+        driverId, driverName: 'Motoboy Eventos', customerName: 'Cliente Eventos',
+        address: { street: 'Rua 23', number: '1', neighborhood: 'Centro' }, totalCents: 1800,
+        paymentMethod: 'PIX', createdAt: now, updatedAt: now, assignedAt: now,
+      });
+    });
+    const adminDb = env.authenticatedContext('admin-uid').firestore();
+    const eventRef = doc(collection(adminDb, 'deliveryEvents'));
+    const cancellation = writeBatch(adminDb);
+    cancellation.update(doc(adminDb, 'deliveries', orderId), {
+      status: 'CANCELLED', failureReason: 'Cancelado pela loja.', updatedAt: now,
+    });
+    cancellation.update(doc(adminDb, 'orders', orderId), {
+      status: 'CANCELLED', cancelledAt: now, cancellationReason: 'Cancelado pela loja.', updatedAt: now,
+      statusHistory: arrayUnion({ status: 'CANCELLED', at: now, actorUid: 'admin-uid', actorRole: 'admin' }),
+    });
+    cancellation.update(doc(adminDb, 'deliveryDrivers', driverId), {
+      status: 'AVAILABLE', currentDeliveryId: deleteField(), updatedAt: now,
+    });
+    cancellation.set(eventRef, {
+      eventId: eventRef.id, brandId: 'teiko', deliveryId: orderId, orderId, driverId,
+      fromStatus: 'ASSIGNED', toStatus: 'CANCELLED', kind: 'CANCELLED_BY_ADMIN',
+      actorUid: 'admin-uid', actorRole: 'admin', reason: 'Cancelado pela loja.', occurredAt: now,
+    });
+    await assertSucceeds(cancellation.commit());
+    await assertFails(getDoc(doc(env.authenticatedContext(ownerUid).firestore(), 'deliveryEvents', eventRef.id)));
+    await assertFails(updateDoc(doc(adminDb, 'deliveryEvents', eventRef.id), { kind: 'EDITADO' }));
+    await assertFails(deleteDoc(doc(adminDb, 'deliveryEvents', eventRef.id)));
   });
 
   it('recupera uma entrega que falhou e permite que o novo motoboy envie outro código', async () => {
