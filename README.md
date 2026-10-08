@@ -64,7 +64,7 @@ No projeto `sushi-cbfd2`:
 3. Copiar o UID desse usuário.
 4. Firestore Database → `(default)` → criar `users/{UID}` com `brandId: teiko`, `role: admin`, `active: true`.
 5. Firestore Database → `(default)` → preencher `storePublicConfig/main` e o catálogo oficial antes de abrir pedidos.
-6. Habilitar o plano necessário para Cloud Functions e publicar o backend com `npm run deploy:backend` após conferir o projeto Firebase selecionado.
+6. Habilitar o plano necessário para Cloud Functions e publicar o backend com `npm run deploy:backend`; o comando fixa explicitamente o projeto `sushi-cbfd2`.
 7. Autenticar o Wrangler na conta Cloudflare correta e publicar o frontend com `npm run deploy:frontend`; o preflight bloqueia projeto errado, emulador ou seed de desenvolvimento.
 
 Não criar banco nomeado adicional. Não ativar Storage ou Cloud Run. Se Functions forem publicadas, revisar faturamento, App Check e limites antes de abrir pedidos.

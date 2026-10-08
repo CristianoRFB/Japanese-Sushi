@@ -11,7 +11,7 @@
     "start": "wrangler dev --config dist/server/wrangler.json",
     "preflight:production": "node scripts/preflight-production.mjs",
     "deploy:frontend": "npm run preflight:production && npm run build && wrangler deploy --config dist/server/wrangler.json",
-    "deploy:backend": "npm --prefix functions run build && firebase deploy --only functions,firestore",
+    "deploy:backend": "npm --prefix functions run build && firebase deploy --project sushi-cbfd2 --only functions,firestore",
     "lint": "oxlint app components/providers.tsx components/public-header.tsx components/admin-shell.tsx components/admin-form.tsx lib shared tests functions/src scripts vitest.config.ts vite.config.ts",
     "format": "oxfmt",
     "typecheck": "tsc --noEmit",
