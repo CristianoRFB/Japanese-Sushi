@@ -57,7 +57,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 | Push quando o app está fechado | [PARCIAL] | Não implementado; o fallback é alerta in-app e atualização em tempo real enquanto a tela está aberta. |
 | Financeiro e caixa | [PARCIAL] | A conclusão exige lançamento financeiro; ainda falta exercício ponta a ponta com caixa de produção e auditoria específica da movimentação de dinheiro. |
 | Histórico de eventos imutável | [OK local] | `deliveryEvents` é criada nas operações de despacho, aceite, recusa, etapas, falha, código e conclusão; Rules bloqueiam update/delete, há cenário dedicado de imutabilidade e a Central exibe a trilha recente. |
-| Mobile 360/390/430 e teclado | [PARCIAL] | Portal tem breakpoints, alvos de toque, navegação inferior e espaço para safe area; ainda não foi executada varredura visual automatizada nessas três larguras nem com teclado aberto. |
+| Mobile 360/390/430 e teclado | [PARCIAL] | Login do motoboy foi inspecionado visualmente em 360×800, 390×844 e 430×932 sem overflow/clipping; portal autenticado e teclado aberto ainda dependem de Firebase/credenciais reais. |
 | PWA/offline | [PARCIAL] | Manifest, service worker e fallback foram adicionados; ações Firestore não são enfileiradas offline e devem ser repetidas somente após reconexão. |
 | Perfil próprio do motoboy | [OK] | O portal exibe nome, telefone e e-mail ativos; edição continua centralizada na administração. |
 
@@ -65,6 +65,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 - `git pull --ff-only` — sem atualizações; RC confirmado em `5d444a3`.
 - Navegador local — passou para a home pública em `http://localhost:3001/`; a página mostra o cardápio de desenvolvimento e preços pendentes.
+- Navegador local — login do motoboy passou visualmente em 360×800, 390×844 e 430×932; o ambiente sem Firebase mantém o botão desabilitado como esperado.
 - `/admin/login` — passou visualmente; acesso exige e-mail e senha do Firebase e não expõe credenciais no código.
 - `npm run lint` — passou.
 - `npm run typecheck` — passou.
