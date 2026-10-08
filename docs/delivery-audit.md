@@ -34,7 +34,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 | Área | Status | Prova/limitação |
 |---|---|---|
-| RBAC, isolamento do motoboy, cliente dono e cliente alheio | [OK] | 12 cenários em `tests/firestore.rules.test.ts`, incluindo leitura do dono e bloqueio de usuário alheio. |
+| RBAC, isolamento do motoboy, cliente dono e cliente alheio | [OK] | 13 cenários em `tests/firestore.rules.test.ts`, incluindo leitura do dono e bloqueio de usuário alheio. |
 | Sequestro de entrega e transições inválidas | [OK] | Rules testadas contra alteração de vínculo e conclusão direta pelo motoboy. |
 | Tentativas de código | [OK] | Cinco rejeições são permitidas; a sexta submissão é bloqueada por Rules e pela operação. |
 | Reatribuição após falha | [OK] | Fluxo e Rules testados para liberar o motoboy anterior e aceitar novo vínculo. |
@@ -53,7 +53,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - `npm run typecheck` — passou.
 - `npm test` — 7 arquivos, 29 testes passaram.
 - `npm run test:functions` — 1 arquivo, 7 testes passaram.
-- `npm run test:rules` — 1 arquivo, 12 testes passaram no Firestore Emulator com Java 21.
+- `npm run test:rules` — 1 arquivo, 13 testes passaram no Firestore Emulator com Java 21.
 - `npm run build` — passou; apenas aviso não bloqueante de chunks acima de 500 kB.
 - `npm audit --omit=dev --audit-level=high` — encontrou 26 vulnerabilidades (1 crítica, 21 altas, 3 moderadas, 1 baixa); não foi aplicado `npm audit fix --force` por risco de alterações incompatíveis.
 - `npm run test:integration` e `npm run test:e2e` — scripts inexistentes no `package.json`.
