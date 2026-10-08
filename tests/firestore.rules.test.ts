@@ -130,7 +130,7 @@ beforeAll(async () => {
       productIds: [],
     });
   });
-});
+}, 30_000);
 
 afterAll(() => env.cleanup());
 
@@ -420,6 +420,13 @@ describe('Firestore Rules Spark Teiko', () => {
     });
     await assertSucceeds(pickupBatch.commit());
     await assertFails(updateDoc(doc(driverDb, 'deliveries', orderId), { status: 'DELIVERED', deliveredAt: Timestamp.now(), updatedAt: Timestamp.now() }));
+    await assertFails(updateDoc(doc(adminDb, 'deliveries', orderId), { status: 'CANCELLED', updatedAt: Timestamp.now() }));
+    const cancelledAt = Timestamp.now();
+    const cancellation = writeBatch(adminDb);
+    cancellation.update(doc(adminDb, 'deliveries', orderId), { status: 'CANCELLED', failureReason: 'Cancelado pela loja.', updatedAt: cancelledAt });
+    cancellation.update(doc(adminDb, 'orders', orderId), { status: 'CANCELLED', cancelledAt, cancellationReason: 'Cancelado pela loja.', updatedAt: cancelledAt, statusHistory: arrayUnion({ status: 'CANCELLED', at: cancelledAt, actorUid: 'admin-uid', actorRole: 'admin' }) });
+    cancellation.update(doc(adminDb, 'deliveryDrivers', driverId), { status: 'AVAILABLE', currentDeliveryId: deleteField(), updatedAt: cancelledAt });
+    await assertSucceeds(cancellation.commit());
 
     await assertSucceeds(getDoc(doc(ownerDb, 'orderDeliveryCodes', orderId)));
     await assertFails(getDoc(doc(env.authenticatedContext(`other-${testRunId}`).firestore(), 'orderDeliveryCodes', orderId)));

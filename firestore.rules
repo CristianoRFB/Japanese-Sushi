@@ -130,6 +130,16 @@ service cloud.firestore {
         && (request.resource.data.status != 'DELIVERY_FAILED'
           || (request.resource.data.failureReason is string && request.resource.data.failureReason.size() >= 3 && request.resource.data.failureReason.size() <= 200));
     }
+    function validAdminDeliveryCancellation(id) {
+      return getAfter(/databases/$(database)/documents/orders/$(id)).data.status == 'CANCELLED'
+        && (!resource.data.keys().hasAny(['driverId'])
+          || (exists(/databases/$(database)/documents/deliveryDrivers/$(resource.data.driverId))
+            && getAfter(/databases/$(database)/documents/deliveryDrivers/$(resource.data.driverId)).data.status == 'AVAILABLE'
+            && !getAfter(/databases/$(database)/documents/deliveryDrivers/$(resource.data.driverId)).data.keys().hasAny(['currentDeliveryId'])))
+        && (!exists(/databases/$(database)/documents/deliveryReceiptRequests/$(id))
+          || get(/databases/$(database)/documents/deliveryReceiptRequests/$(id)).data.status != 'PENDING'
+          || getAfter(/databases/$(database)/documents/deliveryReceiptRequests/$(id)).data.status == 'REJECTED');
+    }
 
     match /storePublicConfig/{id} {
       allow read: if resource.data.brandId == 'teiko';
@@ -290,7 +300,8 @@ service cloud.firestore {
               && get(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.status == 'AVAILABLE'
               && getAfter(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.status == 'BUSY'
               && getAfter(/databases/$(database)/documents/deliveryDrivers/$(request.resource.data.driverId)).data.currentDeliveryId == id)
-            || (resource.data.status in ['READY_FOR_DELIVERY', 'ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'ON_THE_WAY', 'ARRIVED', 'DELIVERY_FAILED'] && request.resource.data.status == 'CANCELLED')
+            || (resource.data.status in ['READY_FOR_DELIVERY', 'ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'ON_THE_WAY', 'ARRIVED', 'DELIVERY_FAILED'] && request.resource.data.status == 'CANCELLED'
+              && validAdminDeliveryCancellation(id))
             || (resource.data.status == 'ARRIVED' && request.resource.data.status == 'DELIVERED'
               && request.resource.data.deliveredAt is timestamp
               && getAfter(/databases/$(database)/documents/deliveryReceiptRequests/$(id)).data.status == 'VERIFIED'
