@@ -129,7 +129,7 @@ export async function assignReadyOrder(input: { orderId: string; driverId: strin
       updatedAt: now,
       assignedAt: now,
     };
-    if (deliverySnap.exists()) transaction.update(deliveryRef, { ...record, failureReason: deleteField() });
+    if (deliverySnap.exists()) transaction.update(deliveryRef, { ...record, failedAt: deleteField(), failureReason: deleteField() });
     else transaction.set(deliveryRef, { ...record, createdAt: now });
     if (!customerCodeSnap.exists()) transaction.set(customerCodeRef, {
       brandId: TEIKO_BRAND_ID, orderId: input.orderId, ownerUid: order.ownerUid, code, createdAt: now,
@@ -392,7 +392,7 @@ export async function advanceDriverDelivery(input: {
       status: input.next,
       updatedAt: now,
       ...(input.next === 'DELIVERY_FAILED' ? {} : { [timeField[input.next]]: now }),
-      ...(input.next === 'DELIVERY_FAILED' ? { failureReason: reason } : {}),
+      ...(input.next === 'DELIVERY_FAILED' ? { failedAt: now, failureReason: reason } : {}),
     });
     if (input.next === 'PICKED_UP' && order && order.exists() && order.data().status === 'READY') {
       transaction.update(orderRef, {

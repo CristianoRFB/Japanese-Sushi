@@ -31,6 +31,8 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 - O motoboy não consegue mais trocar `driverId` ou `driverName` em uma transição; a Rule mantém o vínculo com a conta autenticada.
 - A tela do cliente passa a acompanhar `deliveries/{orderId}` em tempo real, exibindo etapa e motoboy somente para o dono do pedido.
+- O portal do motoboy ganhou navegação inferior para celular, com âncoras de corrida, histórico e perfil, além de espaço seguro para a barra inferior.
+- Falhas de entrega agora registram `failedAt`; a reatribuição limpa esse timestamp junto com o motivo da tentativa anterior.
 - O pedido de confirmação passou a ter `attempts` e `locked`; após cinco rejeições, uma nova tentativa é bloqueada até reatribuição administrativa.
 - O hash correto é exigido pela Rule na aprovação. A conclusão exige, na mesma operação, entrega `DELIVERED`, pedido `COMPLETED` e lançamento financeiro cujo `sourceOrderId` é o próprio pedido.
 - A reatribuição reinicia o contador da nova corrida sem apagar o documento existente.
@@ -53,7 +55,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 | Push quando o app está fechado | [PARCIAL] | Não implementado; o fallback é alerta in-app e atualização em tempo real enquanto a tela está aberta. |
 | Financeiro e caixa | [PARCIAL] | A conclusão exige lançamento financeiro; ainda falta exercício ponta a ponta com caixa de produção e auditoria específica da movimentação de dinheiro. |
 | Histórico de eventos imutável | [OK local] | `deliveryEvents` é criada nas operações de despacho, aceite, recusa, etapas, falha, código e conclusão; Rules bloqueiam update/delete, há cenário dedicado de imutabilidade e a Central exibe a trilha recente. |
-| Mobile 360/390/430 e teclado | [PARCIAL] | Layout tem breakpoints e alvos de toque; não foi executada varredura visual automatizada nessas três larguras. |
+| Mobile 360/390/430 e teclado | [PARCIAL] | Portal tem breakpoints, alvos de toque, navegação inferior e espaço para safe area; ainda não foi executada varredura visual automatizada nessas três larguras nem com teclado aberto. |
 | PWA/offline | [PARCIAL] | Manifest, service worker e fallback foram adicionados; ações Firestore não são enfileiradas offline e devem ser repetidas somente após reconexão. |
 | Perfil próprio do motoboy | [OK] | O portal exibe nome, telefone e e-mail ativos; edição continua centralizada na administração. |
 

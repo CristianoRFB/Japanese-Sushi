@@ -106,6 +106,7 @@ export interface DeliveryRecord {
   startedAt?: unknown;
   arrivedAt?: unknown;
   deliveredAt?: unknown;
+  failedAt?: unknown;
   failureReason?: string;
 }
 
