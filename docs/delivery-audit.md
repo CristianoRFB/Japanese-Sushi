@@ -2,7 +2,7 @@
 
 Data da auditoria: 2026-10-09
 Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
-RC auditado: `6a2383a` (`test: cover delivery concurrency and emulator startup`)
+RC auditado: `992fffd` (`fix: protect automatic delivery finance entries`)
 Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
 
 ## Veredito do RC atual
@@ -46,6 +46,7 @@ O goal recuperado em Downloads (`GOAL_Acai_Mais_Sabor_Auditoria_Total_Motoboy.tx
 - O portal do motoboy agora abre rota de direção real no Google Maps a partir do endereço da corrida e oferece Waze como fallback.
 - O runner `npm run test:e2e` agora escolhe portas livres, fixa o projeto/emuladores corretos e limpa a configuração temporária ao terminar.
 - O runner E2E tolera descoberta fria das Functions no Windows com timeout de 60 segundos; a suíte também registra as disputas concorrentes de delivery no emulador.
+- Lançamentos financeiros automáticos ligados a `sourceOrderId` agora são imutáveis nas Rules e aparecem separados dos lançamentos manuais na tela de Finanças.
 - O runtime foi atualizado para React 19.3, Vinext 1.0.1 e Vite 8.3.4; os overrides de `@grpc/grpc-js` e `proxy-addr` removem vulnerabilidades críticas conhecidas sem usar `--force`.
 - O pacote de build `shadcn` foi movido para `devDependencies`; ele continua disponível durante o build, mas não é instalado como dependência de runtime.
 
@@ -62,7 +63,7 @@ O goal recuperado em Downloads (`GOAL_Acai_Mais_Sabor_Auditoria_Total_Motoboy.tx
 | E2E do pedido server-side | [OK local] | `npm run test:e2e` passou 3/3 em portas dinâmicas: persistência, idempotência e rejeição de total adulterado. |
 | Concorrência de delivery | [OK local] | A suíte de Rules passou 16/16, cobrindo disputa de atribuição, dois aceites simultâneos, duas conclusões simultâneas e uma única receita criada. |
 | Push quando o app está fechado | [PARCIAL] | Não implementado; o fallback é alerta in-app e atualização em tempo real enquanto a tela está aberta. |
-| Financeiro e caixa | [PARCIAL] | A conclusão exige lançamento financeiro; ainda falta exercício ponta a ponta com caixa de produção e auditoria específica da movimentação de dinheiro. |
+| Financeiro e caixa | [PARCIAL] | A conclusão exige lançamento financeiro e as Rules protegem entradas automáticas ligadas ao pedido; ainda falta exercício ponta a ponta com caixa de produção e auditoria específica da movimentação de dinheiro. |
 | Histórico de eventos imutável | [OK local] | `deliveryEvents` é criada nas operações de despacho, aceite, recusa, etapas, falha, código e conclusão; Rules bloqueiam update/delete, há cenário dedicado de imutabilidade e a Central exibe a trilha recente. |
 | Mobile 360/390/430 e teclado | [PARCIAL] | Login do motoboy foi inspecionado visualmente em 360×800, 390×844 e 430×932 sem overflow/clipping; portal autenticado e teclado aberto ainda dependem de Firebase/credenciais reais. |
 | Mapas e navegação | [PARCIAL] | O portal gera deep link de direções para o endereço real e fallback Waze em `app/entregador/page.tsx`; a abertura em dispositivo móvel autenticado ainda depende de Firebase/credenciais reais. |
