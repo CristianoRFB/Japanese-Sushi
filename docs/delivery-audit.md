@@ -54,7 +54,7 @@ O goal recuperado em Downloads (`GOAL_Acai_Mais_Sabor_Auditoria_Total_Motoboy.tx
 
 | Área | Status | Prova/limitação |
 |---|---|---|
-| RBAC, isolamento do motoboy, cliente dono e cliente alheio | [OK local] | 15 cenários em `tests/firestore.rules.test.ts`, incluindo leitura do dono, bloqueio de usuário alheio, usuário inativo e motoboy desativado. A sessão também revalida role/cadastro em tempo real no `AuthProvider`. |
+| RBAC, isolamento do motoboy, cliente dono e cliente alheio | [OK local] | 16 cenários em `tests/firestore.rules.test.ts`, incluindo leitura do dono, bloqueio de usuário alheio, usuário inativo e motoboy desativado. A sessão também revalida role/cadastro em tempo real no `AuthProvider`. |
 | Sequestro de entrega e transições inválidas | [OK] | Rules testadas contra alteração de vínculo e conclusão direta pelo motoboy. |
 | Tentativas de código | [OK] | Cinco rejeições são permitidas; a sexta submissão é bloqueada por Rules e pela operação. |
 | Reatribuição após falha | [OK] | Fluxo e Rules testados para liberar o motoboy anterior e aceitar novo vínculo. |
@@ -72,7 +72,7 @@ O goal recuperado em Downloads (`GOAL_Acai_Mais_Sabor_Auditoria_Total_Motoboy.tx
 
 ## Validações executadas
 
-- `git pull --ff-only` — sem atualizações; RC confirmado em `6a2383a`.
+- `git pull --ff-only` — sem atualizações; código funcional auditado confirmado em `992fffd` (`fix: protect automatic delivery finance entries`).
 - Navegador local — passou para a home pública em `http://localhost:3001/`; a página mostra o cardápio de desenvolvimento e preços pendentes.
 - Navegador local — login do motoboy passou visualmente em 360×800, 390×844 e 430×932; o ambiente sem Firebase mantém o botão desabilitado como esperado.
 - `/admin/login` — passou visualmente; acesso exige e-mail e senha do Firebase e não expõe credenciais no código.
