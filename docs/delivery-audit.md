@@ -2,7 +2,7 @@
 
 Data da auditoria: 2026-10-09
 Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
-RC auditado: `e7f65ca` (`docs: record production dependency surface`)
+RC auditado: `2d3d6ee` (`docs: align audit with current release`)
 Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
 
 ## Veredito do RC atual
@@ -11,7 +11,7 @@ Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
 
 O bloqueio é comercial e operacional, não uma falha de build local: o cardápio real ainda não foi configurado, o deploy das Functions ainda não foi comprovado no Firebase oficial e a jornada real de produção ainda não foi executada.
 
-O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplicados somente os requisitos funcionais de auditoria de motoboy ao produto atual, Teiko Sushi; branding, dados e regras do Açaí foram descartados.
+O goal recuperado em Downloads (`GOAL_Acai_Mais_Sabor_Auditoria_Total_Motoboy.txt`) descreve o produto Açaí Mais Sabor. Foram aplicados somente os requisitos funcionais de auditoria de motoboy ao produto atual, Teiko Sushi; branding, dados e regras do Açaí foram descartados.
 
 ## Matriz inicial após o pull
 
@@ -69,7 +69,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 ## Validações executadas
 
-- `git pull --ff-only` — sem atualizações; RC confirmado em `e7f65ca`.
+- `git pull --ff-only` — sem atualizações; RC confirmado em `2d3d6ee`.
 - Navegador local — passou para a home pública em `http://localhost:3001/`; a página mostra o cardápio de desenvolvimento e preços pendentes.
 - Navegador local — login do motoboy passou visualmente em 360×800, 390×844 e 430×932; o ambiente sem Firebase mantém o botão desabilitado como esperado.
 - `/admin/login` — passou visualmente; acesso exige e-mail e senha do Firebase e não expõe credenciais no código.
