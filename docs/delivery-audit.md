@@ -1,6 +1,6 @@
 # Auditoria do módulo de entregas — Teiko Sushi
 
-Data da auditoria: 2026-10-08
+Data da auditoria: 2026-10-09
 Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
 RC auditado: `b67b399` (`test: stabilize isolated functions e2e`)
 Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
