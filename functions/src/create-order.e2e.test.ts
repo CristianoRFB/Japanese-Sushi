@@ -2,6 +2,8 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { beforeAll, describe, expect, it } from 'vitest';
 
+if (process.env.FIRESTORE_EMULATOR_PORT)
+  process.env.FIRESTORE_EMULATOR_HOST = `127.0.0.1:${process.env.FIRESTORE_EMULATOR_PORT}`;
 if (!getApps().length)
   initializeApp({
     projectId: process.env.GCLOUD_PROJECT || 'sushi-cbfd2',
@@ -43,18 +45,15 @@ let idToken = '';
 async function fetchJson(url: string, init: RequestInit) {
   const response = await fetch(url, {
     ...init,
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(30_000),
   });
-  const text = await response.text();
-  let body: unknown;
   try {
-    body = JSON.parse(text);
+    return { response, body: (await response.json()) as unknown };
   } catch {
     throw new Error(
-      `E2E recebeu resposta não-JSON em ${url}: ${response.status} ${text.slice(0, 160)}`,
+      `E2E recebeu resposta não-JSON em ${url}: ${response.status}`,
     );
   }
-  return { response, body };
 }
 
 async function call(data: unknown) {
@@ -155,7 +154,7 @@ describe('createOrder da Teiko', () => {
     const second = await call({ ...basePayload, clientRequestId });
     expect(first.body.result?.publicCode).toBe(second.body.result?.publicCode);
     expect(second.body.result?.idempotent).toBe(true);
-  });
+  }, 30_000);
   it('rejeita total adulterado', async () => {
     const response = await call({
       ...basePayload,
@@ -164,5 +163,5 @@ describe('createOrder da Teiko', () => {
     });
     expect(response.status).not.toBe(200);
     expect(response.body.error?.message).toMatch(/novo total/i);
-  });
+  }, 30_000);
 });

@@ -67,6 +67,8 @@ const child = spawn(
     cwd: projectRoot,
     env: {
       ...process.env,
+      GCLOUD_PROJECT: 'sushi-cbfd2',
+      FIREBASE_CONFIG: JSON.stringify({ projectId: 'sushi-cbfd2' }),
       AUTH_EMULATOR_PORT: String(authPort),
       FIRESTORE_EMULATOR_PORT: String(firestorePort),
       FUNCTIONS_EMULATOR_PORT: String(functionsPort),
