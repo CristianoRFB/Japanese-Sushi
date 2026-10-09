@@ -4,6 +4,7 @@ Data da auditoria: 2026-10-09
 Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
 RC auditado: `992fffd` (`fix: protect automatic delivery finance entries`)
 Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
+HEAD final: `642dd3b` (`docs: align audit evidence with current release`) · commits desta rodada: `992fffd`, `ac9aafc`, `642dd3b`.
 
 ## Veredito do RC atual
 
