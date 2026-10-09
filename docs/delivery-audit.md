@@ -45,6 +45,7 @@ O goal recuperado em Downloads (`GOAL_Acai_Mais_Sabor_Auditoria_Total_Motoboy.tx
 - A Central de entregas agora exibe a trilha recente por corrida, com etapa, motivo e horário, sem expor o UID interno do ator.
 - O portal do motoboy agora abre rota de direção real no Google Maps a partir do endereço da corrida e oferece Waze como fallback.
 - O runner `npm run test:e2e` agora escolhe portas livres, fixa o projeto/emuladores corretos e limpa a configuração temporária ao terminar.
+- O runner E2E tolera descoberta fria das Functions no Windows com timeout de 60 segundos; a suíte também registra as disputas concorrentes de delivery no emulador.
 - O runtime foi atualizado para React 19.3, Vinext 1.0.1 e Vite 8.3.4; os overrides de `@grpc/grpc-js` e `proxy-addr` removem vulnerabilidades críticas conhecidas sem usar `--force`.
 - O pacote de build `shadcn` foi movido para `devDependencies`; ele continua disponível durante o build, mas não é instalado como dependência de runtime.
 
@@ -59,6 +60,7 @@ O goal recuperado em Downloads (`GOAL_Acai_Mais_Sabor_Auditoria_Total_Motoboy.tx
 | Cliente em tempo real | [OK] | Listener do pedido e listener protegido de `deliveries/{orderId}` implementados. Execução real depende do Firebase configurado. |
 | Login/fluxo ponta a ponta em produção | [PARCIAL] | Não há credencial/ambiente de produção disponível nesta auditoria. |
 | E2E do pedido server-side | [OK local] | `npm run test:e2e` passou 3/3 em portas dinâmicas: persistência, idempotência e rejeição de total adulterado. |
+| Concorrência de delivery | [OK local] | A suíte de Rules passou 16/16, cobrindo disputa de atribuição, dois aceites simultâneos, duas conclusões simultâneas e uma única receita criada. |
 | Push quando o app está fechado | [PARCIAL] | Não implementado; o fallback é alerta in-app e atualização em tempo real enquanto a tela está aberta. |
 | Financeiro e caixa | [PARCIAL] | A conclusão exige lançamento financeiro; ainda falta exercício ponta a ponta com caixa de produção e auditoria específica da movimentação de dinheiro. |
 | Histórico de eventos imutável | [OK local] | `deliveryEvents` é criada nas operações de despacho, aceite, recusa, etapas, falha, código e conclusão; Rules bloqueiam update/delete, há cenário dedicado de imutabilidade e a Central exibe a trilha recente. |
@@ -82,7 +84,7 @@ O goal recuperado em Downloads (`GOAL_Acai_Mais_Sabor_Auditoria_Total_Motoboy.tx
 - `npx wrangler deploy --dry-run --config dist/server/wrangler.json` — passou; release Cloudflare gerado com 394 módulos, 5,1 MB de upload e sem bindings pendentes. Nenhuma publicação real foi feita.
 - `npm run preflight:production` — bloqueou corretamente sem configuração Firebase; com valores de teste e projeto `sushi-cbfd2`, passou sem imprimir segredos.
 - `npm run deploy:frontend` e `npm run deploy:backend` — comandos de publicação documentados; não executados, pois exigem credenciais das contas Cloudflare/Firebase e efeito externo autorizado.
-- `npm run test:rules` — 1 arquivo, 15 testes passaram no Firestore Emulator com Java 21.
+- `npm run test:rules` — 1 arquivo, 16 testes passaram no Firestore Emulator; a nova prova cobre atribuição, aceite e conclusão concorrentes.
 - `npm run build` — passou; apenas aviso não bloqueante de chunks acima de 500 kB.
 - `npm audit` — o audit de produção do frontend ficou em 10 vulnerabilidades (1 baixa, 3 moderadas e 6 altas), e o audit de produção das Functions em 8 moderadas, sem críticas; as restantes exigem revisão de versões maiores e não foi aplicado `--force`.
 - `npm run test:integration` — script raiz inexistente; o E2E aplicável está disponível em `npm run test:e2e` e foi executado acima.
@@ -94,7 +96,7 @@ O goal recuperado em Downloads (`GOAL_Acai_Mais_Sabor_Auditoria_Total_Motoboy.tx
 3. Configurar uma chave Firebase Web válida, Auth Email/Password + Anonymous, primeiro admin e documentos de produção; `.env.local` não está versionado neste workspace.
 4. Executar o deploy oficial separado: frontend com Wrangler na conta Cloudflare correta; Firestore/Functions com Firebase. Functions de segunda geração exigem plano de faturamento e revisão de limites/custos.
 5. Resolver/revisar as 10 vulnerabilidades do frontend e 8 moderadas das Functions, preferencialmente por atualizações compatíveis e nova rodada completa de testes.
-6. Executar uma jornada real com cliente, admin e motoboy, incluindo código errado/certo, falha, reatribuição, dinheiro e duas sessões concorrentes.
+6. Executar uma jornada real com cliente, admin e motoboy, incluindo código errado/certo, falha, reatribuição e dinheiro; a concorrência principal já tem prova no emulador, mas ainda falta a confirmação operacional em produção.
 7. Decidir se a operação exige push quando o portal estiver fechado; se sim, implementar FCM/Web Push antes da venda.
 
 Enquanto esses itens não forem comprovados, o sistema não deve ser anunciado como pronto para venda em produção.
