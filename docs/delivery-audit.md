@@ -2,7 +2,7 @@
 
 Data da auditoria: 2026-10-08
 Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
-RC auditado: `473aa01` (`feat: add navigation fallback for drivers`)
+RC auditado: `b67b399` (`test: stabilize isolated functions e2e`)
 Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
 
 ## Veredito do RC atual
@@ -44,6 +44,8 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - Foi criada a coleção append-only `deliveryEvents`, com leitura restrita ao admin e ao motoboy vinculado; inclusão e imutabilidade são validadas pelas Rules.
 - A Central de entregas agora exibe a trilha recente por corrida, com etapa, motivo e horário, sem expor o UID interno do ator.
 - O portal do motoboy agora abre rota de direção real no Google Maps a partir do endereço da corrida e oferece Waze como fallback.
+- O runner `npm run test:e2e` agora escolhe portas livres, fixa o projeto/emuladores corretos e limpa a configuração temporária ao terminar.
+- O runtime foi atualizado para React 19.3, Vinext 1.0.1 e Vite 8.3.4; os overrides de `@grpc/grpc-js` e `proxy-addr` removem vulnerabilidades críticas conhecidas sem usar `--force`.
 
 ## Matriz final local
 
@@ -55,6 +57,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 | Reatribuição após falha | [OK] | Fluxo e Rules testados para liberar o motoboy anterior e aceitar novo vínculo. |
 | Cliente em tempo real | [OK] | Listener do pedido e listener protegido de `deliveries/{orderId}` implementados. Execução real depende do Firebase configurado. |
 | Login/fluxo ponta a ponta em produção | [PARCIAL] | Não há credencial/ambiente de produção disponível nesta auditoria. |
+| E2E do pedido server-side | [OK local] | `npm run test:e2e` passou 3/3 em portas dinâmicas: persistência, idempotência e rejeição de total adulterado. |
 | Push quando o app está fechado | [PARCIAL] | Não implementado; o fallback é alerta in-app e atualização em tempo real enquanto a tela está aberta. |
 | Financeiro e caixa | [PARCIAL] | A conclusão exige lançamento financeiro; ainda falta exercício ponta a ponta com caixa de produção e auditoria específica da movimentação de dinheiro. |
 | Histórico de eventos imutável | [OK local] | `deliveryEvents` é criada nas operações de despacho, aceite, recusa, etapas, falha, código e conclusão; Rules bloqueiam update/delete, há cenário dedicado de imutabilidade e a Central exibe a trilha recente. |
@@ -65,7 +68,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 ## Validações executadas
 
-- `git pull --ff-only` — sem atualizações; RC confirmado em `473aa01`.
+- `git pull --ff-only` — sem atualizações; RC confirmado em `b67b399`.
 - Navegador local — passou para a home pública em `http://localhost:3001/`; a página mostra o cardápio de desenvolvimento e preços pendentes.
 - Navegador local — login do motoboy passou visualmente em 360×800, 390×844 e 430×932; o ambiente sem Firebase mantém o botão desabilitado como esperado.
 - `/admin/login` — passou visualmente; acesso exige e-mail e senha do Firebase e não expõe credenciais no código.
@@ -74,14 +77,14 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - `npm test` — 7 arquivos, 29 testes passaram.
 - `npm run test:functions` — 1 arquivo, 7 testes passaram.
 - `npm --prefix functions run build` — passou.
-- `npx firebase emulators:exec --config firebase.e2e.json --project sushi-cbfd2 --only auth,firestore,functions "npm --prefix functions run test:e2e"` — 3 cenários de criação de pedido passaram em portas isoladas, incluindo idempotência e rejeição de preço adulterado.
+- `npm run test:e2e` — 3 cenários de criação de pedido passaram em portas dinâmicas, incluindo idempotência e rejeição de preço adulterado.
 - `npx wrangler deploy --dry-run --config dist/server/wrangler.json` — passou; release Cloudflare gerado com 394 módulos, 5,1 MB de upload e sem bindings pendentes. Nenhuma publicação real foi feita.
 - `npm run preflight:production` — bloqueou corretamente sem configuração Firebase; com valores de teste e projeto `sushi-cbfd2`, passou sem imprimir segredos.
 - `npm run deploy:frontend` e `npm run deploy:backend` — comandos de publicação documentados; não executados, pois exigem credenciais das contas Cloudflare/Firebase e efeito externo autorizado.
 - `npm run test:rules` — 1 arquivo, 15 testes passaram no Firestore Emulator com Java 21.
 - `npm run build` — passou; apenas aviso não bloqueante de chunks acima de 500 kB.
-- `npm audit fix` — atualizou somente dependências compatíveis no lockfile e reduziu o audit de produção para 18 vulnerabilidades; as restantes ainda exigem versões incompatíveis (`--force`) e não foi aplicado esse modo.
-- `npm run test:integration` e `npm run test:e2e` — scripts raiz inexistentes; o E2E aplicável das Functions foi executado explicitamente acima.
+- `npm audit` — o audit de produção do frontend ficou em 14 vulnerabilidades (1 baixa, 3 moderadas e 10 altas), e o audit de produção das Functions em 8 moderadas, sem críticas; as restantes exigem revisão de versões maiores e não foi aplicado `--force`.
+- `npm run test:integration` — script raiz inexistente; o E2E aplicável está disponível em `npm run test:e2e` e foi executado acima.
 
 ## Bloqueios antes de vender
 
@@ -89,7 +92,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 2. Publicar e observar `createOrder` no Firebase oficial; a proteção já está implementada e validada no emulator, mas ainda não há evidência de deploy, App Check e logs em produção.
 3. Configurar uma chave Firebase Web válida, Auth Email/Password + Anonymous, primeiro admin e documentos de produção; `.env.local` não está versionado neste workspace.
 4. Executar o deploy oficial separado: frontend com Wrangler na conta Cloudflare correta; Firestore/Functions com Firebase. Functions de segunda geração exigem plano de faturamento e revisão de limites/custos.
-5. Resolver as vulnerabilidades de dependências, preferencialmente por atualizações compatíveis e nova rodada completa de testes.
+5. Resolver/revisar as 14 vulnerabilidades do frontend e 8 moderadas das Functions, preferencialmente por atualizações compatíveis e nova rodada completa de testes.
 6. Executar uma jornada real com cliente, admin e motoboy, incluindo código errado/certo, falha, reatribuição, dinheiro e duas sessões concorrentes.
 7. Decidir se a operação exige push quando o portal estiver fechado; se sim, implementar FCM/Web Push antes da venda.
 
