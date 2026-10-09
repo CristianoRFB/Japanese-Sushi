@@ -195,6 +195,8 @@ service cloud.firestore {
           || (request.resource.data.sourceOrderId is string
             && request.resource.data.sourceOrderId == id));
       allow update: if isAdmin() && brand(resource.data) && brand(request.resource.data)
+        && !resource.data.keys().hasAny(['sourceOrderId'])
+        && !request.resource.data.keys().hasAny(['sourceOrderId'])
         && request.resource.data.kind in ['INCOME', 'EXPENSE']
         && request.resource.data.status in ['PAID', 'PENDING']
         && request.resource.data.amountCents is int

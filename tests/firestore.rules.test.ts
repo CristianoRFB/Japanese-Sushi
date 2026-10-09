@@ -207,6 +207,16 @@ describe('Firestore Rules Spark Teiko', () => {
       brandId: 'teiko', kind: 'INCOME', category: 'Vendas de sushi', description: 'Combinado Teiko',
       amountCents: 4200, date: '2026-09-17', status: 'PAID',
     }));
+    await assertSucceeds(updateDoc(doc(adminDb, 'financeEntries', `sale-${testRunId}`), {
+      status: 'PENDING', updatedAt: Timestamp.now(),
+    }));
+    await assertSucceeds(setDoc(doc(adminDb, 'financeEntries', `automatic-${testRunId}`), {
+      brandId: 'teiko', kind: 'INCOME', category: 'Delivery', description: 'Pedido automático',
+      amountCents: 1800, date: '2026-09-17', status: 'PAID', sourceOrderId: `automatic-${testRunId}`,
+    }));
+    await assertFails(updateDoc(doc(adminDb, 'financeEntries', `automatic-${testRunId}`), {
+      amountCents: 9999, updatedAt: Timestamp.now(),
+    }));
     await assertFails(setDoc(doc(env.authenticatedContext('staff-uid').firestore(), 'financeEntries', `staff-${testRunId}`), {
       brandId: 'teiko', kind: 'EXPENSE', category: 'Insumos frescos', description: 'Salmão',
       amountCents: 12000, date: '2026-09-17', status: 'PAID',
