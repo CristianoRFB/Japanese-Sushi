@@ -19,9 +19,10 @@ import {
   setDoc,
   where,
   query,
+  runTransaction,
   writeBatch,
 } from 'firebase/firestore';
-import { afterAll, beforeAll, describe, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 let env: RulesTestEnvironment;
 const testRunId = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
@@ -686,5 +687,120 @@ describe('Firestore Rules Spark Teiko', () => {
       brandId: 'teiko', registerId, type: 'SALE', direction: 'IN', amountCents: -5, cashAmountCents: -5,
       paymentMethod: 'CASH', operatorUid: 'admin-uid', createdAt: soldAt,
     }));
+  });
+
+  it('resolve disputas concorrentes de atribuição, aceite e conclusão sem duplicar a receita', async () => {
+    const orderId = `concurrency-order-${testRunId}`;
+    const firstDriverId = `concurrency-driver-a-${testRunId}`;
+    const secondDriverId = `concurrency-driver-b-${testRunId}`;
+    const now = Timestamp.now();
+    const baseOrder = {
+      ...orderData(`concurrency-customer-${testRunId}`, 'READY'),
+      fulfillment: { mode: 'DELIVERY' },
+    };
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'users', 'admin-two'), { brandId: 'teiko', role: 'admin', active: true });
+      await setDoc(doc(db, 'orders', orderId), baseOrder);
+      for (const driverId of [firstDriverId, secondDriverId]) {
+        await setDoc(doc(db, 'users', driverId), { brandId: 'teiko', role: 'driver', active: true });
+        await setDoc(doc(db, 'deliveryDrivers', driverId), {
+          brandId: 'teiko', name: driverId, email: `${driverId}@example.com`, phone: '17999999999',
+          enabled: true, status: 'AVAILABLE',
+        });
+      }
+    });
+
+    const firstAdminDb = env.authenticatedContext('admin-uid').firestore();
+    const secondAdminDb = env.authenticatedContext('admin-two').firestore();
+    const deliveryRef = doc(firstAdminDb, 'deliveries', orderId);
+    const assign = async (db: typeof firstAdminDb, driverId: string, actorUid: string) => runTransaction(db, async (transaction) => {
+      const orderRef = doc(db, 'orders', orderId);
+      const driverRef = doc(db, 'deliveryDrivers', driverId);
+      const [order, existing, driver] = await Promise.all([
+        transaction.get(orderRef), transaction.get(doc(db, 'deliveries', orderId)), transaction.get(driverRef),
+      ]);
+      if (!order.exists() || existing.exists() || !driver.exists() || driver.data().status !== 'AVAILABLE') {
+        throw new Error('A atribuição já foi resolvida por outra sessão.');
+      }
+      const assignedAt = Timestamp.now();
+      transaction.set(doc(db, 'deliveries', orderId), {
+        brandId: 'teiko', unitId: 'santa-fe-do-sul', orderId, orderNumber: '#TCONC', status: 'ASSIGNED',
+        driverId, driverName: driver.data().name, customerName: 'Cliente Concorrente',
+        address: { street: 'Rua 23', number: '624', neighborhood: 'Centro' }, totalCents: 1800,
+        paymentMethod: 'PIX', createdAt: now, updatedAt: assignedAt, assignedAt,
+      });
+      transaction.update(driverRef, { status: 'BUSY', currentDeliveryId: orderId, updatedAt: assignedAt });
+      transaction.set(doc(db, 'deliveryEvents', `${orderId}-${driverId}`), {
+        eventId: `${orderId}-${driverId}`, brandId: 'teiko', deliveryId: orderId, orderId, driverId,
+        toStatus: 'ASSIGNED', kind: 'ASSIGNED', actorUid, actorRole: 'admin', occurredAt: assignedAt,
+      });
+    });
+    const assignmentResults = await Promise.allSettled([
+      assign(firstAdminDb, firstDriverId, 'admin-uid'),
+      assign(secondAdminDb, secondDriverId, 'admin-two'),
+    ]);
+    expect(assignmentResults.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(assignmentResults.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    const assigned = await getDoc(deliveryRef);
+    expect(assigned.data()?.status).toBe('ASSIGNED');
+    const assignedDriverId = String(assigned.data()?.driverId);
+
+    const driverDbA = env.authenticatedContext(assignedDriverId).firestore();
+    const accept = (db: typeof driverDbA) => runTransaction(db, async (transaction) => {
+      const current = await transaction.get(doc(db, 'deliveries', orderId));
+      if (!current.exists() || current.data().status !== 'ASSIGNED') throw new Error('O aceite já foi registrado.');
+      const acceptedAt = Timestamp.now();
+      const eventId = crypto.randomUUID();
+      transaction.update(doc(db, 'deliveries', orderId), { status: 'ACCEPTED', acceptedAt, updatedAt: acceptedAt });
+      transaction.set(doc(db, 'deliveryEvents', eventId), {
+        eventId, brandId: 'teiko', deliveryId: orderId, orderId, driverId: assignedDriverId,
+        toStatus: 'ACCEPTED', kind: 'ACCEPTED', actorUid: assignedDriverId, actorRole: 'driver', occurredAt: acceptedAt,
+      });
+    });
+    const acceptanceResults = await Promise.allSettled([accept(driverDbA), accept(env.authenticatedContext(assignedDriverId).firestore())]);
+    expect(acceptanceResults.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(acceptanceResults.filter((result) => result.status === 'rejected')).toHaveLength(1);
+
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await updateDoc(doc(db, 'deliveries', orderId), {
+        status: 'ARRIVED', acceptedAt: now, pickedUpAt: now, startedAt: now, arrivedAt: now, updatedAt: now,
+      });
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: 'OUT_FOR_DELIVERY', updatedAt: now,
+        statusHistory: arrayUnion({ status: 'OUT_FOR_DELIVERY', at: now, actorUid: assignedDriverId, actorRole: 'driver' }),
+      });
+      await setDoc(doc(db, 'deliverySecrets', orderId), {
+        brandId: 'teiko', orderId, codeHash: 'c'.repeat(64), createdAt: now,
+      });
+      await setDoc(doc(db, 'deliveryReceiptRequests', orderId), {
+        brandId: 'teiko', deliveryId: orderId, orderId, driverId: assignedDriverId, codeHash: 'c'.repeat(64),
+        paymentConfirmed: true, status: 'PENDING', attempts: 0, locked: false, createdAt: now,
+      });
+    });
+    const finalize = (db: typeof firstAdminDb, actorUid: string) => runTransaction(db, async (transaction) => {
+      const receiptRef = doc(db, 'deliveryReceiptRequests', orderId);
+      const receipt = await transaction.get(receiptRef);
+      if (!receipt.exists() || receipt.data().status !== 'PENDING') throw new Error('A conclusão já foi registrada.');
+      const finishedAt = Timestamp.now();
+      transaction.update(receiptRef, { status: 'VERIFIED', reviewedAt: finishedAt, reviewedBy: actorUid });
+      transaction.update(doc(db, 'deliveries', orderId), { status: 'DELIVERED', deliveredAt: finishedAt, updatedAt: finishedAt });
+      transaction.update(doc(db, 'orders', orderId), {
+        status: 'COMPLETED', updatedAt: finishedAt,
+        statusHistory: arrayUnion({ status: 'COMPLETED', at: finishedAt, actorUid, actorRole: 'admin' }),
+      });
+      transaction.set(doc(db, 'financeEntries', orderId), {
+        brandId: 'teiko', kind: 'INCOME', category: 'Delivery', description: 'Pedido concorrente', amountCents: 1800,
+        date: '2026-10-09', status: 'PAID', sourceOrderId: orderId, createdAt: finishedAt, updatedAt: finishedAt,
+      });
+      transaction.update(doc(db, 'deliveryDrivers', assignedDriverId), { status: 'AVAILABLE', currentDeliveryId: deleteField(), updatedAt: finishedAt });
+    });
+    const finalResults = await Promise.allSettled([finalize(firstAdminDb, 'admin-uid'), finalize(secondAdminDb, 'admin-two')]);
+    expect(finalResults.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(finalResults.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    const finance = await getDoc(doc(firstAdminDb, 'financeEntries', orderId));
+    expect(finance.exists()).toBe(true);
+    expect(finance.data()?.sourceOrderId).toBe(orderId);
   });
 });

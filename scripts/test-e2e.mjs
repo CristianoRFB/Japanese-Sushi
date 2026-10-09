@@ -75,6 +75,8 @@ const child = spawn(
       FIREBASE_AUTH_EMULATOR_HOST: `127.0.0.1:${authPort}`,
       FIRESTORE_EMULATOR_HOST: `127.0.0.1:${firestorePort}`,
       FUNCTIONS_EMULATOR_HOST: `127.0.0.1:${functionsPort}`,
+      // Cold TypeScript/Functions discovery can exceed Firebase CLI's 10s default on Windows.
+      FUNCTIONS_DISCOVERY_TIMEOUT: '60',
     },
     stdio: 'inherit',
   },
