@@ -2,7 +2,7 @@
 
 Data da auditoria: 2026-10-09
 Projeto: `sushi-cbfd2` · unidade `santa-fe-do-sul`
-RC auditado: `b67b399` (`test: stabilize isolated functions e2e`)
+RC auditado: `210b443` (`chore: keep build tooling out of production`)
 Branch: `main` · `git pull --ff-only` sem atualizações · working tree limpo.
 
 ## Veredito do RC atual
@@ -46,6 +46,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - O portal do motoboy agora abre rota de direção real no Google Maps a partir do endereço da corrida e oferece Waze como fallback.
 - O runner `npm run test:e2e` agora escolhe portas livres, fixa o projeto/emuladores corretos e limpa a configuração temporária ao terminar.
 - O runtime foi atualizado para React 19.3, Vinext 1.0.1 e Vite 8.3.4; os overrides de `@grpc/grpc-js` e `proxy-addr` removem vulnerabilidades críticas conhecidas sem usar `--force`.
+- O pacote de build `shadcn` foi movido para `devDependencies`; ele continua disponível durante o build, mas não é instalado como dependência de runtime.
 
 ## Matriz final local
 
@@ -68,7 +69,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 
 ## Validações executadas
 
-- `git pull --ff-only` — sem atualizações; RC confirmado em `b67b399`.
+- `git pull --ff-only` — sem atualizações; RC confirmado em `210b443`.
 - Navegador local — passou para a home pública em `http://localhost:3001/`; a página mostra o cardápio de desenvolvimento e preços pendentes.
 - Navegador local — login do motoboy passou visualmente em 360×800, 390×844 e 430×932; o ambiente sem Firebase mantém o botão desabilitado como esperado.
 - `/admin/login` — passou visualmente; acesso exige e-mail e senha do Firebase e não expõe credenciais no código.
@@ -83,7 +84,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 - `npm run deploy:frontend` e `npm run deploy:backend` — comandos de publicação documentados; não executados, pois exigem credenciais das contas Cloudflare/Firebase e efeito externo autorizado.
 - `npm run test:rules` — 1 arquivo, 15 testes passaram no Firestore Emulator com Java 21.
 - `npm run build` — passou; apenas aviso não bloqueante de chunks acima de 500 kB.
-- `npm audit` — o audit de produção do frontend ficou em 14 vulnerabilidades (1 baixa, 3 moderadas e 10 altas), e o audit de produção das Functions em 8 moderadas, sem críticas; as restantes exigem revisão de versões maiores e não foi aplicado `--force`.
+- `npm audit` — o audit de produção do frontend ficou em 10 vulnerabilidades (1 baixa, 3 moderadas e 6 altas), e o audit de produção das Functions em 8 moderadas, sem críticas; as restantes exigem revisão de versões maiores e não foi aplicado `--force`.
 - `npm run test:integration` — script raiz inexistente; o E2E aplicável está disponível em `npm run test:e2e` e foi executado acima.
 
 ## Bloqueios antes de vender
@@ -92,7 +93,7 @@ O TXT encontrado em Downloads descreve o produto Açaí Mais Sabor. Foram aplica
 2. Publicar e observar `createOrder` no Firebase oficial; a proteção já está implementada e validada no emulator, mas ainda não há evidência de deploy, App Check e logs em produção.
 3. Configurar uma chave Firebase Web válida, Auth Email/Password + Anonymous, primeiro admin e documentos de produção; `.env.local` não está versionado neste workspace.
 4. Executar o deploy oficial separado: frontend com Wrangler na conta Cloudflare correta; Firestore/Functions com Firebase. Functions de segunda geração exigem plano de faturamento e revisão de limites/custos.
-5. Resolver/revisar as 14 vulnerabilidades do frontend e 8 moderadas das Functions, preferencialmente por atualizações compatíveis e nova rodada completa de testes.
+5. Resolver/revisar as 10 vulnerabilidades do frontend e 8 moderadas das Functions, preferencialmente por atualizações compatíveis e nova rodada completa de testes.
 6. Executar uma jornada real com cliente, admin e motoboy, incluindo código errado/certo, falha, reatribuição, dinheiro e duas sessões concorrentes.
 7. Decidir se a operação exige push quando o portal estiver fechado; se sim, implementar FCM/Web Push antes da venda.
 
