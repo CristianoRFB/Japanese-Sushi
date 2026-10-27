@@ -196,6 +196,33 @@ describe('createOrder da Teiko', () => {
 });
 
 
+describe('createReservation: horários no servidor', () => {
+  it('rejeita reservas quando o expediente é obrigatório e a loja não abre', async () => {
+    const configRef = db.doc('storePublicConfig/main');
+    await configRef.update({ enforceHours: true, hours: [] });
+    try {
+      const payload = {
+        clientRequestId: crypto.randomUUID(), unitId: 'santa-fe-do-sul',
+        name: 'Cliente Teste', whatsapp: '17999999999',
+        date: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+        time: '19:00', people: 2,
+      };
+      const { response, body } = await fetchJson(
+        functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/createReservation',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + idToken },
+          body: JSON.stringify({ data: payload }),
+        },
+      );
+      expect(response.ok).toBe(false);
+      expect(JSON.stringify(body)).toMatch(/horário|funcionamento/i);
+    } finally {
+      await configRef.update({ enforceHours: false });
+    }
+  }, 40_000);
+});
+
 describe('driver FCM opt-in — apenas motoboy autorizado', () => {
   it('registra e revoga token; cliente anônimo não pode se inscrever', async () => {
     const email = 'driver-' + crypto.randomUUID() + '@example.test';
