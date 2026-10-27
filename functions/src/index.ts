@@ -755,4 +755,4 @@ export { resolvePublicTenant } from './resolve-tenant.js';
 
 export { platformCreateTenant, platformSetTenantStatus, platformSetMembership, getMyTenantAccess, platformListTenants } from './tenant-admin.js';
 
-export { tenantUpsertCategory, tenantUpsertSimpleProduct } from './tenant-catalog.js';
+export { tenantUpsertCategory, tenantUpsertSimpleProduct, tenantGetManageCatalog } from './tenant-catalog.js';

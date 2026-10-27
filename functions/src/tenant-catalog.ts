@@ -102,3 +102,22 @@ export const tenantUpsertSimpleProduct = onCall(opts, async (request) => {
   });
   return { productId: input.productId, updated: changed };
 });
+
+
+export const tenantGetManageCatalog = onCall(opts, async (request) => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sessão necessária.');
+  const input = validated(z.object({ tenantId: idSchema }).strict(), request.data);
+  await requireTenantMembership(request.auth.uid, input.tenantId, ['tenant_owner', 'staff']);
+  const db = getFirestore();
+  const [cats, prods] = await Promise.all([
+    db.collection('tenants/' + input.tenantId + '/categories').where('tenantId', '==', input.tenantId).limit(100).get(),
+    db.collection('tenants/' + input.tenantId + '/products').where('tenantId', '==', input.tenantId).limit(100).get(),
+  ]);
+  return {
+    categories: cats.docs.map((doc) => ({ id: doc.id, name: doc.data().name,
+      active: doc.data().active === true })),
+    products: prods.docs.map((doc) => ({ id: doc.id, name: doc.data().name,
+      description: doc.data().description || '', categoryId: doc.data().categoryId,
+      priceCents: Number(doc.data().sizes?.[0]?.basePriceCents || 0), active: doc.data().active === true })),
+  };
+});

@@ -383,8 +383,15 @@ describe('F4 catalog scoped writes — owner, revocation, product isolation', ()
     expect((await callCat('tenantUpsertCategory', category)).response.ok).toBe(true);
     const product = { tenantId: a, productId: 'salmao', categoryId: 'sushis',
       name: 'Sushi Salmão', description: 'Categoria de teste', priceCents: 1990, active: true };
+    const beforeCatalog = await callCat('tenantGetManageCatalog', { tenantId: a });
+    expect(beforeCatalog.response.ok).toBe(true);
     const first = await callCat('tenantUpsertSimpleProduct', product);
     expect(first.response.ok).toBe(true);
+    const management = await callCat('tenantGetManageCatalog', { tenantId: a });
+    const listed = (management.body as { result: { products: Array<{ id: string }> } }).result.products;
+    expect(listed.some((x) => x.id === 'salmao')).toBe(true);
+    const deniedList = await callCat('tenantGetManageCatalog', { tenantId: b });
+    expect(deniedList.response.ok).toBe(false);
     const retry = await callCat('tenantUpsertSimpleProduct', product);
     expect(retry.response.ok).toBe(true);
     expect((retry.body as { result: { updated: boolean } }).result.updated).toBe(false);
