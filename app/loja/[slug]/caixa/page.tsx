@@ -118,13 +118,16 @@ export default function TenantCashPage() {
     const data = new FormData(event.currentTarget);
     const countedCashCents = parseCashAmount(String(data.get('counted') ?? ''));
     if (countedCashCents === null) { setError('Informe a contagem física em reais.'); return; }
-    await execute(async () => {
+    setBusy(true); setNotice(''); setError('');
+    try {
       const output = await httpsCallable(getFirebaseClient().functions, 'tenantClosePickupCashRegister')({
         tenantId, countedCashCents,
       });
       const result = output.data as { varianceCents: number };
+      await refresh();
       setNotice('Caixa encerrado. Diferença registrada: ' + brl(result.varianceCents));
-    }, 'Caixa encerrado. Confira a diferença no relatório.');
+    } catch (cause) { setError(messageOf(cause)); }
+    finally { setBusy(false); }
   }
 
   if (!ready) return <main role="alert" className="p-8">
@@ -174,7 +177,7 @@ export default function TenantCashPage() {
               <h3 className="font-bold">{order.orderNumber} · {order.customerName}</h3>
               <p className="mt-1 text-lg font-black">{brl(order.totalCents)}</p>
               <form onSubmit={event => void settle(event, order)} className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label>Dinheiro recebido (R$)<input name="received" required inputMode="decimal" defaultValue={brl(order.totalCents).replace('R$\u00a0', '').replace(/\./g, '')} className="mt-1 w-full rounded-lg border p-3" /></label>
+                <label>Dinheiro recebido (R$)<input name="received" required inputMode="decimal" defaultValue={(order.totalCents / 100).toFixed(2).replace('.', ',')} className="mt-1 w-full rounded-lg border p-3" /></label>
                 <label className="flex items-center gap-2 text-sm"><input required type="checkbox" name="confirmed" />Confirmo que recebi o dinheiro fisicamente</label>
                 <Button type="submit" disabled={busy || register.status !== 'OPEN'} className="sm:col-span-2">Confirmar e concluir pedido</Button>
               </form>
