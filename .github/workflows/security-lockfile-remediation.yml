@@ -24,10 +24,12 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - name: Propose compatible lockfile patches (never force)
+      - name: Install published security patches without force
         run: |
-          npm audit fix --package-lock-only --ignore-scripts || true
-          npm --prefix functions audit fix --package-lock-only --ignore-scripts || true
+          npm install 'zod@^4.6.6' --package-lock-only --ignore-scripts
+          npm --prefix functions install 'zod@^4.6.6' --package-lock-only --ignore-scripts
+          npm pkg set 'overrides.body-parser=2.4.0' --prefix functions
+          npm --prefix functions install --package-lock-only --ignore-scripts
       - name: Install exactly the proposed lockfiles
         run: |
           npm ci
@@ -49,10 +51,10 @@ jobs:
           npm run build
       - name: Commit lockfile updates only if green
         run: |
-          if ! git diff --quiet -- package-lock.json functions/package-lock.json; then
+          if ! git diff --quiet -- package.json package-lock.json functions/package.json functions/package-lock.json; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json functions/package-lock.json
+            git add package.json package-lock.json functions/package.json functions/package-lock.json
             git commit -m "fix(deps): apply compatible audited lockfile remediations"
             git push origin HEAD:feat/sushi-master-multitenant
           else
