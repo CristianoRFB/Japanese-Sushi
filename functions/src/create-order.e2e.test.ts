@@ -293,3 +293,66 @@ describe('driver FCM opt-in — apenas motoboy autorizado', () => {
     expect((await db.doc('driverPushTokens/' + id).get()).exists).toBe(false);
   }, 50_000);
 });
+
+describe('F4 tenant admin — claims, membership, suspensão e A×B', () => {
+  it('só o Platform Owner provisionado no Auth pode alterar tenants e memberships', async () => {
+    const { getAuth } = await import('firebase-admin/auth');
+    const email = 'platform-' + crypto.randomUUID() + '@example.test';
+    const password = 'strong-emulator-only-password';
+    const { response, body } = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+    });
+    expect(response.ok).toBe(true);
+    const uid = (body as { localId: string }).localId;
+    const tokenBefore = (body as { idToken: string }).idToken;
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
+    const a = 'e2e-a-' + suffix;
+    const b = 'e2e-b-' + suffix;
+    const callTenant = async (fn: string, token: string, data: unknown) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + fn,
+      { method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ data }) },
+    );
+    expect((await callTenant('platformCreateTenant', tokenBefore, { slug: a, displayName: 'Restaurante A' })).response.ok).toBe(false);
+    await getAuth().setCustomUserClaims(uid, { platform_owner: true });
+    const login = await fetchJson(
+      authBaseUrl + '/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=owner-test-key',
+      { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: true }) },
+    );
+    const ownerToken = (login.body as { idToken: string }).idToken;
+    expect(ownerToken).toBeTruthy();
+    expect((await callTenant('platformCreateTenant', ownerToken, { slug: 'teiko', displayName: 'Teiko clone' })).response.ok).toBe(false);
+    expect((await callTenant('platformCreateTenant', ownerToken, { slug: a, displayName: 'Restaurante A' })).response.ok).toBe(true);
+    expect((await callTenant('platformCreateTenant', ownerToken, { slug: b, displayName: 'Restaurante B' })).response.ok).toBe(true);
+    expect((await callTenant('platformCreateTenant', ownerToken, { slug: a, displayName: 'Duplicado' })).response.ok).toBe(false);
+
+    const member = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ returnSecureToken: true }),
+    });
+    const memberUid = (member.body as { localId: string }).localId;
+    const memberToken = (member.body as { idToken: string }).idToken;
+    const grant = { tenantId: a, userUid: memberUid, role: 'staff', active: true };
+    expect((await callTenant('platformSetMembership', ownerToken, grant)).response.ok).toBe(true);
+    expect((await callTenant('platformSetMembership', memberToken, { ...grant, role: 'tenant_owner' })).response.ok).toBe(false);
+    const accessA = await callTenant('getMyTenantAccess', memberToken, { tenantId: a });
+    expect(accessA.response.ok).toBe(true);
+    expect((accessA.body as { result?: { role?: string } }).result?.role).toBe('staff');
+    expect((await callTenant('getMyTenantAccess', memberToken, { tenantId: b })).response.ok).toBe(false);
+    expect((await callTenant('platformSetTenantStatus', ownerToken, { tenantId: a, status: 'SUSPENDED' })).response.ok).toBe(true);
+    expect((await callTenant('getMyTenantAccess', memberToken, { tenantId: a })).response.ok).toBe(false);
+    expect((await callTenant('platformSetTenantStatus', ownerToken, { tenantId: a, status: 'ACTIVE' })).response.ok).toBe(true);
+    expect((await callTenant('platformSetMembership', ownerToken, { ...grant, active: false })).response.ok).toBe(true);
+    expect((await callTenant('getMyTenantAccess', memberToken, { tenantId: a })).response.ok).toBe(false);
+
+    // Even a token issued when the claim was active loses authorization
+    // immediately after revocation in the Auth record.
+    await getAuth().setCustomUserClaims(uid, { platform_owner: false });
+    expect((await callTenant('platformSetTenantStatus', ownerToken, { tenantId: b, status: 'SUSPENDED' })).response.ok).toBe(false);
+    const audit = await db.collection('platformAuditEvents').where('tenantId', '==', a).get();
+    expect(audit.size).toBeGreaterThan(2);
+  }, 100_000);
+});

@@ -546,6 +546,10 @@ service cloud.firestore {
     // Push tokens and dispatch receipts can only be accessed through trusted Functions.
     match /driverPushTokens/{id} { allow read, write: if false; }
     match /driverPushDispatches/{id} { allow read, write: if false; }
+    // Tenant/Core privileged state is writable only by trusted Admin SDK Functions.
+    match /tenants/{tenantId} { allow read, write: if false; }
+    match /tenantMemberships/{membershipId} { allow read, write: if false; }
+    match /platformAuditEvents/{eventId} { allow read, write: if false; }
     match /{document=**} { allow read, write: if false; }
   }
 }

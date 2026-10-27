@@ -752,3 +752,5 @@ export const web = onRequest(
 export { registerDriverPushToken, revokeDriverPushToken, notifyDriverOnAssignment } from './driver-push.js';
 
 export { resolvePublicTenant } from './resolve-tenant.js';
+
+export { platformCreateTenant, platformSetTenantStatus, platformSetMembership, getMyTenantAccess } from './tenant-admin.js';
