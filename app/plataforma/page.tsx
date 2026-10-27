@@ -46,7 +46,7 @@ export default function PlatformPage() {
       const gen = ++generation;
       setUser(current);
       setAuthorized(false);
-      if (!current) { setLoading(false); setTenants([]); return; }
+      if (!current || current.isAnonymous) { setUser(null); setLoading(false); setTenants([]); return; }
       setLoading(true);
       void current.getIdTokenResult().then(async (token) => {
         if (gen !== generation) return;
@@ -87,13 +87,14 @@ export default function PlatformPage() {
   }
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const data = new FormData(formElement);
     await perform(async () => {
       await httpsCallable(getFirebaseClient().functions, 'platformCreateTenant')({
         slug: String(data.get('slug') || '').trim().toLowerCase(),
         displayName: String(data.get('displayName') || '').trim(),
       });
-      event.currentTarget.reset();
+      formElement.reset();
     }, 'Tenant criado. Nenhum dado operacional foi migrado.');
   }
   async function setMembership(event: FormEvent<HTMLFormElement>) {
