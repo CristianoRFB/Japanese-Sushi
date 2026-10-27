@@ -414,12 +414,12 @@ describe('Firestore Rules Spark Teiko', () => {
     );
   });
 
-  it('bloqueia reserva fora de 2026 e datas impossíveis', async () => {
+  it('bloqueia reserva além do calendário suportado e datas impossíveis', async () => {
     const customerDb = env.authenticatedContext('reservation-invalid-uid').firestore();
     await assertFails(
       setDoc(
-        doc(customerDb, 'reservations', `reservation-2027-${testRunId}`),
-        { ...reservationData('reservation-invalid-uid'), date: '2027-02-11' },
+        doc(customerDb, 'reservations', `reservation-2100-${testRunId}`),
+        { ...reservationData('reservation-invalid-uid'), date: '2100-02-11' },
       ),
     );
     await assertFails(
