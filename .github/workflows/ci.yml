@@ -28,6 +28,7 @@ jobs:
       - run: npm run test:rules
       - run: npm run test:e2e
       - run: npm run test:tenant:fixture
+      - run: npm run test:migration:emulator
       - run: npm run build
       - name: Dependency audit (runtime, evidence only)
         shell: bash

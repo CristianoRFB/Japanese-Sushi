@@ -1,28 +1,14 @@
-# Migração Teiko → tenant (estado atual)
+# Migração Teiko → tenant
 
-Status: **F4 EM IMPLEMENTAÇÃO**. Nenhuma escrita ou migração real foi executada.
+**F4 IN_PROGRESS. Migração REAL nunca executada.**
 
-## Inspeção segura disponível
+Há duas ferramentas diferentes:
 
-```sh
-npm run tenant:inspect:emulator
-```
+- `npm run tenant:inspect:emulator`: somente contagens de campos nos dados locais.
+- `npm run test:migration:emulator`: seed sintético + dry-run + duas passagens idempotentes no Firestore Emulator.
 
-Este comando:
-- inicia Firestore Emulator;
-- lê apenas campos `tenantId`/`brandId` das coleções operacionais conhecidas;
-- apresenta somente contagens agregadas;
-- **não escreve, não apaga e não conecta produção**;
-- falha antes de importar Firebase Admin se não houver emulador.
+`functions/scripts/migrate-teiko-emulator.mjs` aceita dry-run sem opção ou `--apply-emulator` exclusivamente com `FIRESTORE_EMULATOR_HOST` local e dados marcados `developmentSeed=true`. A cópia mantém IDs e coleções root originais e inicia `tenants/teiko` como `SUSPENDED`, sem memberships automáticas.
 
-Resultado em emulador vazio não prova quantidades reais da Teiko.
+É um ensaio técnico: NÃO migra Teiko real, não faz cutover, não cria Platform Owner e não publica tenant.
 
-## Próximos passos bloqueados até implementação/autorizações
-
-1. Criar TenantResolver confiável, memberships e Rules A×B.
-2. Construir migrador idempotente com dry-run, preview de diffs e backfill de `tenantId=teiko`.
-3. Criar fixtures de dois tenants e testar recursos e Functions cruzadas.
-4. Solicitar backup verificável e autorização específica de escrita no projeto `sushi-cbfd2`.
-5. Executar migração real apenas depois de checklist de rollback, counts/IDs e janela aprovados.
-
-Preservar `createOrder`, `orderRequests`, Auth UIDs, histórico e todos os IDs existentes. Não transformar Teiko em demo.
+**Antes de qualquer migração de produção ainda faltam**: script separado explicitamente autorizado, backup verificável, plano de rollback, tenant-aware Functions, Rules A×B para todos os fluxos reais, inventário de discrepâncias, owner oficial, aprovações de billing/deploy e UAT.
