@@ -750,3 +750,5 @@ export const web = onRequest(
 );
 
 export { registerDriverPushToken, revokeDriverPushToken, notifyDriverOnAssignment } from './driver-push.js';
+
+export { resolvePublicTenant } from './resolve-tenant.js';

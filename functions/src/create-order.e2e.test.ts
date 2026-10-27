@@ -161,6 +161,39 @@ describe('createReservation da Teiko', () => {
   }, 45_000);
 });
 
+describe('resolvePublicTenant — seleção pública sem dados privilegiados', () => {
+  it('mantém fallback Teiko e resolve Beta sem expor assinatura ou memberships', async () => {
+    const call = async (slug: string) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/resolvePublicTenant',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ data: { slug } }),
+      },
+    );
+    const teiko = await call('teiko');
+    expect(teiko.response.ok).toBe(true);
+    expect((teiko.body as { result: { legacyFallback?: boolean } }).result.legacyFallback).toBe(true);
+    await db.doc('tenants/beta-sushi').set({
+      id: 'beta-sushi', slug: 'beta-sushi', status: 'ACTIVE',
+      branding: { displayName: 'Beta de testes', primaryColor: '#123456', logoUrl: 'javascript:alert(1)' },
+      planId: 'INTERNAL_SECRET', entitlementOverrides: { hidden: 'value' },
+    });
+    const beta = await call('beta-sushi');
+    expect(beta.response.ok).toBe(true);
+    const result = (beta.body as { result: Record<string, unknown> }).result;
+    expect(result.id).toBe('beta-sushi');
+    expect((result.branding as { displayName: string }).displayName).toBe('Beta de testes');
+    expect((result.branding as { logoUrl?: string }).logoUrl).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain('INTERNAL_SECRET');
+    const missing = await call('unknown-sushi');
+    expect(missing.response.ok).toBe(false);
+    await db.doc('tenants/beta-sushi').update({ status: 'SUSPENDED' });
+    const suspended = await call('beta-sushi');
+    expect((suspended.body as { result: { status: string } }).result.status).toBe('SUSPENDED');
+  }, 40_000);
+});
+
 describe('createOrder da Teiko', () => {
   it('persiste um pedido e devolve o código público', async () => {
     const clientRequestId = crypto.randomUUID();
