@@ -194,3 +194,42 @@ describe('createOrder da Teiko', () => {
     expect(response.body.error?.message).toMatch(/novo total/i);
   }, 30_000);
 });
+
+
+describe('driver FCM opt-in — apenas motoboy autorizado', () => {
+  it('registra e revoga token; cliente anônimo não pode se inscrever', async () => {
+    const email = 'driver-' + crypto.randomUUID() + '@example.test';
+    const { response: authResponse, body: authBody } = await fetchJson(authEndpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password: 'emulator-only-strong-password', returnSecureToken: true }),
+    });
+    expect(authResponse.ok).toBe(true);
+    const driverUid = (authBody as { localId?: string }).localId!;
+    const driverToken = (authBody as { idToken?: string }).idToken!;
+    await db.doc('users/' + driverUid).set({ role: 'driver', brandId: 'teiko', active: true });
+    await db.doc('deliveryDrivers/' + driverUid).set({
+      name: 'Motorista de teste', brandId: 'teiko', enabled: true, status: 'AVAILABLE',
+    });
+    const token = 'e2e_'.concat('T'.repeat(90));
+    const payload = { token };
+    const callPush = async (name: string, bearer: string) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + name,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + bearer },
+        body: JSON.stringify({ data: payload }),
+      },
+    );
+    const rejected = await callPush('registerDriverPushToken', idToken);
+    expect(rejected.response.ok).toBe(false);
+    const registered = await callPush('registerDriverPushToken', driverToken);
+    expect(registered.response.ok).toBe(true);
+    const { createHash } = await import('node:crypto');
+    const id = createHash('sha256').update(token).digest('hex');
+    expect((await db.doc('driverPushTokens/' + id).get()).data()?.driverUid).toBe(driverUid);
+    const revoked = await callPush('revokeDriverPushToken', driverToken);
+    expect(revoked.response.ok).toBe(true);
+    expect((await db.doc('driverPushTokens/' + id).get()).exists).toBe(false);
+  }, 50_000);
+});
