@@ -1,6 +1,6 @@
 # Master execution status — Sushi v01
 
-Atualizado em 2026-10-09. Estado deste arquivo separado em código local, testes locais, staging, campo e produção.
+Atualizado em 2026-10-27. Estado deste arquivo separado em código local, testes locais, staging, campo e produção.
 
 ## Identificação
 
@@ -15,15 +15,15 @@ Atualizado em 2026-10-09. Estado deste arquivo separado em código local, testes
 | Working tree de código após baseline | Limpo antes do início; instalações em `node_modules` são ignoradas pelo Git |
 | Ambiente local | Node 22.23.3, npm 11.6.4, Java 21.0.12 |
 | Firebase de produção configurado | `sushi-cbfd2`; nenhum acesso/escrita de produção usado nesta execução |
-| Último checkpoint concluído | F1 — baseline reproduzido |
-| Último SHA concluído | `b250fcb57e7e555ff925aa2365ecb34b42639205` |
+| Último checkpoint concluído | F2a — proteção do cache offline PWA (F2 ainda em andamento) |
+| Último SHA concluído | `cf22ff6d0e5c0c3815008e9d74e2fcc222c6e9be` |
 
 ## Estado das fases
 
 | Fase | Estado | Evidência / próximo gate |
 |---|---|---|
 | F1 — Preservar e consolidar o sistema atual | PASS | Instalações limpas Node 22; lint, typecheck, 29 testes app, 7 Functions, 16 Rules, 3 E2E, build e build Functions aprovados. Nenhum delta de código após o baseline. |
-| F2 — Operação, push e PWA | NOT_STARTED | Preservar delivery; implementar push opt-in e outbox testável, aguardando validação de VAPID/origem/dispositivos. |
+| F2 — Operação, push e PWA | IN_PROGRESS | F2a: service worker public-only com 6 testes; Web Push FCM opt-in, outbox e validação real de dispositivos continuam pendentes. |
 | F3 — Segurança e dependências | NOT_STARTED | Reauditar advisories e handlers, aplicar correções compatíveis e documentar risco residual. |
 | F4 — Multi-tenant white-label | NOT_STARTED | Resolver/memberships/Rules/Functions Tenant A×B, Platform Owner seguro, Beta de teste e migração dry-run. Gate estrutural antes do comercial. |
 | F5 — Planos e entitlements | NOT_STARTED | Implementar catálogo Sushi e enforcement depois que F4 passar; sem billing automático. |
@@ -46,6 +46,18 @@ Comandos executados no baseline, sob Node 22.23.3 e Java 21:
 - Build emite avisos de chunk cliente >500 kB e imports dinâmicos ineficazes; não falha. A parcela cliente indicada foi 574.56 kB (170.29 kB gzip), a revisar após mudança estrutural.
 
 Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `lightningcss` enquanto o servidor local antigo o mantinha aberto. O processo identificado era `vinext dev --port 3001`, do próprio repositório; ele foi encerrado, as instalações foram repetidas com Node 22 e concluíram sem erro. Nenhum arquivo rastreado foi descartado.
+
+## Evidência F2a — hardening PWA de 2026-10-27
+
+- Commit de código: [`cf22ff6`](https://github.com/CristianoRFB/Japanese-Sushi/commit/cf22ff6d0e5c0c3815008e9d74e2fcc222c6e9be).
+- `public/sw.js`: mantém apenas assets públicos estáticos no cache offline; não armazena HTML dinâmico, pedidos, APIs ou páginas administrativas.
+- `tests/sw-cache-policy.test.cjs`: 6 cenários Node para fallback seguro, isolamento de cache e rotas privadas.
+- `package.json`: script `npm run test:sw`.
+- `.github/workflows/ci.yml`: integração do novo teste no CI.
+- [GitHub Actions deste commit](https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40507816850): **SUCCESS** — lint, typecheck, testes gerais, `test:sw`, Functions, Firestore Rules e build passaram.
+- Verificação local do patch antes do commit: `node --test tests/sw-cache-policy.test.cjs` **6/6 PASS**.
+- Não houve teste hospedado de navegador/dispositivo, deploy Cloudflare/Firebase ou escrita em dados de produção nesta entrega.
+- F2 não está concluída: Web Push/FCM com permissão explícita, notificações em background, compatibilidade real e UAT seguem pendentes.
 
 ## Preservar / adaptar
 
