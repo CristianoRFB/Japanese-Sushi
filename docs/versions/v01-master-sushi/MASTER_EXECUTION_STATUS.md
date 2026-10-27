@@ -16,7 +16,7 @@ Atualizado em 2026-10-27. Estado deste arquivo separado em código local, testes
 | Ambiente local | Node 22.23.3, npm 11.6.4, Java 21.0.12 |
 | Firebase de produção configurado | `sushi-cbfd2`; nenhum acesso/escrita de produção usado nesta execução |
 | Último checkpoint concluído | F2/F3 e preparação F4 — evidências verificadas em CI, nenhuma prova de produção |
-| Último SHA concluído | `95f4ac2c6dc6379356ad8b0536943a8691404961` (testes completos no CI; documentação posterior pode avançar) |
+| Último SHA concluído | `5b9ab2f45cf69e6e49d46d53de0f6e3e58b55418` (testes completos no CI; documentação posterior pode avançar) |
 
 ## Estado das fases
 
@@ -25,7 +25,7 @@ Atualizado em 2026-10-27. Estado deste arquivo separado em código local, testes
 | F1 — Preservar e consolidar o sistema atual | PASS | Instalações limpas Node 22; lint, typecheck, 29 testes app, 7 Functions, 16 Rules, 3 E2E, build e build Functions aprovados. Nenhum delta de código após o baseline. |
 | F2 — Operação, push e PWA | IN_PROGRESS | FCM opt-in/revogação, Functions e testes em Emulator; push real em dispositivos e VAPID/HTTPS seguem pendentes. |
 | F3 — Segurança e dependências | IN_PROGRESS | Reservas por callable autenticada, regras negando escrita pública, pacote Zod/Body-parser atualizado sem force; triagem moderados pendente. |
-| F4 — Multi-tenant white-label | IN_PROGRESS | Tenant/Membership types, cache de carrinho escopado e inventário somente Emulator. Resolver, regras A×B, Platform Owner e migração real NÃO implementados. |
+| F4 — Multi-tenant white-label | IN_PROGRESS | Resolver público, Platform Owner, memberships, Rules no namespace novo, catálogo e retirada simples/KDS básico testados A×B. Teiko legada, caixa/PDV/delivery e reservas ainda NÃO tenantizados; migração real não executada. |
 | F5 — Planos e entitlements | NOT_STARTED | Implementar catálogo Sushi e enforcement depois que F4 passar; sem billing automático. |
 | F6 — Firebase/Cloudflare, staging, backup e CI/CD | NOT_STARTED | Guardrails e restore local; staging remoto e deploy dependem de aprovação e acesso. |
 | F7 — Cadastro Teiko e homologação | NOT_STARTED | Pipeline/checklist podem avançar; dados oficiais e aceite de campo dependem do proprietário e participantes. |
@@ -81,6 +81,15 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - Fixture sintética e emulador: `npm run test:tenant:fixture`. Cópia idempotente de dados Teiko apenas sintéticos em emulador: `npm run test:migration:emulator`.
 - CI com todos os checks verdes: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40545368745.
 - Backlog e gates revisados em [PRE_PC_COMPLETENESS.md](../../PRE_PC_COMPLETENESS.md); staging/prod/LIVE continuam FALSE.
+
+## Checkpoint operacional F4 — 27/10/2026
+
+- Pickup simples protegido e fechado por padrão: `functions/src/tenant-order-policy.ts` e `functions/src/tenant-orders.ts`; preço calculado pela Function na transação, `orderRequests` idempotente por tenant, autenticação do dono e nenhuma alteração no checkout original da Teiko.
+- KDS inicial: `tenantListPickupOrders` e `tenantUpdatePickupStatus`; status apenas NEW/CONFIRMED/PREPARING/READY/CANCELLED. **COMPLETED e lançamento financeiro ainda bloqueados** até conciliação de caixa.
+- Rota `/loja/[slug]/pedidos`: painel da equipe com proteção de acesso pelas callables; compilado, sem homologação visual em dispositivo.
+- Evidence CI: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40550619553 (SUCCESS no SHA `5b9ab2f45cf69e6e49d46d53de0f6e3e58b55418`).
+- A autorização A×B foi testada na API e Rules do novo namespace. Não existe rollout da Teiko original, nem operação de checkout completo para outros tenants, nem deploy real.
+- F4 continua **IN_PROGRESS**; F5 Global Standard continua **NOT_STARTED**.
 
 ## Preservar / adaptar
 
