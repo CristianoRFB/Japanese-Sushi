@@ -25,7 +25,8 @@
     "ci": "npm run lint && npm run typecheck && npm test && npm run build",
     "test:sw": "node --test tests/sw-cache-policy.test.cjs",
     "tenant:inspect:emulator": "firebase emulators:exec --project sushi-cbfd2 --only firestore \"node functions/scripts/tenant-migration-dry-run.mjs\"",
-    "seed:tenants:emulator": "firebase emulators:exec --project sushi-cbfd2 --only firestore,auth --export-on-exit=.firebase-data \"node functions/scripts/seed-tenant-emulator.mjs\""
+    "seed:tenants:emulator": "firebase emulators:exec --project sushi-cbfd2 --only firestore,auth --export-on-exit=.firebase-data \"node functions/scripts/seed-tenant-emulator.mjs\"",
+    "test:tenant:fixture": "firebase emulators:exec --project sushi-cbfd2 --only firestore,auth \"node functions/scripts/seed-tenant-emulator.mjs && node functions/scripts/verify-tenant-emulator.mjs\""
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

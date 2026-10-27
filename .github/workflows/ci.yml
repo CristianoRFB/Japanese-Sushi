@@ -27,6 +27,7 @@ jobs:
       - run: npm --prefix functions run build
       - run: npm run test:rules
       - run: npm run test:e2e
+      - run: npm run test:tenant:fixture
       - run: npm run build
       - name: Dependency audit (runtime, evidence only)
         shell: bash
