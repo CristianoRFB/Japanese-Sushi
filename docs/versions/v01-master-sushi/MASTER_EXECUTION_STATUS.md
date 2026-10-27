@@ -16,7 +16,7 @@ Atualizado em 2026-10-27. Estado deste arquivo separado em código local, testes
 | Ambiente local | Node 22.23.3, npm 11.6.4, Java 21.0.12 |
 | Firebase de produção configurado | `sushi-cbfd2`; nenhum acesso/escrita de produção usado nesta execução |
 | Último checkpoint concluído | F2/F3 e preparação F4 — evidências verificadas em CI, nenhuma prova de produção |
-| Último SHA concluído | `18264b915a6a87cb67129b4166ba4678c6ecdb24` (último código/dependências antes deste registro) |
+| Último SHA concluído | `95f4ac2c6dc6379356ad8b0536943a8691404961` (testes completos no CI; documentação posterior pode avançar) |
 
 ## Estado das fases
 
@@ -71,6 +71,16 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - Nenhuma alteração em Firebase real, Cloudflare live, dados reais ou contas de faturamento.
 - F4 continua FAIL até tenant resolver, memberships, regras/Functions tenant-aware e testes A×B. F5 continua NEXT.
 - Gate: FEATURE_COMPLETE=false, STAGING_READY=false, PRODUCTION_READY=false, LIVE=false.
+
+## Checkpoint F4 incremental — 27/10/2026
+
+- Backend de plataforma: `functions/src/tenant-admin.ts` controla Tenant CRUD, suspensão, memberships e auditoria; token `platform_owner` checado também no Auth atual.
+- UI `app/plataforma/page.tsx` para gestão de contas já existentes; não cria Platform Owner nem autenticação falsa.
+- Rules protegendo `tenants/{tenantId}/...`, membership e auditoria. E2E A×B e consultas públicas Firestore testadas. **Rules legadas da Teiko não estão tenantizadas.**
+- `app/loja/[slug]` mostra catálogo público do tenant ativo; `app/loja/[slug]/gestao` oferece CRUD de categorias e produtos simples via Functions. Checkout Beta continua expressamente desativado.
+- Fixture sintética e emulador: `npm run test:tenant:fixture`. Cópia idempotente de dados Teiko apenas sintéticos em emulador: `npm run test:migration:emulator`.
+- CI com todos os checks verdes: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40545368745.
+- Backlog e gates revisados em [PRE_PC_COMPLETENESS.md](../../../PRE_PC_COMPLETENESS.md); staging/prod/LIVE continuam FALSE.
 
 ## Preservar / adaptar
 

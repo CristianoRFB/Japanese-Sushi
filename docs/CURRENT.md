@@ -9,3 +9,6 @@ Versão atual: [v01-master-sushi](versions/v01-master-sushi/README.md).
 
 delivery-audit.md e ux-qa-report.md são documentos históricos.
 FEATURE_COMPLETE=false; STAGING_READY=false; PRODUCTION_READY=false; LIVE=false.
+
+- [Progresso de implementação pré-PC](PRE_PC_COMPLETENESS.md)
+- [Sessão de testes no PC](PC_FINAL_TEST_SESSION.md)
