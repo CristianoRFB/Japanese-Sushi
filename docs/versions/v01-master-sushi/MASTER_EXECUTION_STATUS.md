@@ -91,6 +91,16 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - A autorização A×B foi testada na API e Rules do novo namespace. Não existe rollout da Teiko original, nem operação de checkout completo para outros tenants, nem deploy real.
 - F4 continua **IN_PROGRESS**; F5 Global Standard continua **NOT_STARTED**.
 
+## Checkpoint incremental de caixa — 27/10/2026
+
+- Novo módulo `functions/src/tenant-cash.ts`: abertura/fechamento de sessão de caixa por tenant, saldo esperado, contagem física e registro de diferença.
+- Recebimento somente de **dinheiro presencial com atestação manual**, em pedidos de retirada no estado READY. Finaliza pedido e cria `cashMovements/SALE_{orderId}` e `financeEntries/SALE_{orderId}` atomicamente; retries não duplicam lançamentos.
+- Controle RBAC com leitura e revogação de membership/tenant dentro de transação, validação Firebase Auth e nenhuma exposição de segredo de pagamento.
+- UI `app/loja/[slug]/caixa`, vinculada à fila KDS; requer homologação real no navegador/dispositivo.
+- E2E: falta de caixa, valor insuficiente, tentativa entre tenants A×B, concorrência, movimentação única, valor de troco, sessão encerrada, diferença, revogação e impossibilidade de cancelar pedido concluído.
+- Sem pagamentos eletrônicos, fiscalização, NF-e, estorno, billing de assinatura ou migração da Teiko. **F4 continua IN_PROGRESS, PRODUCTION_READY=false**.
+- Evidence de código validada: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40582899072 (SUCCESS, SHA `487c095e1d60db8515cba68343ada58109c63150`). Alterações posteriores devem ser validadas pelos Actions correspondentes.
+
 ## Preservar / adaptar
 
 | Módulo | Tratamento |
