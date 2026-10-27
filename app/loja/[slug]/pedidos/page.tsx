@@ -2,6 +2,7 @@
 
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -89,7 +90,7 @@ export default function TenantOrdersPage() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-widest text-[#b5232b]">Cozinha · {tenantId}</p>
           <h1 className="mt-1 text-3xl font-black">Pedidos para retirada</h1></div>
-        {user && <Button variant="outline" onClick={() => void signOut(getFirebaseClient().auth)}>Sair</Button>}
+        {user && <div className="flex flex-wrap items-center gap-2"><Link href={'/loja/' + tenantId + '/caixa'} className="rounded-lg border px-4 py-2 text-sm font-bold">Abrir caixa</Link><Button variant="outline" onClick={() => void signOut(getFirebaseClient().auth)}>Sair</Button></div>}
       </header>
       <p className="mt-2 text-sm text-gray-600">Fluxo inicial de preparo. Pagamento e conclusão financeira ainda são realizados fora deste painel.</p>
       {loading && <p role="status" className="mt-5 rounded-xl bg-white p-4">Validando acesso e pedidos…</p>}
@@ -115,7 +116,7 @@ export default function TenantOrdersPage() {
             <p className="mt-1 text-xs text-gray-600">Pagamento: pendente de conferência no caixa.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {actions[order.status] && <Button disabled={busy} onClick={() => void advance(order, actions[order.status]!.status)}>{actions[order.status]!.label}</Button>}
-              {order.status !== 'CANCELLED' && <Button variant="outline" disabled={busy} onClick={() => void advance(order, 'CANCELLED')}>Cancelar</Button>}
+              {['NEW', 'CONFIRMED', 'PREPARING', 'READY'].includes(order.status) && <Button variant="outline" disabled={busy} onClick={() => void advance(order, 'CANCELLED')}>Cancelar</Button>}
             </div>
           </article>)}
         </div>
