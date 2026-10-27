@@ -546,6 +546,93 @@ service cloud.firestore {
     // Push tokens and dispatch receipts can only be accessed through trusted Functions.
     match /driverPushTokens/{id} { allow read, write: if false; }
     match /driverPushDispatches/{id} { allow read, write: if false; }
+
+    // F4 isolated namespace. The legacy Teiko root collections above remain
+    // intentionally untouched until the approved live migration.
+    function tenantIsActive(tenantId) {
+      return exists(/databases/$(database)/documents/tenants/$(tenantId))
+        && get(/databases/$(database)/documents/tenants/$(tenantId)).data.status == 'ACTIVE';
+    }
+    function tenantMembership(tenantId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/tenantMemberships/$(tenantId + '_' + request.auth.uid))
+        && get(/databases/$(database)/documents/tenantMemberships/$(tenantId + '_' + request.auth.uid)).data.tenantId == tenantId
+        && get(/databases/$(database)/documents/tenantMemberships/$(tenantId + '_' + request.auth.uid)).data.userUid == request.auth.uid
+        && get(/databases/$(database)/documents/tenantMemberships/$(tenantId + '_' + request.auth.uid)).data.active == true;
+    }
+    function hasTenantRole(tenantId, allowedRoles) {
+      return tenantIsActive(tenantId) && tenantMembership(tenantId)
+        && get(/databases/$(database)/documents/tenantMemberships/$(tenantId + '_' + request.auth.uid)).data.role in allowedRoles;
+    }
+    function tenantOwned(tenantId) {
+      return tenantIsActive(tenantId) && resource.data.tenantId == tenantId;
+    }
+
+    // A nested subcollection can be visible without disclosing its tenant's
+    // privileged root metadata or anything belonging to another tenant.
+    match /tenants/{tenantId} {
+      allow read, write: if false;
+
+      match /products/{productId} {
+        allow get, list: if tenantOwned(tenantId) && resource.data.active == true;
+        allow create, update, delete: if false;
+      }
+      match /categories/{categoryId} {
+        allow get, list: if tenantOwned(tenantId) && resource.data.active == true;
+        allow create, update, delete: if false;
+      }
+      match /modifierGroups/{id} {
+        allow get, list: if tenantOwned(tenantId) && resource.data.active == true;
+        allow create, update, delete: if false;
+      }
+      match /modifiers/{id} {
+        allow get, list: if tenantOwned(tenantId) && resource.data.active == true;
+        allow create, update, delete: if false;
+      }
+      match /promotions/{id} {
+        allow get, list: if tenantOwned(tenantId) && resource.data.active == true;
+        allow create, update, delete: if false;
+      }
+      match /orders/{id} {
+        allow get, list: if tenantOwned(tenantId) && (
+          hasTenantRole(tenantId, ['tenant_owner', 'staff'])
+          || isOwner(resource.data)
+          || (hasTenantRole(tenantId, ['driver']) && resource.data.get('driverId', '') == request.auth.uid)
+        );
+        // All domain writes must go through a tenant-aware trusted Function.
+        allow create, update, delete: if false;
+      }
+      match /deliveries/{id} {
+        allow get, list: if tenantOwned(tenantId) && (
+          hasTenantRole(tenantId, ['tenant_owner', 'staff'])
+          || (hasTenantRole(tenantId, ['driver']) && resource.data.get('driverId', '') == request.auth.uid)
+        );
+        allow create, update, delete: if false;
+      }
+      match /reservations/{id} {
+        allow get, list: if tenantOwned(tenantId)
+          && (hasTenantRole(tenantId, ['tenant_owner', 'staff']) || isOwner(resource.data));
+        allow create, update, delete: if false;
+      }
+      match /tables/{id} {
+        allow get, list: if tenantOwned(tenantId) && hasTenantRole(tenantId, ['tenant_owner', 'staff']);
+        allow create, update, delete: if false;
+      }
+      match /financeEntries/{id} {
+        allow get, list: if tenantOwned(tenantId) && hasTenantRole(tenantId, ['tenant_owner']);
+        allow create, update, delete: if false;
+      }
+      match /cashRegisters/{id} {
+        allow get, list: if tenantOwned(tenantId) && hasTenantRole(tenantId, ['tenant_owner']);
+        allow create, update, delete: if false;
+      }
+      match /cashMovements/{id} {
+        allow get, list: if tenantOwned(tenantId) && hasTenantRole(tenantId, ['tenant_owner']);
+        allow create, update, delete: if false;
+      }
+      match /{path=**} { allow read, write: if false; }
+    }
+
     // Tenant/Core privileged state is writable only by trusted Admin SDK Functions.
     match /tenants/{tenantId} { allow read, write: if false; }
     match /tenantMemberships/{membershipId} { allow read, write: if false; }

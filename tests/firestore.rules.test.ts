@@ -144,6 +144,62 @@ async function seedOrder(id: string, order: ReturnType<typeof orderData>) {
 
 describe('Firestore Rules Spark Teiko', () => {
 
+  it('isola coleções novas por tenant, papel e status sem afetar Teiko legada', async () => {
+    const a = 'alpha-' + testRunId;
+    const b = 'beta-' + testRunId;
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'tenants', a), { slug: a, status: 'ACTIVE' });
+      await setDoc(doc(db, 'tenants', b), { slug: b, status: 'ACTIVE' });
+      for (const [tenantId, uid, role] of [
+        [a, 'staff-tenant-a', 'staff'], [b, 'staff-tenant-b', 'staff'],
+        [a, 'tenant-owner-a', 'tenant_owner'], [a, 'driver-a', 'driver'],
+      ]) {
+        await setDoc(doc(db, 'tenantMemberships', tenantId + '_' + uid), {
+          tenantId, userUid: uid, role, active: true,
+        });
+      }
+      await setDoc(doc(db, 'tenants', a, 'products', 'menu'), { tenantId: a, active: true, name: 'Menu A' });
+      await setDoc(doc(db, 'tenants', b, 'products', 'menu'), { tenantId: b, active: true, name: 'Menu B' });
+      await setDoc(doc(db, 'tenants', b, 'products', 'spoofed'), { tenantId: a, active: true, name: 'Spoof' });
+      await setDoc(doc(db, 'tenants', a, 'orders', 'order-a'), { tenantId: a, ownerUid: 'customer-a' });
+      await setDoc(doc(db, 'tenants', b, 'orders', 'order-b'), { tenantId: b, ownerUid: 'customer-b' });
+      await setDoc(doc(db, 'tenants', a, 'deliveries', 'delivery-a'), { tenantId: a, driverId: 'driver-a' });
+      await setDoc(doc(db, 'tenants', b, 'deliveries', 'delivery-b'), { tenantId: b, driverId: 'driver-b' });
+      await setDoc(doc(db, 'tenants', a, 'financeEntries', 'entry'), { tenantId: a, amountCents: 100 });
+    });
+    const staffA = env.authenticatedContext('staff-tenant-a').firestore();
+    const staffB = env.authenticatedContext('staff-tenant-b').firestore();
+    const ownerA = env.authenticatedContext('tenant-owner-a').firestore();
+    const driverA = env.authenticatedContext('driver-a').firestore();
+    const customerA = env.authenticatedContext('customer-a').firestore();
+    const anon = env.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(anon, 'tenants', a, 'products', 'menu')));
+    await assertFails(getDoc(doc(anon, 'tenants', b, 'products', 'spoofed')));
+    await assertSucceeds(getDoc(doc(staffA, 'tenants', a, 'orders', 'order-a')));
+    await assertFails(getDoc(doc(staffA, 'tenants', b, 'orders', 'order-b')));
+    await assertSucceeds(getDoc(doc(staffB, 'tenants', b, 'orders', 'order-b')));
+    await assertFails(getDoc(doc(staffB, 'tenants', a, 'orders', 'order-a')));
+    await assertSucceeds(getDoc(doc(customerA, 'tenants', a, 'orders', 'order-a')));
+    await assertFails(getDoc(doc(customerA, 'tenants', b, 'orders', 'order-b')));
+    await assertSucceeds(getDoc(doc(driverA, 'tenants', a, 'deliveries', 'delivery-a')));
+    await assertFails(getDoc(doc(driverA, 'tenants', b, 'deliveries', 'delivery-b')));
+    await assertFails(getDoc(doc(staffA, 'tenants', a, 'financeEntries', 'entry')));
+    await assertSucceeds(getDoc(doc(ownerA, 'tenants', a, 'financeEntries', 'entry')));
+    await assertFails(setDoc(doc(ownerA, 'tenants', a, 'orders', 'forged'), { tenantId: a }));
+    await assertFails(setDoc(doc(ownerA, 'tenants', a, 'products', 'forged'), { tenantId: a, active: true }));
+    await assertFails(getDoc(doc(ownerA, 'tenants', a)));
+    await env.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'tenants', a), { status: 'SUSPENDED' });
+    });
+    await assertFails(getDoc(doc(staffA, 'tenants', a, 'orders', 'order-a')));
+    await assertFails(getDoc(doc(anon, 'tenants', a, 'products', 'menu')));
+    await assertFails(getDoc(doc(ownerA, 'tenants', a, 'financeEntries', 'entry')));
+    // Legacy Teiko remains unaffected by new-namespace suspension.
+    await assertSucceeds(getDoc(doc(anon, 'products', 'active')));
+  }, 50_000);
+
+
   it('nenhum cliente acessa tenants, memberships ou auditoria privilegiada, mesmo com claim', async () => {
     const id = 'rules-' + testRunId;
     await env.withSecurityRulesDisabled(async (context) => {
