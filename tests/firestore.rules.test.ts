@@ -175,6 +175,13 @@ describe('Firestore Rules Spark Teiko', () => {
     const customerA = env.authenticatedContext('customer-a').firestore();
     const anon = env.unauthenticatedContext().firestore();
     await assertSucceeds(getDoc(doc(anon, 'tenants', a, 'products', 'menu')));
+    // Real storefront query: Rules must authorize the entire result set,
+    // not just a manually fetched document.
+    await assertSucceeds(getDocs(query(
+      collection(anon, 'tenants', a, 'products'),
+      where('tenantId', '==', a), where('active', '==', true),
+    )));
+    await assertFails(getDocs(query(collection(anon, 'tenants', a, 'products'), where('active', '==', true))));
     await assertFails(getDoc(doc(anon, 'tenants', b, 'products', 'spoofed')));
     await assertSucceeds(getDoc(doc(staffA, 'tenants', a, 'orders', 'order-a')));
     await assertFails(getDoc(doc(staffA, 'tenants', b, 'orders', 'order-b')));
@@ -194,6 +201,10 @@ describe('Firestore Rules Spark Teiko', () => {
     });
     await assertFails(getDoc(doc(staffA, 'tenants', a, 'orders', 'order-a')));
     await assertFails(getDoc(doc(anon, 'tenants', a, 'products', 'menu')));
+    await assertFails(getDocs(query(
+      collection(anon, 'tenants', a, 'products'),
+      where('tenantId', '==', a), where('active', '==', true),
+    )));
     await assertFails(getDoc(doc(ownerA, 'tenants', a, 'financeEntries', 'entry')));
     // Legacy Teiko remains unaffected by new-namespace suspension.
     await assertSucceeds(getDoc(doc(anon, 'products', 'active')));
