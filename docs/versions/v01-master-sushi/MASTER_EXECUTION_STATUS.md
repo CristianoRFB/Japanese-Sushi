@@ -15,17 +15,17 @@ Atualizado em 2026-10-27. Estado deste arquivo separado em código local, testes
 | Working tree de código após baseline | Limpo antes do início; instalações em `node_modules` são ignoradas pelo Git |
 | Ambiente local | Node 22.23.3, npm 11.6.4, Java 21.0.12 |
 | Firebase de produção configurado | `sushi-cbfd2`; nenhum acesso/escrita de produção usado nesta execução |
-| Último checkpoint concluído | F2a — proteção do cache offline PWA (F2 ainda em andamento) |
-| Último SHA concluído | `cf22ff6d0e5c0c3815008e9d74e2fcc222c6e9be` |
+| Último checkpoint concluído | F2/F3 e preparação F4 — evidências verificadas em CI, nenhuma prova de produção |
+| Último SHA concluído | `18264b915a6a87cb67129b4166ba4678c6ecdb24` (último código/dependências antes deste registro) |
 
 ## Estado das fases
 
 | Fase | Estado | Evidência / próximo gate |
 |---|---|---|
 | F1 — Preservar e consolidar o sistema atual | PASS | Instalações limpas Node 22; lint, typecheck, 29 testes app, 7 Functions, 16 Rules, 3 E2E, build e build Functions aprovados. Nenhum delta de código após o baseline. |
-| F2 — Operação, push e PWA | IN_PROGRESS | F2a: service worker public-only com 6 testes; Web Push FCM opt-in, outbox e validação real de dispositivos continuam pendentes. |
-| F3 — Segurança e dependências | NOT_STARTED | Reauditar advisories e handlers, aplicar correções compatíveis e documentar risco residual. |
-| F4 — Multi-tenant white-label | NOT_STARTED | Resolver/memberships/Rules/Functions Tenant A×B, Platform Owner seguro, Beta de teste e migração dry-run. Gate estrutural antes do comercial. |
+| F2 — Operação, push e PWA | IN_PROGRESS | FCM opt-in/revogação, Functions e testes em Emulator; push real em dispositivos e VAPID/HTTPS seguem pendentes. |
+| F3 — Segurança e dependências | IN_PROGRESS | Reservas por callable autenticada, regras negando escrita pública, pacote Zod/Body-parser atualizado sem force; triagem moderados pendente. |
+| F4 — Multi-tenant white-label | IN_PROGRESS | Tenant/Membership types, cache de carrinho escopado e inventário somente Emulator. Resolver, regras A×B, Platform Owner e migração real NÃO implementados. |
 | F5 — Planos e entitlements | NOT_STARTED | Implementar catálogo Sushi e enforcement depois que F4 passar; sem billing automático. |
 | F6 — Firebase/Cloudflare, staging, backup e CI/CD | NOT_STARTED | Guardrails e restore local; staging remoto e deploy dependem de aprovação e acesso. |
 | F7 — Cadastro Teiko e homologação | NOT_STARTED | Pipeline/checklist podem avançar; dados oficiais e aceite de campo dependem do proprietário e participantes. |
@@ -58,6 +58,18 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - Verificação local do patch antes do commit: `node --test tests/sw-cache-policy.test.cjs` **6/6 PASS**.
 - Não houve teste hospedado de navegador/dispositivo, deploy Cloudflare/Firebase ou escrita em dados de produção nesta entrega.
 - F2 não está concluída: Web Push/FCM com permissão explícita, notificações em background, compatibilidade real e UAT seguem pendentes.
+
+## Evidências adicionais — 27/10/2026
+
+- F2: Web Push opt-in, revogação, tokens com autenticação no servidor e payload sem dados pessoais. Tests de Rules e E2E via emulador. Dispositivo real e VAPID ainda não homologados.
+- Reservas: validação do calendário além de 2026; agora criadas por callable autenticada, idempotente e com ownership. Rules bloqueiam criação direta. E2E valida horário e retry.
+- F4: shared/tenancy.ts, tests/tenancy.test.ts, chave de carrinho Teiko preparada para tenant e script de inspeção read-only para Firestore Emulator. NÃO comprova isolamento A×B.
+- CI agora inclui lint, TypeScript, unitários, service worker, Functions, Firestore Rules, E2E e build.
+- Dependências: Zod ^4.6.7 no frontend/Functions e body-parser 2.4.0 nas Functions após remediação sem --force e validação completa.
+- Evidência: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40514874611 (SUCCESS), commit de dependências 18264b915a6a87cb67129b4166ba4678c6ecdb24.
+- Nenhuma alteração em Firebase real, Cloudflare live, dados reais ou contas de faturamento.
+- F4 continua FAIL até tenant resolver, memberships, regras/Functions tenant-aware e testes A×B. F5 continua NEXT.
+- Gate: FEATURE_COMPLETE=false, STAGING_READY=false, PRODUCTION_READY=false, LIVE=false.
 
 ## Preservar / adaptar
 
