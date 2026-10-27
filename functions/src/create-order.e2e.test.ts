@@ -462,3 +462,56 @@ describe('F4 tenant pickup order transaction and owner isolation', () => {
     expect((await invoke('getMyTenantOrder', { tenantId: a, orderId: first.orderId })).response.ok).toBe(true);
   }, 100_000);
 });
+
+
+describe('F4 pickup KDS tenant A/B security', () => {
+  it('staff atualiza apenas o próprio tenant e não conclui pedido sem caixa/financeiro', async () => {
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const a = 'kds-a-' + suffix;
+    const b = 'kds-b-' + suffix;
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + a + '/products/simple').set({
+      tenantId: a, name: 'Sushi de teste', active: true, productType: 'SIMPLE',
+      modifierGroupIds: [], sizes: [{ id: 'unico', active: true, basePriceCents: 1700 }],
+    });
+    const invoke = (name: string, data: unknown, token: string) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + name, {
+        method: 'POST', headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ data }),
+      },
+    );
+    const orderResult = await invoke('createTenantPickupOrder', {
+      tenantId: a, clientRequestId: crypto.randomUUID(), customerName: 'Cliente de teste',
+      items: [{ productId: 'simple', quantity: 1 }], clientPreviewTotalCents: 1700,
+    }, idToken);
+    expect(orderResult.response.ok).toBe(true);
+    const orderId = (orderResult.body as { result: { orderId: string } }).result.orderId;
+    const auth = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'staff-' + suffix + '@example.test',
+        password: 'synthetic-emulator-password', returnSecureToken: true }),
+    });
+    const uid = (auth.body as { localId: string }).localId;
+    const staffToken = (auth.body as { idToken: string }).idToken;
+    await db.doc('tenantMemberships/' + a + '_' + uid).set({
+      tenantId: a, userUid: uid, role: 'staff', active: true,
+    });
+    const list = await invoke('tenantListPickupOrders', { tenantId: a }, staffToken);
+    expect(list.response.ok).toBe(true);
+    expect((list.body as { result: { orders: Array<{ id: string }> } }).result.orders.some(x => x.id === orderId)).toBe(true);
+    expect((await invoke('tenantListPickupOrders', { tenantId: b }, staffToken)).response.ok).toBe(false);
+    const update = (tenantId: string, status: string) => invoke('tenantUpdatePickupStatus', {
+      tenantId, orderId, status,
+    }, staffToken);
+    expect((await update(b, 'CONFIRMED')).response.ok).toBe(false);
+    expect((await update(a, 'READY')).response.ok).toBe(false);
+    expect((await update(a, 'CONFIRMED')).response.ok).toBe(true);
+    expect((await update(a, 'PREPARING')).response.ok).toBe(true);
+    expect((await update(a, 'READY')).response.ok).toBe(true);
+    expect((await update(a, 'COMPLETED')).response.ok).toBe(false);
+    expect((await db.doc('tenants/' + a + '/orders/' + orderId).get()).data()?.status).toBe('READY');
+    await db.doc('tenantMemberships/' + a + '_' + uid).update({ active: false });
+    expect((await update(a, 'CANCELLED')).response.ok).toBe(false);
+  }, 100_000);
+});
