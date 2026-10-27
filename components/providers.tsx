@@ -275,14 +275,19 @@ interface CartState {
   clear: () => void;
 }
 const CartContext = createContext<CartState | null>(null);
-const CART_KEY = 'teiko-sushi-cart-v1';
+const LEGACY_CART_KEY = 'teiko-sushi-cart-v1';
+import { tenantCacheKey } from '@/shared/tenancy';
+const CART_KEY = tenantCacheKey(TEIKO_BRAND_ID, 'cart');
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItemDraft[]>([]);
   const itemsRef = useRef<CartItemDraft[]>([]);
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(CART_KEY);
+      const current = localStorage.getItem(CART_KEY);
+      const old = current === null ? localStorage.getItem(LEGACY_CART_KEY) : null;
+      const saved = current ?? old;
+      if (old !== null) { localStorage.setItem(CART_KEY, old); localStorage.removeItem(LEGACY_CART_KEY); }
       const loaded = saved ? (JSON.parse(saved) as CartItemDraft[]) : [];
       itemsRef.current = Array.isArray(loaded) ? loaded : [];
       setItems(itemsRef.current);
