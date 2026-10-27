@@ -4,7 +4,7 @@ import { logger } from 'firebase-functions';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { z } from 'zod';
-import { driverPushTokenId, isPushAssignment, PUSH_TOKEN_LIMIT, safeDeliveryPushData, validFcmToken } from './driver-push-policy.js';
+import { driverPushTokenId, isPushAssignment, PUSH_TOKEN_LIMIT, safeDeliveryPushData, validFcmToken, type AssignmentSnapshot } from './driver-push-policy.js';
 
 // Until F4, this product has one real tenant. Membership checks will replace brandId
 // during CORE_FIRST tenant migration. Do not accept tenantId from the client.
@@ -76,8 +76,8 @@ export const revokeDriverPushToken = onCall(
 export const notifyDriverOnAssignment = onDocumentWritten(
   { document: 'deliveries/{deliveryId}', region, retry: false },
   async (event) => {
-    const before = event.data?.before.exists ? event.data.before.data() : null;
-    const after = event.data?.after.exists ? event.data.after.data() : null;
+    const before = event.data?.before.exists ? event.data.before.data() as AssignmentSnapshot : null;
+    const after = event.data?.after.exists ? event.data.after.data() as AssignmentSnapshot : null;
     if (!isPushAssignment(before, after)) return;
     if (after?.brandId !== LEGACY_TENANT || !after.driverId) return;
     const db = getFirestore();
