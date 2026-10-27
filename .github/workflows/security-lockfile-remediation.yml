@@ -1,0 +1,60 @@
+name: Safe lockfile remediation (one-shot)
+on:
+  push:
+    paths:
+      - '.github/workflows/security-lockfile-remediation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  safe-lockfile-update:
+    if: github.ref == 'refs/heads/feat/sushi-master-multitenant'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Propose compatible lockfile patches (never force)
+        run: |
+          npm audit fix --package-lock-only --ignore-scripts || true
+          npm --prefix functions audit fix --package-lock-only --ignore-scripts || true
+      - name: Install exactly the proposed lockfiles
+        run: |
+          npm ci
+          npm ci --prefix functions
+      - name: Reject residual high/critical runtime advisories
+        run: |
+          npm audit --omit=dev --audit-level=high
+          npm --prefix functions audit --omit=dev --audit-level=high
+      - name: Validate fully before commit
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run test:sw
+          npm run test:functions
+          npm --prefix functions run build
+          npm run test:rules
+          npm run test:e2e
+          npm run build
+      - name: Commit lockfile updates only if green
+        run: |
+          if ! git diff --quiet -- package-lock.json functions/package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json functions/package-lock.json
+            git commit -m "fix(deps): apply compatible audited lockfile remediations"
+            git push origin HEAD:feat/sushi-master-multitenant
+          else
+            echo "No compatible lockfile changes were necessary."
+          fi
