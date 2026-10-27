@@ -107,3 +107,80 @@ export const getMyTenantOrder = onCall(options, async request => {
     createdAt: data.createdAt?.toDate?.().toISOString(),
   };
 });
+
+
+// The initial pickup KDS deliberately cannot mark orders paid or completed.
+// Cash register and finance ledger invariants must be implemented before completion.
+const statusSchema = z.object({
+  tenantId: z.string().refine(validTenantSlug),
+  orderId: z.string().regex(/^[A-Za-z0-9_-]{10,128}$/),
+  status: z.enum(['CONFIRMED', 'PREPARING', 'READY', 'CANCELLED']),
+  reason: z.string().trim().max(300).optional(),
+}).strict();
+
+export const tenantListPickupOrders = onCall(options, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sessão necessária.');
+  const data = z.object({ tenantId: z.string().refine(validTenantSlug) }).strict().safeParse(request.data);
+  if (!data.success) throw new HttpsError('invalid-argument', 'Tenant inválido.');
+  const { requireTenantMembership } = await import('./tenant-admin.js');
+  await requireTenantMembership(request.auth.uid, data.data.tenantId, ['tenant_owner', 'staff']);
+  const snapshot = await getFirestore().collection('tenants/' + data.data.tenantId + '/orders')
+    .where('tenantId', '==', data.data.tenantId).limit(50).get();
+  return { orders: snapshot.docs.map(doc => {
+    const order = doc.data();
+    return {
+      id: doc.id, orderNumber: order.orderNumber,
+      customerName: order.customer?.name || 'Cliente',
+      status: order.status, items: order.items,
+      totalCents: order.pricing?.totalCents || 0,
+      createdAt: order.createdAt?.toDate?.().toISOString() || null,
+    };
+  }).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')) };
+});
+
+export const tenantUpdatePickupStatus = onCall(options, async request => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sessão necessária.');
+  const parsed = statusSchema.safeParse(request.data);
+  if (!parsed.success) throw new HttpsError('invalid-argument', 'Atualização inválida.');
+  const { tenantId, orderId, status, reason } = parsed.data;
+  const { requireTenantMembership } = await import('./tenant-admin.js');
+  const access = await requireTenantMembership(uid, tenantId, ['tenant_owner', 'staff']);
+  const db = getFirestore();
+  const tenantRef = db.doc('tenants/' + tenantId);
+  const membershipRef = db.doc('tenantMemberships/' + tenantId + '_' + uid);
+  const orderRef = db.doc('tenants/' + tenantId + '/orders/' + orderId);
+  const transitions: Record<string, string[]> = {
+    NEW: ['CONFIRMED', 'CANCELLED'],
+    CONFIRMED: ['PREPARING', 'CANCELLED'],
+    PREPARING: ['READY', 'CANCELLED'],
+    READY: ['CANCELLED'],
+  };
+  await db.runTransaction(async tx => {
+    const [tenant, membership, order] = await Promise.all([
+      tx.get(tenantRef), tx.get(membershipRef), tx.get(orderRef),
+    ]);
+    const member = membership.data();
+    if (tenant.data()?.status !== 'ACTIVE' ||
+      member?.active !== true || member.tenantId !== tenantId || member.userUid !== uid ||
+      member.role !== access.role) {
+      throw new HttpsError('permission-denied', 'Acesso ao restaurante foi revogado.');
+    }
+    if (!order.exists || order.data()?.tenantId !== tenantId)
+      throw new HttpsError('not-found', 'Pedido não encontrado.');
+    const current = String(order.data()?.status);
+    if (!transitions[current]?.includes(status))
+      throw new HttpsError('failed-precondition', 'Transição de pedido não permitida.');
+    tx.update(orderRef, {
+      status, updatedAt: FieldValue.serverTimestamp(),
+      statusHistory: FieldValue.arrayUnion({
+        status, at: Timestamp.now(), actorUid: uid, actorRole: access.role,
+        ...(reason ? { reason } : {}),
+      }),
+      ...(status === 'CANCELLED' ? {
+        cancelledAt: FieldValue.serverTimestamp(), cancellationReason: reason || '',
+      } : {}),
+    });
+  });
+  return { ok: true, status };
+});
