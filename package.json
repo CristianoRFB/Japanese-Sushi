@@ -22,7 +22,8 @@
     "test:e2e": "node scripts/test-e2e.mjs",
     "emulators": "firebase emulators:start --project sushi-cbfd2 --import=.firebase-data --export-on-exit=.firebase-data",
     "seed:emulator": "firebase emulators:exec --project sushi-cbfd2 --only firestore,auth --export-on-exit=.firebase-data \"npm --prefix functions run seed:emulator\"",
-    "ci": "npm run lint && npm run typecheck && npm test && npm run build"
+    "ci": "npm run lint && npm run typecheck && npm test && npm run build",
+    "test:sw": "node --test tests/sw-cache-policy.test.cjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
