@@ -143,6 +143,34 @@ async function seedOrder(id: string, order: ReturnType<typeof orderData>) {
 }
 
 describe('Firestore Rules Spark Teiko', () => {
+
+  it('nenhum cliente acessa tenants, memberships ou auditoria privilegiada, mesmo com claim', async () => {
+    const id = 'rules-' + testRunId;
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'tenants', id), { slug: id, status: 'ACTIVE' });
+      await setDoc(doc(db, 'tenantMemberships', id + '_member'), { tenantId: id, userUid: 'member', role: 'staff', active: true });
+      await setDoc(doc(db, 'platformAuditEvents', id), { tenantId: id, actorUid: 'owner', action: 'TENANT_CREATED' });
+    });
+    const surfaces = [
+      ['tenants', id],
+      ['tenantMemberships', id + '_member'],
+      ['platformAuditEvents', id],
+    ];
+    for (const db of [
+      env.unauthenticatedContext().firestore(),
+      env.authenticatedContext('admin-uid').firestore(),
+      env.authenticatedContext('member', { tenantId: id }).firestore(),
+      env.authenticatedContext('platform-owner', { platform_owner: true }).firestore(),
+    ]) {
+      for (const [collectionName, documentId] of surfaces) {
+        await assertFails(getDoc(doc(db, collectionName, documentId)));
+        await assertFails(setDoc(doc(db, collectionName, 'forged-' + id), { role: 'platform_owner', status: 'ACTIVE' }));
+        await assertFails(deleteDoc(doc(db, collectionName, documentId)));
+      }
+    }
+  });
+
   it('nega criação direta de reserva em qualquer ano: apenas Function autorizada', async () => {
     const customerDb = env.authenticatedContext('customer-uid').firestore();
     await assertFails(setDoc(doc(customerDb, 'reservations', 'direct-2027-' + testRunId), {

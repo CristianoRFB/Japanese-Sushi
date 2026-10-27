@@ -151,3 +151,16 @@ export const getMyTenantAccess = onCall(options, async (request) => {
 
 // No callable to grant a platform_owner claim. That credential must be
 // provisioned out-of-band by the verified Firebase project administrator.
+
+export const platformListTenants = onCall(options, async (request) => {
+  await requirePlatformOwner(request);
+  // Bounded listing; no private config, client data, plan or entitlement overrides.
+  const snapshot = await getFirestore().collection('tenants').orderBy('slug').limit(50).get();
+  return { tenants: snapshot.docs.map((doc) => ({
+    id: doc.id,
+    slug: doc.data().slug,
+    status: doc.data().status,
+    displayName: typeof doc.data().branding?.displayName === 'string'
+      ? doc.data().branding.displayName : 'Restaurante',
+  })) };
+});

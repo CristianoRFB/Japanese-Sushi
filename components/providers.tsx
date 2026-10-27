@@ -406,6 +406,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       setState({ user, role: null, loading: true });
+      // Platform Owner uses Firebase Auth custom claims, never a forged users/{uid} role.
+      // Preserve existing Teiko team/driver auth flow without requiring a store account.
+      void user.getIdTokenResult().then((token) => {
+        if (currentGeneration !== generation) return;
+        if (token.claims.platform_owner === true) {
+          setState({ user, role: null, loading: false });
+          return;
+        }
       stopUserDoc = onSnapshot(
         doc(db, 'users', user.uid),
         (roleDoc) => {
@@ -441,6 +449,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         () => setState({ user, role: null, loading: false }),
       );
+      }).catch(() => {
+        if (currentGeneration === generation) setState({ user: null, role: null, loading: false });
+      });
     });
     return () => {
       generation += 1;

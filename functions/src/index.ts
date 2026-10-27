@@ -753,4 +753,4 @@ export { registerDriverPushToken, revokeDriverPushToken, notifyDriverOnAssignmen
 
 export { resolvePublicTenant } from './resolve-tenant.js';
 
-export { platformCreateTenant, platformSetTenantStatus, platformSetMembership, getMyTenantAccess } from './tenant-admin.js';
+export { platformCreateTenant, platformSetTenantStatus, platformSetMembership, getMyTenantAccess, platformListTenants } from './tenant-admin.js';
