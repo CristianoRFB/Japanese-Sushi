@@ -132,6 +132,35 @@ beforeAll(async () => {
   });
 }, 60_000);
 
+const reservationEndpoint = `${functionsBaseUrl}/sushi-cbfd2/southamerica-east1/createReservation`;
+
+describe('createReservation da Teiko', () => {
+  it('persiste ownerUid, é idempotente e rejeita data inválida no servidor', async () => {
+    const clientRequestId = crypto.randomUUID();
+    const date = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const payload = { clientRequestId, unitId: 'santa-fe-do-sul',
+      name: 'Cliente Teste', whatsapp: '17999999999', date, time: '19:00', people: 2 };
+    const send = async (data: unknown) => {
+      const { response, body } = await fetchJson(reservationEndpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ data }),
+      });
+      return { status: response.status, body: body as { result?: { reservationId?: string }, error?: { message?: string } } };
+    };
+    const first = await send(payload);
+    const second = await send(payload);
+    expect(first.status).toBe(200);
+    expect(first.body.result?.reservationId).toBeTruthy();
+    expect(second.body.result?.reservationId).toBe(first.body.result?.reservationId);
+    const reservation = await db.doc('reservations/' + first.body.result?.reservationId).get();
+    expect(reservation.data()?.ownerUid).toBeTruthy();
+    expect(reservation.data()?.date).toBe(date);
+    const invalid = await send({ ...payload, clientRequestId: crypto.randomUUID(), date: '2027-02-29' });
+    expect(invalid.status).not.toBe(200);
+  }, 45_000);
+});
+
 describe('createOrder da Teiko', () => {
   it('persiste um pedido e devolve o código público', async () => {
     const clientRequestId = crypto.randomUUID();

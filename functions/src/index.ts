@@ -575,6 +575,8 @@ const reservationSchema = z.object({
 export const createReservation = onCall(
   { region, timeoutSeconds: 15, memory: '256MiB', enforceAppCheck },
   async (request) => {
+    if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Faça login para reservar.');
+    const ownerUid = request.auth.uid;
     const parsed = reservationSchema.safeParse(request.data);
     if (!parsed.success)
       throw new HttpsError(
@@ -613,9 +615,13 @@ export const createReservation = onCall(
     const reservationRef = db.collection('reservations').doc();
     await db.runTransaction(async (transaction) => {
       const requestSnapshot = await transaction.get(requestRef);
-      if (requestSnapshot.exists) return;
+      if (requestSnapshot.exists) {
+        if (requestSnapshot.data()?.ownerUid !== ownerUid) throw new HttpsError('permission-denied', 'Reserva pertence a outra sessão.');
+        return;
+      }
       transaction.create(reservationRef, {
         brandId: TEIKO_BRAND_ID,
+        ownerUid,
         unitId: input.unitId,
         name: normalizeReservationName(input.name),
         whatsapp,
@@ -633,6 +639,7 @@ export const createReservation = onCall(
       });
       transaction.create(requestRef, {
         brandId: TEIKO_BRAND_ID,
+        ownerUid,
         reservationId: reservationRef.id,
         createdAt: FieldValue.serverTimestamp(),
       });

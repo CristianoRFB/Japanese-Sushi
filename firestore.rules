@@ -443,30 +443,8 @@ service cloud.firestore {
     match /reservations/{id} {
       allow get: if (isStaff() && brand(resource.data)) || isOwner(resource.data);
       allow list: if (isStaff() && brand(resource.data)) || isOwner(resource.data);
-      allow create: if signedIn()
-        && brand(request.resource.data)
-        && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.status == 'REQUESTED'
-        && validUnit()
-        && request.resource.data.keys().hasAll(['brandId', 'ownerUid', 'clientRequestId', 'unitId', 'name', 'whatsapp', 'date', 'time', 'people', 'notes', 'status', 'createdAt', 'updatedAt', 'statusHistory'])
-        && request.resource.data.keys().hasOnly(['brandId', 'ownerUid', 'clientRequestId', 'unitId', 'name', 'whatsapp', 'date', 'time', 'people', 'notes', 'status', 'createdAt', 'updatedAt', 'statusHistory'])
-        && request.resource.data.name is string
-        && request.resource.data.name.size() >= 2
-        && request.resource.data.name.size() <= 80
-        && request.resource.data.whatsapp is string
-        && request.resource.data.whatsapp.size() >= 8
-        && request.resource.data.whatsapp.size() <= 30
-        && request.resource.data.date is string
-        && request.resource.data.date.matches('^20\\d{2}-((0[13578]|1[02])-(0[1-9]|[12]\\d|3[01])|(0[469]|11)-(0[1-9]|[12]\\d|30)|02-(0[1-9]|1\\d|2[0-9]))$')
-        && request.resource.data.time is string
-        && request.resource.data.time.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
-        && request.resource.data.people is int
-        && request.resource.data.people >= 1
-        && request.resource.data.people <= 30
-        && request.resource.data.notes is string
-        && request.resource.data.notes.size() <= 500
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp;
+      // Reservations are created exclusively by trusted createReservation callable.
+      allow create: if false;
       allow update: if isStaff()
         && brand(resource.data)
         && brand(request.resource.data)

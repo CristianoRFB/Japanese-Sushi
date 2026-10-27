@@ -143,17 +143,12 @@ async function seedOrder(id: string, order: ReturnType<typeof orderData>) {
 }
 
 describe('Firestore Rules Spark Teiko', () => {
-  it('aceita reserva real de 2027 e nega datas impossíveis no contrato Firestore', async () => {
+  it('nega criação direta de reserva em qualquer ano: apenas Function autorizada', async () => {
     const customerDb = env.authenticatedContext('customer-uid').firestore();
-    const nextYear = reservationData('customer-uid');
-    await assertSucceeds(setDoc(doc(customerDb, 'reservations', 'next-year-' + testRunId), {
-      ...nextYear, date: '2027-12-10',
-    }));
-    await assertFails(setDoc(doc(customerDb, 'reservations', 'bad-day-' + testRunId), {
-      ...nextYear, date: '2027-02-31',
+    await assertFails(setDoc(doc(customerDb, 'reservations', 'direct-2027-' + testRunId), {
+      ...reservationData('customer-uid'), date: '2027-12-10',
     }));
   });
-
 
   it('bloqueia leitura e escrita de tokens FCM e registros de dispatch para todo cliente, inclusive admin', async () => {
     const tokenId = 'push-private-' + testRunId;
@@ -376,12 +371,10 @@ describe('Firestore Rules Spark Teiko', () => {
 
   it('permite reserva própria e gestão administrativa', async () => {
     const customerDb = env.authenticatedContext('customer-uid').firestore();
-    await assertSucceeds(
-      setDoc(
-        doc(customerDb, 'reservations', `reservation-${testRunId}`),
-        reservationData('customer-uid'),
-      ),
-    );
+    await assertFails(setDoc(doc(customerDb, 'reservations', 'forged-' + testRunId), reservationData('customer-uid')));
+    await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'reservations', 'reservation-' + testRunId), reservationData('customer-uid'));
+    });
     await assertSucceeds(
       getDoc(doc(customerDb, 'reservations', `reservation-${testRunId}`)),
     );
@@ -414,20 +407,10 @@ describe('Firestore Rules Spark Teiko', () => {
     );
   });
 
-  it('bloqueia reserva além do calendário suportado e datas impossíveis', async () => {
+  it('nega reservas gravadas pelo cliente sem Function, inclusive datas inválidas', async () => {
     const customerDb = env.authenticatedContext('reservation-invalid-uid').firestore();
-    await assertFails(
-      setDoc(
-        doc(customerDb, 'reservations', `reservation-2100-${testRunId}`),
-        { ...reservationData('reservation-invalid-uid'), date: '2100-02-11' },
-      ),
-    );
-    await assertFails(
-      setDoc(
-        doc(customerDb, 'reservations', `reservation-impossible-${testRunId}`),
-        { ...reservationData('reservation-invalid-uid'), date: '2026-02-31' },
-      ),
-    );
+    await assertFails(setDoc(doc(customerDb, 'reservations', 'forged-old-' + testRunId),
+      { ...reservationData('reservation-invalid-uid'), date: '2026-02-31' }));
   });
 
   it('bloqueia nome emoji, telefone inválido e texto excessivo mesmo com cliente modificado', async () => {

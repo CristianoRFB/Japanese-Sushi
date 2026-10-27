@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  Timestamp,
-} from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import {
   AlertCircle,
   ArrowLeft,
@@ -15,7 +10,7 @@ import {
   KeyRound,
   Loader2,
 } from 'lucide-react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { PublicHeader } from '@/components/public-header';
 import { PublicFooter } from '@/components/public-footer';
@@ -58,6 +53,7 @@ export default function ReservationPage() {
   const [sentReservation, setSentReservation] = useState<SavedReservation | null>(null);
   const [cachedReservation, setCachedReservation] = useState<SavedReservation | null>(null);
   const [busy, setBusy] = useState(false);
+  const requestInFlight = useRef<{ signature: string; id: string } | null>(null);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<ReservationField, string>>>({});
   const [copiedCode, setCopiedCode] = useState('');
@@ -93,7 +89,7 @@ export default function ReservationPage() {
     setBusy(true);
     const data = new FormData(event.currentTarget);
     const payload = {
-      clientRequestId: crypto.randomUUID(),
+      clientRequestId: '',
       unitId: config.defaultUnitId,
       name: normalizeReservationName(String(data.get('name') ?? '')),
       whatsapp: String(data.get('whatsapp')),
@@ -102,6 +98,12 @@ export default function ReservationPage() {
       people: Number(data.get('people')),
       notes: String(data.get('notes') || '') || undefined,
     };
+    // Stable request id for retries of an identical form; server enforces idempotency.
+    const signature = JSON.stringify({ ...payload, clientRequestId: undefined });
+    if (!requestInFlight.current || requestInFlight.current.signature !== signature) {
+      requestInFlight.current = { signature, id: crypto.randomUUID() };
+    }
+    payload.clientRequestId = requestInFlight.current.id;
     const validation = validateReservationDraft(payload);
     if (!validation.date && !validation.time && !isReservationTimeWithinHours(payload.date, payload.time, config)) {
       validation.time = 'Escolha um horário dentro do funcionamento da unidade.';
@@ -117,22 +119,12 @@ export default function ReservationPage() {
         throw new Error(
           'A unidade ainda não está conectada ao serviço de reservas.',
         );
-      const { db } = getFirebaseClient();
+      const { functions } = getFirebaseClient();
       const user = await ensureAnonymousUser();
-      const reservation = await addDoc(collection(db, 'reservations'), {
-        brandId: 'teiko',
-        ownerUid: user.uid,
-        ...payload,
-        name: normalizeReservationName(payload.name),
-        whatsapp: normalizePhone(payload.whatsapp),
-        notes: payload.notes ?? '',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        status: 'REQUESTED',
-        statusHistory: [
-          { status: 'REQUESTED', at: Timestamp.now(), actor: 'customer' },
-        ],
-      });
+      const response = await httpsCallable(functions, 'createReservation')(payload);
+      const result = response.data as { reservationId?: string };
+      if (!result.reservationId) throw new Error('Reserva sem identificador.');
+      const reservation = { id: result.reservationId };
       const savedReservation: SavedReservation = {
         id: reservation.id,
         code: reservation.id,
@@ -147,6 +139,7 @@ export default function ReservationPage() {
       window.localStorage.setItem(reservationCacheKey(user.uid), JSON.stringify(savedReservation));
       setCachedReservation(savedReservation);
       setSentReservation(savedReservation);
+      requestInFlight.current = null;
     } catch (cause) {
       const code = cause && typeof cause === 'object' && 'code' in cause ? String(cause.code) : '';
       setError(
