@@ -143,6 +143,32 @@ async function seedOrder(id: string, order: ReturnType<typeof orderData>) {
 }
 
 describe('Firestore Rules Spark Teiko', () => {
+  it('bloqueia leitura e escrita de tokens FCM e registros de dispatch para todo cliente, inclusive admin', async () => {
+    const tokenId = 'push-private-' + testRunId;
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'driverPushTokens', tokenId), {
+        token: 'secret-registration-token', driverUid: 'driver-uid', tenantId: 'teiko',
+      });
+      await setDoc(doc(db, 'driverPushDispatches', tokenId), {
+        tenantId: 'teiko', driverUid: 'driver-uid', state: 'SENT',
+      });
+    });
+    for (const uid of ['admin-uid', 'staff-uid', 'customer-uid', 'driver-uid']) {
+      const db = env.authenticatedContext(uid).firestore();
+      for (const bucket of ['driverPushTokens', 'driverPushDispatches']) {
+        await assertFails(getDoc(doc(db, bucket, tokenId)));
+        await assertFails(setDoc(doc(db, bucket, 'forged-' + uid), { token: 'unauthorized', driverUid: uid }));
+        await assertFails(updateDoc(doc(db, bucket, tokenId), { state: 'HACKED' }));
+        await assertFails(deleteDoc(doc(db, bucket, tokenId)));
+      }
+    }
+    const db = env.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(db, 'driverPushTokens', tokenId)));
+    await assertFails(getDoc(doc(db, 'driverPushDispatches', tokenId)));
+  });
+
+
   it('permite catálogo público, mas nega pedidos alheios e promoção de cliente', async () => {
     const publicDb = env.unauthenticatedContext().firestore();
     await assertSucceeds(getDoc(doc(publicDb, 'products', 'active')));
