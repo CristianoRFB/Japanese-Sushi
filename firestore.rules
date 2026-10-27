@@ -457,7 +457,7 @@ service cloud.firestore {
         && request.resource.data.whatsapp.size() >= 8
         && request.resource.data.whatsapp.size() <= 30
         && request.resource.data.date is string
-        && request.resource.data.date.matches('^2026-((0[13578]|1[02])-(0[1-9]|[12]\\d|3[01])|(0[469]|11)-(0[1-9]|[12]\\d|30)|02-(0[1-9]|1\\d|2[0-8]))$')
+        && request.resource.data.date.matches('^20\\d{2}-((0[13578]|1[02])-(0[1-9]|[12]\\d|3[01])|(0[469]|11)-(0[1-9]|[12]\\d|30)|02-(0[1-9]|1\\d|2[0-9]))$')
         && request.resource.data.time is string
         && request.resource.data.time.matches('^([01]\\d|2[0-3]):[0-5]\\d$')
         && request.resource.data.people is int

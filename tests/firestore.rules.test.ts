@@ -143,6 +143,18 @@ async function seedOrder(id: string, order: ReturnType<typeof orderData>) {
 }
 
 describe('Firestore Rules Spark Teiko', () => {
+  it('aceita reserva real de 2027 e nega datas impossíveis no contrato Firestore', async () => {
+    const customerDb = env.authenticatedContext('customer-uid').firestore();
+    const nextYear = reservationData('customer-uid');
+    await assertSucceeds(setDoc(doc(customerDb, 'reservations', 'next-year-' + testRunId), {
+      ...nextYear, date: '2027-12-10',
+    }));
+    await assertFails(setDoc(doc(customerDb, 'reservations', 'bad-day-' + testRunId), {
+      ...nextYear, date: '2027-02-31',
+    }));
+  });
+
+
   it('bloqueia leitura e escrita de tokens FCM e registros de dispatch para todo cliente, inclusive admin', async () => {
     const tokenId = 'push-private-' + testRunId;
     await env.withSecurityRulesDisabled(async (context) => {

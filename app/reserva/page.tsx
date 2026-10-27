@@ -32,7 +32,7 @@ import {
   normalizeReservationName,
   isReservationTimeWithinHours,
   RESERVATION_MAX_DATE,
-  RESERVATION_MIN_DATE,
+  reservationMinDate,
   validateReservationDraft,
   type ReservationField,
 } from '@/shared/domain';
@@ -151,7 +151,7 @@ export default function ReservationPage() {
       const code = cause && typeof cause === 'object' && 'code' in cause ? String(cause.code) : '';
       setError(
         code.includes('permission-denied')
-          ? 'A solicitação não foi aceita. Confira se a data está dentro de 2026 e tente novamente.'
+          ? 'A solicitação não foi aceita. Confira a data, o horário e a disponibilidade e tente novamente.'
           : code.includes('unavailable')
             ? 'O serviço está temporariamente indisponível. Aguarde um instante e tente novamente.'
             : 'Não foi possível enviar a reserva agora. Confira os dados e tente novamente.',
@@ -257,7 +257,7 @@ export default function ReservationPage() {
                 name="date"
                 type="date"
                 required
-                min={RESERVATION_MIN_DATE}
+                min={reservationMinDate()}
                 max={RESERVATION_MAX_DATE}
                 error={fieldErrors.date}
               />
