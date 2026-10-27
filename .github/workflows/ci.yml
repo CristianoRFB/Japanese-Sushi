@@ -28,3 +28,9 @@ jobs:
       - run: npm run test:rules
       - run: npm run test:e2e
       - run: npm run build
+      - name: Dependency audit (runtime, evidence only)
+        shell: bash
+        run: |
+          npm audit --omit=dev --json > "$RUNNER_TEMP/sushi-audit-root.json" || true
+          npm --prefix functions audit --omit=dev --json > "$RUNNER_TEMP/sushi-audit-functions.json" || true
+          node scripts/audit-summary.mjs "$RUNNER_TEMP/sushi-audit-root.json" "$RUNNER_TEMP/sushi-audit-functions.json"
