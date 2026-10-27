@@ -21,6 +21,7 @@ import {
   RESERVATION_TRANSITIONS,
   normalizeReservationName,
   validateReservationDraft,
+  isReservationTimeWithinHours,
   type ReservationStatus,
 } from '../../shared/domain.js';
 
@@ -602,6 +603,8 @@ export const createReservation = onCall(
       )
     )
       throw new HttpsError('failed-precondition', 'Unidade indisponível.');
+    if (config.enforceHours && !isReservationTimeWithinHours(input.date, input.time, config))
+      throw new HttpsError('failed-precondition', 'Horário fora do funcionamento da unidade.');
     let whatsapp: string;
     try {
       whatsapp = normalizePhone(input.whatsapp);
