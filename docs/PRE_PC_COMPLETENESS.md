@@ -1,8 +1,8 @@
 # PRE-PC COMPLETENESS — Japanese-Sushi
 
-Último SHA de código avaliado: `95f4ac2c6dc6379356ad8b0536943a8691404961`.
+Último SHA de código avaliado: `5b9ab2f45cf69e6e49d46d53de0f6e3e58b55418`.
 
-Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40545368745), **SUCCESS** em lint, typecheck, unitários, Functions, Rules, E2E, fixtures A×B, migração somente em emulator e build.
+Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40550619553), **SUCCESS** em lint, typecheck, unitários, Functions, Rules, E2E, fixtures A×B, migração somente em emulator e build.
 
 ## Fonte de verdade
 
@@ -23,12 +23,16 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 | Storefront público tenant-scoped, somente leitura | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/page.tsx`; Rules + build |
 | Categoria/produto simples com centavos e transação de membership | CODE_COMPLETE para simples | `functions/src/tenant-catalog.ts`; E2E |
 | Gestão de catálogo da nova loja | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/gestao/page.tsx` |
+| Política de preço autoritativo de retirada por tenant | CODE_COMPLETE PARA PICKUP SIMPLES | `functions/src/tenant-order-policy.ts`; unitários e E2E |
+| Pedido de retirada tenant-scoped com concorrência/idempotência e leitura somente do dono | CODE_COMPLETE PARA PICKUP SIMPLES | `functions/src/tenant-orders.ts`; E2E Auth/Firestore/Functions, tenant A×B |
+| Listagem e transições KDS por tenant com RBAC | CODE_COMPLETE PARA STATUS PREPARATÓRIOS | `functions/src/tenant-orders.ts`; E2E de staff A×B e transição inválida |
+| Tela de fila KDS por tenant | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/pedidos/page.tsx`; build, sem QA visual real |
 | Cache de carrinho preparado para tenant | PARTIAL | `components/providers.tsx`; ainda fixo em Teiko |
 | Duas fixtures Auth/Firestore e verificadores automatizados | CODE_COMPLETE | `functions/scripts/seed-tenant-emulator.mjs`, `verify-tenant-emulator.mjs`; CI |
 | Cópia idempotente Teiko somente em emulador | CODE_COMPLETE para ensaio | `functions/scripts/migrate-teiko-emulator.mjs`; CI |
 | Teiko original: pedidos, caixa, delivery, PDV, KDS, reservas | PRESERVED_LEGACY_CODE | Ver `README.md`, testes legados e CI; NÃO tenantizados |
 | Resolver e autenticação integrados em TODAS as rotas legadas | MISSING | Teiko ainda depende de `brandId=teiko` |
-| Functions `createOrder`, caixa, delivery e Finance A×B | MISSING | Não expor múltiplos tenants aos fluxos legados |
+| Functions de caixa, delivery, Finance e checkout completo A×B | MISSING | Pickup simples criado como fluxo isolado; NÃO implica atendimento completo, entrega nem financeiro multi-tenant |
 | Migração real autorizável, backup/rollback, cutover | MISSING + EXTERNAL_GATE | Nenhuma escrita real autorizada |
 | White-label completo, domínio, SEO, mídia e Storage | PARTIAL | Branding público limitado, sem custom domain |
 | Web Push real em device fechado | CODE_PRESENT_EXTERNAL_GATE | FCM/opt-in e testes emulator; VAPID/HTTPS/device real faltam |
@@ -40,7 +44,7 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 
 ## Próximos bloqueios implementáveis (não exigem PC)
 
-1. Tenant-aware end-to-end de pedido, KDS/PDV, delivery, finanças e reserva; preservar invariantes atuais.
+1. Expandir pickup simples para carrinho público, checkout homologável, PDV/KDS completo, delivery, finanças e reserva tenant-aware; preservar invariantes atuais.
 2. Conversão da Teiko legada sem quebra de Auth, IDs ou links, com migrador production-safe separado e proteção de rollback (sem executar).
 3. Domain resolver e branding completos para todos os tenants; regras de cache/storage.
 4. Após F4 passar: PlanCatalog/EntitlementService/Sushi approved matrix, backend gating, DemoMode.
