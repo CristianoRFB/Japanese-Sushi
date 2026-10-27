@@ -404,3 +404,61 @@ describe('F4 catalog scoped writes — owner, revocation, product isolation', ()
     expect((await callCat('tenantUpsertSimpleProduct', { ...product, priceCents: 1999 })).response.ok).toBe(false);
   }, 90_000);
 });
+
+
+describe('F4 tenant pickup order transaction and owner isolation', () => {
+  it('gates ordering, recalculates prices, deduplicates requests, protects A x B', async () => {
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const a = 'order-a-' + suffix;
+    const b = 'order-b-' + suffix;
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: false });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    for (const [tenantId, price] of [[a, 1800], [b, 900]] as const) {
+      await db.doc('tenants/' + tenantId + '/products/simple').set({
+        tenantId, name: 'Sushi de teste', active: true, productType: 'SIMPLE',
+        modifierGroupIds: [], sizes: [{ id: 'unico', active: true, basePriceCents: price }],
+      });
+    }
+    const input = {
+      tenantId: a, clientRequestId: crypto.randomUUID(), customerName: 'Cliente Teste',
+      items: [{ productId: 'simple', quantity: 2 }], clientPreviewTotalCents: 3600,
+    };
+    const invoke = (name: string, data: unknown, bearer = idToken) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + name,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + bearer },
+        body: JSON.stringify({ data }),
+      },
+    );
+    expect((await invoke('createTenantPickupOrder', input)).response.ok).toBe(false);
+    await db.doc('tenants/' + a).update({ orderingEnabled: true });
+    expect((await invoke('createTenantPickupOrder', { ...input, clientPreviewTotalCents: 1 })).response.ok).toBe(false);
+    const results = await Promise.all([
+      invoke('createTenantPickupOrder', input), invoke('createTenantPickupOrder', input),
+    ]);
+    expect(results.every(x => x.response.ok)).toBe(true);
+    const first = (results[0].body as { result: { orderId: string; totalCents: number } }).result;
+    const second = (results[1].body as { result: { orderId: string } }).result;
+    expect(first.totalCents).toBe(3600);
+    expect(first.orderId).toBe(second.orderId);
+    expect((await db.collection('tenants/' + a + '/orders').get()).size).toBe(1);
+    expect((await db.collection('tenants/' + b + '/orders').get()).size).toBe(0);
+    expect((await invoke('createTenantPickupOrder', { ...input, items: [{ productId: 'simple', quantity: 1 }] })).response.ok).toBe(false);
+    expect((await invoke('createTenantPickupOrder', { ...input, tenantId: b, clientRequestId: crypto.randomUUID() })).response.ok).toBe(false);
+    const mine = await invoke('getMyTenantOrder', { tenantId: a, orderId: first.orderId });
+    expect(mine.response.ok).toBe(true);
+    expect((mine.body as { result: { pricing: { totalCents: number } } }).result.pricing.totalCents).toBe(3600);
+    expect((await invoke('getMyTenantOrder', { tenantId: b, orderId: first.orderId })).response.ok).toBe(false);
+    const other = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ returnSecureToken: true }),
+    });
+    const otherToken = (other.body as { idToken: string }).idToken;
+    expect((await invoke('getMyTenantOrder', { tenantId: a, orderId: first.orderId }, otherToken)).response.ok).toBe(false);
+    await db.doc('tenants/' + a).update({ status: 'SUSPENDED' });
+    expect((await invoke('createTenantPickupOrder', { ...input, clientRequestId: crypto.randomUUID() })).response.ok).toBe(false);
+    // The customer does not lose access to historical data after suspension.
+    expect((await invoke('getMyTenantOrder', { tenantId: a, orderId: first.orderId })).response.ok).toBe(true);
+  }, 100_000);
+});
