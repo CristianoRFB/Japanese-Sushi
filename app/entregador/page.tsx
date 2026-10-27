@@ -92,6 +92,13 @@ export default function DriverPortalPage() {
     finally { setPushBusy(false); }
   }
 
+  async function deactivatePush() {
+    setPushBusy(true);
+    try { await disableDriverPush(); setPushInfo('Notificações desativadas neste dispositivo.'); }
+    catch (cause) { setPushInfo(friendlyError(cause)); }
+    finally { setPushBusy(false); }
+  }
+
   async function logOut() {
     try { await disableDriverPush(); }
     catch { /* Offline or revoked; server verifies active driver on every dispatch. */ }
@@ -133,6 +140,10 @@ export default function DriverPortalPage() {
         <p className="mt-1 text-sm text-[#66716a]">Opcional. Seu navegador pedirá permissão; se indisponível, a fila continua atualizando quando o portal estiver aberto.</p>
         <Button type="button" disabled={pushBusy || !online || Boolean(pushAvailability()) || !driver.enabled} onClick={() => void activatePush()} className="mt-3 rounded-full bg-[#0b100e] text-white">
           {pushBusy ? 'Ativando…' : 'Ativar notificações'}
+        </Button>
+        <Button type="button" variant="outline" disabled={pushBusy || !online || !driver.enabled || !Boolean(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY)}
+          onClick={() => void deactivatePush()} className="mt-3 ml-2 rounded-full">
+          Desativar neste dispositivo
         </Button>
         {pushAvailability() && <p className="mt-2 text-xs text-[#76510a]">{pushAvailability()}</p>}
         {pushInfo && <p role="status" className="mt-2 text-sm text-[#27523a]">{pushInfo}</p>}
