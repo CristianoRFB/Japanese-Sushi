@@ -515,3 +515,87 @@ describe('F4 pickup KDS tenant A/B security', () => {
     expect((await update(a, 'CANCELLED')).response.ok).toBe(false);
   }, 100_000);
 });
+
+
+describe('F4 pickup cash settlement and tenant financial isolation', () => {
+  it('keeps orders unsettled without cash register; settles once atomically; rejects cross-tenant, double posting and revoked membership', async () => {
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const a = 'cash-a-' + suffix, b = 'cash-b-' + suffix;
+    const ownerEmail = 'cash-owner-' + suffix + '@example.test';
+    const auth = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: ownerEmail,
+        password: 'synthetic-emulator-password', returnSecureToken: true }),
+    });
+    expect(auth.response.ok).toBe(true);
+    const uid = (auth.body as { localId: string }).localId;
+    const ownerToken = (auth.body as { idToken: string }).idToken;
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenantMemberships/' + a + '_' + uid).set({
+      tenantId: a, userUid: uid, role: 'tenant_owner', active: true,
+    });
+    await db.doc('tenants/' + a + '/products/simple').set({
+      tenantId: a, name: 'Combo sintético', active: true, productType: 'SIMPLE',
+      modifierGroupIds: [], sizes: [{ id: 'unico', active: true, basePriceCents: 2450 }],
+    });
+    const invoke = (name: string, data: unknown, bearer = ownerToken) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + name, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + bearer },
+        body: JSON.stringify({ data }),
+      },
+    );
+    const create = await invoke('createTenantPickupOrder', {
+      tenantId: a, clientRequestId: crypto.randomUUID(), customerName: 'Cliente Sintético',
+      items: [{ productId: 'simple', quantity: 2 }], clientPreviewTotalCents: 4900,
+    }, idToken);
+    expect(create.response.ok).toBe(true);
+    const orderId = (create.body as { result: { orderId: string } }).result.orderId;
+    for (const status of ['CONFIRMED', 'PREPARING', 'READY']) {
+      const progressed = await invoke('tenantUpdatePickupStatus', { tenantId: a, orderId, status });
+      expect(progressed.response.ok).toBe(true);
+    }
+    const settlement = { tenantId: a, orderId, cashReceivedCents: 5000, confirmCashReceived: true };
+    expect((await invoke('tenantSettlePickupCash', settlement)).response.ok).toBe(false);
+    expect((await invoke('tenantOpenPickupCashRegister', { tenantId: b, openingFloatCents: 3000 })).response.ok).toBe(false);
+    expect((await invoke('tenantOpenPickupCashRegister', { tenantId: a, openingFloatCents: 3000 })).response.ok).toBe(true);
+    expect((await invoke('tenantOpenPickupCashRegister', { tenantId: a, openingFloatCents: 3000 })).response.ok).toBe(false);
+    expect((await invoke('tenantSettlePickupCash', { ...settlement, cashReceivedCents: 4800 })).response.ok).toBe(false);
+    expect((await invoke('tenantSettlePickupCash', { ...settlement, confirmCashReceived: false })).response.ok).toBe(false);
+    expect((await invoke('tenantSettlePickupCash', { ...settlement, tenantId: b })).response.ok).toBe(false);
+    const settled = await Promise.all([
+      invoke('tenantSettlePickupCash', settlement),
+      invoke('tenantSettlePickupCash', settlement),
+    ]);
+    expect(settled.every(x => x.response.ok)).toBe(true);
+    const first = (settled[0].body as { result: { amountCents: number } }).result;
+    expect(first.amountCents).toBe(4900);
+    expect((await invoke('tenantSettlePickupCash', { ...settlement, cashReceivedCents: 6000 })).response.ok).toBe(false);
+    const [order, register, movement, ledger] = await Promise.all([
+      db.doc('tenants/' + a + '/orders/' + orderId).get(),
+      db.doc('tenants/' + a + '/cashRegisters/current').get(),
+      db.doc('tenants/' + a + '/cashMovements/SALE_' + orderId).get(),
+      db.doc('tenants/' + a + '/financeEntries/SALE_' + orderId).get(),
+    ]);
+    expect(order.data()?.status).toBe('COMPLETED');
+    expect(order.data()?.payment?.cashChangeCents).toBe(100);
+    expect(register.data()?.expectedCashCents).toBe(7900);
+    expect(register.data()?.salesCount).toBe(1);
+    expect(movement.data()?.amountCents).toBe(4900);
+    expect(ledger.data()?.amountCents).toBe(4900);
+    expect((await db.collection('tenants/' + b + '/financeEntries').get()).empty).toBe(true);
+    expect((await invoke('tenantUpdatePickupStatus', { tenantId: a, orderId, status: 'CANCELLED' })).response.ok).toBe(false);
+    const close = await invoke('tenantClosePickupCashRegister', { tenantId: a, countedCashCents: 7850 });
+    expect(close.response.ok).toBe(true);
+    expect((close.body as { result: { varianceCents: number } }).result.varianceCents).toBe(-50);
+    expect((await invoke('tenantClosePickupCashRegister', { tenantId: a, countedCashCents: 7850 })).response.ok).toBe(false);
+    const historical = await db.doc('tenants/' + a + '/cashRegisterSessions/' + register.data()?.sessionId).get();
+    expect(historical.data()?.status).toBe('CLOSED');
+    expect(historical.data()?.cashSalesCents).toBe(4900);
+    expect((await invoke('tenantSettlePickupCash', settlement)).response.ok).toBe(true);
+    await db.doc('tenantMemberships/' + a + '_' + uid).update({ active: false });
+    expect((await invoke('tenantOpenPickupCashRegister', { tenantId: a, openingFloatCents: 0 })).response.ok).toBe(false);
+    expect((await invoke('tenantGetPickupCashRegister', { tenantId: b })).response.ok).toBe(false);
+  }, 115_000);
+});
