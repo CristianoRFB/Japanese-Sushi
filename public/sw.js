@@ -46,3 +46,24 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+// Data-only notifications: messages must never contain PII or delivery codes.
+self.addEventListener('push', (event) => {
+  let info = {};
+  try {
+    const payload = event.data?.json() || {};
+    info = payload.data || payload;
+  } catch {
+    info = {};
+  }
+  event.waitUntil(self.registration.showNotification('Nova corrida atribuída', {
+    body: 'Abra seu portal para conferir a solicitação.',
+    tag: 'sushi-driver-assignment',
+    data: { link: '/entregador' },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(self.clients.openWindow('/entregador'));
+});

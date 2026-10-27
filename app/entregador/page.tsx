@@ -10,6 +10,7 @@ import { useAuth } from '@/components/providers';
 import { Button } from '@/components/ui/button';
 import { advanceDriverDelivery, respondToDelivery, setDriverAvailability, submitDeliveryCode } from '@/lib/delivery-operations';
 import { getFirebaseClient, hasFirebaseConfig } from '@/lib/firebase/client';
+import { enableDriverPush, disableDriverPush, pushAvailability } from '@/lib/driver-push';
 import { TEIKO_BRAND_ID } from '@/shared/domain';
 import { deliveryStatusLabels, driverStatusLabels, type DeliveryDriver, type DeliveryRecord, type DeliveryReceiptRequest } from '@/shared/delivery';
 
@@ -25,6 +26,8 @@ export default function DriverPortalPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [online, setOnline] = useState(true);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushInfo, setPushInfo] = useState('');
   const announcedDeliveryRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -82,6 +85,19 @@ export default function DriverPortalPage() {
     }
   }, [requestedDeliveryId, currentId]);
 
+  async function activatePush() {
+    setPushBusy(true);
+    try { await enableDriverPush(); setPushInfo('Notificações ativadas neste dispositivo.'); }
+    catch (cause) { setPushInfo(friendlyError(cause)); }
+    finally { setPushBusy(false); }
+  }
+
+  async function logOut() {
+    try { await disableDriverPush(); }
+    catch { /* Offline or revoked; server verifies active driver on every dispatch. */ }
+    await signOut(getFirebaseClient().auth);
+  }
+
   async function perform(task: () => Promise<unknown>, message: string) {
     setBusy(true); setError(''); setNotice('');
     try { await task(); setNotice(message); }
@@ -106,11 +122,21 @@ export default function DriverPortalPage() {
 
   const available = driver.status === 'AVAILABLE';
   return <main className="min-h-screen bg-[#f3f0e8] text-[#111613]">
-    <header className="bg-[#0b100e] px-4 py-5 text-white sm:px-7"><div className="mx-auto flex max-w-4xl items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-2xl bg-[#c7a773] text-[#0b100e]"><Bike /></span><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#c7a773]">Teiko Sushi · Entregas</p><h1 className="text-lg font-black">Olá, {driver.name.split(' ')[0]}</h1></div></div><button type="button" aria-label="Sair" onClick={() => void signOut(getFirebaseClient().auth)} className="grid size-10 place-items-center rounded-full bg-white/10"><LogOut className="size-4" /></button></div></header>
+    <header className="bg-[#0b100e] px-4 py-5 text-white sm:px-7"><div className="mx-auto flex max-w-4xl items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-2xl bg-[#c7a773] text-[#0b100e]"><Bike /></span><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#c7a773]">Teiko Sushi · Entregas</p><h1 className="text-lg font-black">Olá, {driver.name.split(' ')[0]}</h1></div></div><button type="button" aria-label="Sair" onClick={() => void logOut()} className="grid size-10 place-items-center rounded-full bg-white/10"><LogOut className="size-4" /></button></div></header>
     <div className="mx-auto max-w-4xl px-4 pb-24 pt-6 sm:px-7 sm:py-8">
       {!online && <p role="alert" className="mb-5 rounded-2xl bg-[#fff2d8] p-4 text-sm font-bold text-[#76510a]">Você está sem conexão. Não confirme etapas agora; reconecte-se e confira a corrida antes de tentar novamente.</p>}
       {(error || notice) && <p role={error ? 'alert' : 'status'} className={`mb-5 rounded-2xl p-4 text-sm font-bold ${error ? 'bg-[#fff0ef] text-[#9d1723]' : 'bg-[#e7f1df] text-[#27523a]'}`}>{error || notice}</p>}
       <section className="flex flex-col justify-between gap-4 rounded-[26px] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Sua disponibilidade</p><h2 className="mt-1 text-xl font-black">{driverStatusLabels[driver.status]}</h2><p className="mt-1 text-sm text-[#66716a]">Fique disponível somente quando puder aceitar uma nova corrida.</p></div><Button type="button" disabled={busy || Boolean(driver.currentDeliveryId) || !driver.enabled} onClick={() => void perform(() => setDriverAvailability({ driverId: driver.id, available: !available }), available ? 'Você ficará offline e não receberá novas corridas.' : 'Você está disponível para receber uma corrida.')} className={`min-h-11 rounded-full px-5 font-black ${available ? 'bg-[#e7f1df] text-[#27523a] hover:bg-[#d8e9cc]' : 'bg-[#0b100e] text-white'}`}>{available ? <ToggleRight className="size-5" /> : <ToggleLeft className="size-5" />}{available ? 'Ficar offline' : 'Ficar disponível'}</Button></section>
+
+      <section className="mt-5 rounded-[26px] bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-black">Notificações de novas corridas</h2>
+        <p className="mt-1 text-sm text-[#66716a]">Opcional. Seu navegador pedirá permissão; se indisponível, a fila continua atualizando quando o portal estiver aberto.</p>
+        <Button type="button" disabled={pushBusy || !online || Boolean(pushAvailability()) || !driver.enabled} onClick={() => void activatePush()} className="mt-3 rounded-full bg-[#0b100e] text-white">
+          {pushBusy ? 'Ativando…' : 'Ativar notificações'}
+        </Button>
+        {pushAvailability() && <p className="mt-2 text-xs text-[#76510a]">{pushAvailability()}</p>}
+        {pushInfo && <p role="status" className="mt-2 text-sm text-[#27523a]">{pushInfo}</p>}
+      </section>
 
       <div id="corrida" className="mt-7 flex scroll-mt-5 items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[#b5232b]">Em tempo real</p><h2 className="teiko-display mt-1 text-3xl">{current ? 'Corrida atual' : 'Nenhuma corrida ativa'}</h2></div><span className="grid size-11 place-items-center rounded-2xl bg-[#0b100e] text-[#c7a773]"><Clock3 /></span></div>
       {current ? <DeliveryCard delivery={current} busy={busy} receipt={receipt} onPerform={perform} onSendCode={sendCode} driverId={driver.id} /> : <div className="mt-4 rounded-[28px] border border-dashed border-[#070a08]/15 bg-white p-9 text-center"><PackageCheck className="mx-auto size-9 text-[#b5232b]" /><h3 className="mt-4 text-lg font-black">Tudo em dia</h3><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#66716a]">Quando a loja atribuir uma corrida, ela aparecerá aqui. Sua fila mostra somente pedidos ligados à sua conta.</p></div>}

@@ -565,6 +565,9 @@ service cloud.firestore {
                 && request.resource.data.cashAmountCents == request.resource.data.amountCents);
       allow update, delete: if false;
     }
+    // Push tokens and dispatch receipts can only be accessed through trusted Functions.
+    match /driverPushTokens/{id} { allow read, write: if false; }
+    match /driverPushDispatches/{id} { allow read, write: if false; }
     match /{document=**} { allow read, write: if false; }
   }
 }
