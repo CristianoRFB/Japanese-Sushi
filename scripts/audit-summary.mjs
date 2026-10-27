@@ -18,9 +18,22 @@ const filePairs = [
 const rows = [];
 for (const [name, filename] of filePairs) {
   let summary = null;
-  try { summary = safeSummary(JSON.parse(await readFile(filename, 'utf8'))); }
-  catch { /* A missing audit report must never be counted as zero vulnerabilities. */ }
-  rows.push({ name, summary });
+  let notable = [];
+  try {
+    const report = JSON.parse(await readFile(filename, 'utf8'));
+    summary = safeSummary(report);
+    notable = Object.entries(report.vulnerabilities || {})
+      .filter(([, value]) => ['high', 'critical'].includes(value?.severity))
+      .map(([pkg, value]) => ({
+        pkg,
+        severity: value.severity,
+        direct: value.isDirect === true ? 'sim' : 'não',
+        fix: value.fixAvailable === false ? 'sem fix automatizado'
+          : value.fixAvailable === true ? 'compatível sugerido'
+          : value.fixAvailable?.version || 'revisar',
+      }));
+  } catch { /* A missing audit report must never be counted as zero vulnerabilities. */ }
+  rows.push({ name, summary, notable });
 }
 const markdown = [
   '## Dependency audit — runtime only',
@@ -30,6 +43,13 @@ const markdown = [
   ...rows.map(({ name, summary }) => summary
     ? '| ' + name + ' | ' + summary.critical + ' | ' + summary.high + ' | ' + summary.moderate + ' | ' + summary.low + ' | ' + summary.total + ' |'
     : '| ' + name + ' | INDISPONÍVEL | — | — | — | — |'),
+  '',
+  '### Vulnerabilidades altas/críticas que exigem revisão',
+  '',
+  '| Área | Dependência | Severidade | Direta | Fix disponível |',
+  '|---|---|---|---|---|',
+  ...rows.flatMap(({ name, notable }) => notable.map((x) =>
+    '| ' + name + ' | ' + x.pkg + ' | ' + x.severity + ' | ' + x.direct + ' | ' + x.fix + ' |')),
   '',
   'A green CI does not make unresolved vulnerabilities safe to release.',
   '',
