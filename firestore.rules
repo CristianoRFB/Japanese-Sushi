@@ -637,6 +637,7 @@ service cloud.firestore {
     match /tenants/{tenantId} { allow read, write: if false; }
     match /tenantMemberships/{membershipId} { allow read, write: if false; }
     match /platformAuditEvents/{eventId} { allow read, write: if false; }
+    match /tenantAuditEvents/{eventId} { allow read, write: if false; }
     match /{document=**} { allow read, write: if false; }
   }
 }

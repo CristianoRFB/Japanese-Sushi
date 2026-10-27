@@ -356,3 +356,44 @@ describe('F4 tenant admin — claims, membership, suspensão e A×B', () => {
     expect(audit.size).toBeGreaterThan(2);
   }, 100_000);
 });
+
+describe('F4 catalog scoped writes — owner, revocation, product isolation', () => {
+  it('grava catálogo simples somente no tenant próprio e respeita idempotência', async () => {
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const a = 'catalog-a-' + suffix;
+    const b = 'catalog-b-' + suffix;
+    const email = 'tenant-owner-' + suffix + '@example.test';
+    const auth = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password: 'only-for-emulator', returnSecureToken: true }),
+    });
+    const token = (auth.body as { idToken: string }).idToken;
+    const uid = (auth.body as { localId: string }).localId;
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE' });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE' });
+    await db.doc('tenantMemberships/' + a + '_' + uid).set({
+      tenantId: a, userUid: uid, active: true, role: 'tenant_owner',
+    });
+    const callCat = async (name: string, payload: unknown) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + name,
+      { method: 'POST', headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ data: payload }) },
+    );
+    const category = { tenantId: a, categoryId: 'sushis', name: 'Sushis' };
+    expect((await callCat('tenantUpsertCategory', category)).response.ok).toBe(true);
+    const product = { tenantId: a, productId: 'salmao', categoryId: 'sushis',
+      name: 'Sushi Salmão', description: 'Categoria de teste', priceCents: 1990, active: true };
+    const first = await callCat('tenantUpsertSimpleProduct', product);
+    expect(first.response.ok).toBe(true);
+    const retry = await callCat('tenantUpsertSimpleProduct', product);
+    expect(retry.response.ok).toBe(true);
+    expect((retry.body as { result: { updated: boolean } }).result.updated).toBe(false);
+    const snapshot = await db.doc('tenants/' + a + '/products/salmao').get();
+    expect(snapshot.data()?.sizes?.[0]?.basePriceCents).toBe(1990);
+    expect((await db.doc('tenants/' + b + '/products/salmao').get()).exists).toBe(false);
+    expect((await callCat('tenantUpsertSimpleProduct', { ...product, tenantId: b })).response.ok).toBe(false);
+    expect((await callCat('tenantUpsertSimpleProduct', { ...product, priceCents: -100 })).response.ok).toBe(false);
+    await db.doc('tenantMemberships/' + a + '_' + uid).update({ active: false });
+    expect((await callCat('tenantUpsertSimpleProduct', { ...product, priceCents: 1999 })).response.ok).toBe(false);
+  }, 90_000);
+});
