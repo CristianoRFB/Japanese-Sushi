@@ -80,7 +80,7 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - `app/loja/[slug]` mostra catálogo público do tenant ativo; `app/loja/[slug]/gestao` oferece CRUD de categorias e produtos simples via Functions. Checkout Beta continua expressamente desativado.
 - Fixture sintética e emulador: `npm run test:tenant:fixture`. Cópia idempotente de dados Teiko apenas sintéticos em emulador: `npm run test:migration:emulator`.
 - CI com todos os checks verdes: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40545368745.
-- Backlog e gates revisados em [PRE_PC_COMPLETENESS.md](../../../PRE_PC_COMPLETENESS.md); staging/prod/LIVE continuam FALSE.
+- Backlog e gates revisados em [PRE_PC_COMPLETENESS.md](../../PRE_PC_COMPLETENESS.md); staging/prod/LIVE continuam FALSE.
 
 ## Preservar / adaptar
 
