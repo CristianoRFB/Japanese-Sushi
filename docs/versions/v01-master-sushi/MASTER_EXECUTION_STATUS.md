@@ -64,8 +64,9 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - F2: Web Push opt-in, revogação, tokens com autenticação no servidor e payload sem dados pessoais. Tests de Rules e E2E via emulador. Dispositivo real e VAPID ainda não homologados.
 - Reservas: validação do calendário além de 2026; agora criadas por callable autenticada, idempotente e com ownership. Rules bloqueiam criação direta. E2E valida horário e retry.
 - F4: shared/tenancy.ts, tests/tenancy.test.ts, chave de carrinho Teiko preparada para tenant e script de inspeção read-only para Firestore Emulator. NÃO comprova isolamento A×B.
+- F4 adicional: callable resolvePublicTenant aceita slug validado, retorna apenas branding/status públicos, conserva fallback legado Teiko e foi testada com Beta fictício e tenant suspenso no emulador. Aplicação e Rules continuam single-tenant; a função isolada NÃO implementa Core A×B.
 - CI agora inclui lint, TypeScript, unitários, service worker, Functions, Firestore Rules, E2E e build.
-- Dependências: Zod ^4.6.7 no frontend/Functions e body-parser 2.4.0 nas Functions após remediação sem --force e validação completa.
+- Dependências: Zod ^4.6.7 no frontend/Functions e body-parser 2.4.0 nas Functions após remediação sem --force e validação completa. CI final: 0 high/critical, com 14 achados moderados/baixos somados entre os dois runtimes (não deduplicados).
 - Evidência: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40514874611 (SUCCESS), commit de dependências 18264b915a6a87cb67129b4166ba4678c6ecdb24.
 - Nenhuma alteração em Firebase real, Cloudflare live, dados reais ou contas de faturamento.
 - F4 continua FAIL até tenant resolver, memberships, regras/Functions tenant-aware e testes A×B. F5 continua NEXT.
