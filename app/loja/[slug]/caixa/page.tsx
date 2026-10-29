@@ -16,6 +16,8 @@ type Register = {
   expectedCashCents?: number;
   cashSalesCents?: number;
   salesCount?: number;
+  cashRefundsCents?: number;
+  refundCount?: number;
 };
 type ReadyOrder = { id: string; orderNumber: string; status: string; totalCents: number; customerName: string };
 const brl = (cents: number) => (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -40,6 +42,7 @@ export default function TenantCashPage() {
   const [busy, setBusy] = useState(false);
   const [register, setRegister] = useState<Register>({ status: 'NOT_OPENED' });
   const [orders, setOrders] = useState<ReadyOrder[]>([]);
+  const [completedOrders, setCompletedOrders] = useState<ReadyOrder[]>([]);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -50,7 +53,9 @@ export default function TenantCashPage() {
       httpsCallable(functions, 'tenantListPickupOrders')({ tenantId }),
     ]);
     setRegister(reg.data as Register);
-    setOrders(((queue.data as { orders: ReadyOrder[] }).orders ?? []).filter(o => o.status === 'READY'));
+    const allOrders = (queue.data as { orders: ReadyOrder[] }).orders ?? [];
+    setOrders(allOrders.filter(o => o.status === 'READY'));
+    setCompletedOrders(allOrders.filter(o => o.status === 'COMPLETED'));
   }
   useEffect(() => {
     if (!ready) { setLoading(false); return; }
@@ -113,6 +118,23 @@ export default function TenantCashPage() {
       tenantId, orderId: order.id, cashReceivedCents, confirmCashReceived: true,
     }), 'Recebimento registrado uma vez no caixa e financeiro. Pedido concluído.');
   }
+  async function refund(event: FormEvent<HTMLFormElement>, order: ReadyOrder) {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    const reason = String(fields.get('reason') ?? '').trim();
+    if (reason.length < 8 || reason.length > 300) {
+      setError('Informe um motivo entre 8 e 300 caracteres.');
+      return;
+    }
+    if (fields.get('confirmed') !== 'on') {
+      setError('Confirme a devolução física do valor integral.');
+      return;
+    }
+    await execute(() => httpsCallable(getFirebaseClient().functions, 'tenantRefundPickupCash')({
+      tenantId, orderId: order.id, reason, confirmCashReturned: true,
+    }), 'Estorno integral lançado no financeiro e no caixa.');
+  }
+
   async function close(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -156,6 +178,7 @@ export default function TenantCashPage() {
           <h2 className="text-xl font-bold">Situação do caixa</h2>
           <p className="mt-2 text-sm">Estado: <strong>{register.status}</strong></p>
           <p className="mt-1 text-sm">Vendas registradas: {register.salesCount ?? 0}</p>
+          <p className="mt-1 text-sm">Estornos manuais: {register.refundCount ?? 0} · {brl(register.cashRefundsCents ?? 0)}</p>
           {register.status === 'OPEN' && <p className="mt-1 font-bold">Saldo esperado: {brl(register.expectedCashCents ?? 0)}</p>}
           {register.status !== 'OPEN' && role === 'tenant_owner' && <form onSubmit={openRegister} className="mt-4 flex flex-wrap items-end gap-3">
             <label>Fundo inicial (R$)<input name="float" required inputMode="decimal" defaultValue="0,00" className="mt-1 block rounded-lg border p-3" /></label>
@@ -184,6 +207,33 @@ export default function TenantCashPage() {
             </article>)}
           </div>
         </section>
+        {role === 'tenant_owner' && register.status === 'OPEN' && <section className="rounded-2xl bg-white p-5">
+          <h2 className="text-xl font-bold">Devoluções de dinheiro</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Estorno integral somente após você efetivamente devolver o dinheiro.
+            Não estorna PIX/cartão, não movimenta conta bancária e não emite documento fiscal.
+          </p>
+          {completedOrders.length === 0 && <p className="mt-4 text-sm">Nenhuma venda concluída nas últimas 50 posições da fila.</p>}
+          <div className="mt-4 grid gap-4">{completedOrders.map(order =>
+            <article key={order.id} className="rounded-xl border p-4">
+              <p className="font-bold">{order.orderNumber} · {order.customerName}</p>
+              <p className="mt-1 text-sm font-semibold">Valor integral: {brl(order.totalCents)}</p>
+              <form onSubmit={event => void refund(event, order)} className="mt-3 grid gap-3">
+                <label className="text-sm">Motivo da devolução
+                  <textarea required name="reason" minLength={8} maxLength={300} rows={2}
+                    className="mt-1 w-full rounded-lg border p-3" />
+                </label>
+                <label className="flex items-start gap-2 text-sm">
+                  <input type="checkbox" required name="confirmed" className="mt-1" />
+                  Confirmei a devolução física de {brl(order.totalCents)} ao cliente.
+                </label>
+                <Button variant="outline" type="submit" disabled={busy || (register.expectedCashCents ?? 0) < order.totalCents}>
+                  Registrar estorno integral
+                </Button>
+              </form>
+            </article>
+          )}</div>
+        </section>}
       </div>}
     </div>
   </main>;
