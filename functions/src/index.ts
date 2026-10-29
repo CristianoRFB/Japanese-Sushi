@@ -766,3 +766,5 @@ export { tenantCreateReservation, tenantGetMyReservation, tenantListReservations
 export { tenantGetBrandingSettings, tenantUpdateBranding } from './tenant-branding.js';
 
 export { tenantRefundPickupCash } from './tenant-refunds.js';
+
+export { tenantGetRecentFinanceSummary } from './tenant-finance-report.js';
