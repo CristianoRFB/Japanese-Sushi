@@ -69,3 +69,14 @@ Isso não habilita nenhum cliente real ou o tenant original Teiko.
 - [ ] Desligar em fixture `orderingEnabled`; cardápio permanece visível, mas checkout some.
 
 A execução em navegador real ainda precisa de evidência. Não confundir fixtures sintéticas com clientes nem com homologação.
+
+## Reservas (somente emulador, nunca ativar comercialmente agora)
+
+- [ ] Abrir `/loja/tenant-a/reservas`, com a fixture local tenant-a ativa.
+- [ ] Enviar solicitação com telefone e nome fictícios, data futura válida e quantidade de pessoas.
+- [ ] Confirmar a mensagem 'solicitação recebida, ainda não confirmada'.
+- [ ] Abrir `/loja/tenant-a/reservas/<reservationId>` na mesma sessão e conferir status.
+- [ ] Entrar com owner-a em `/loja/tenant-a/reservas/gestao` e confirmar somente após verificação humana de capacidade.
+- [ ] Confirmar atualização de status e testar cancelamento pelo cliente.
+- [ ] Repetir como owner-b ou cliente de outra sessão: acesso negado.
+- [ ] Em produção, feature permanece desativada até PlanCatalog/EntitlementService Pro+ e capacidade de mesas homologados.

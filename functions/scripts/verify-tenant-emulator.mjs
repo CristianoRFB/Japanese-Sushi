@@ -23,7 +23,7 @@ for (const [tenantId,email,productId,otherId] of [
     db.doc('tenants/' + tenantId + '/products/' + otherId).get(),
   ]);
   if (tenant.data()?.status !== 'ACTIVE' || tenant.data()?.developmentSeed !== true
-    || tenant.data()?.orderingEnabled !== true)
+    || tenant.data()?.orderingEnabled !== true || tenant.data()?.reservationsEnabled !== true)
     throw new Error('Synthetic tenant invalid');
   if (membership.data()?.tenantId !== tenantId || membership.data()?.userUid !== user.uid
     || membership.data()?.role !== 'tenant_owner' || membership.data()?.active !== true)
