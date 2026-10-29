@@ -184,3 +184,30 @@ export const tenantUpdatePickupStatus = onCall(options, async request => {
   });
   return { ok: true, status };
 });
+
+
+const listMyOrdersSchema = z.object({ tenantId: z.string().refine(validTenantSlug) }).strict();
+
+// History is scoped to the authenticated Firebase user AND the tenant namespace.
+// No global order queries, phone-number lookups or staff privileges here.
+export const listMyTenantOrders = onCall(options, async request => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sessão necessária.');
+  const parsed = listMyOrdersSchema.safeParse(request.data);
+  if (!parsed.success) throw new HttpsError('invalid-argument', 'Restaurante inválido.');
+  if ((await getAuth().getUser(uid)).disabled)
+    throw new HttpsError('permission-denied', 'Conta desativada.');
+  const tenantId = parsed.data.tenantId;
+  const snap = await getFirestore().collection('tenants/' + tenantId + '/orders')
+    .where('ownerUid', '==', uid).limit(20).get();
+  return {
+    orders: snap.docs.filter(doc => doc.data().tenantId === tenantId).map(doc => {
+      const order = doc.data();
+      return {
+        id: doc.id, orderNumber: order.orderNumber, status: order.status,
+        totalCents: order.pricing?.totalCents ?? 0,
+        createdAt: order.createdAt?.toDate?.().toISOString() ?? null,
+      };
+    }).sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')),
+  };
+});

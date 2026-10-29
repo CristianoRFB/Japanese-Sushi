@@ -757,6 +757,6 @@ export { platformCreateTenant, platformSetTenantStatus, platformSetMembership, g
 
 export { tenantUpsertCategory, tenantUpsertSimpleProduct, tenantGetManageCatalog } from './tenant-catalog.js';
 
-export { createTenantPickupOrder, getMyTenantOrder, tenantListPickupOrders, tenantUpdatePickupStatus } from './tenant-orders.js';
+export { createTenantPickupOrder, getMyTenantOrder, listMyTenantOrders, tenantListPickupOrders, tenantUpdatePickupStatus } from './tenant-orders.js';
 
 export { tenantOpenPickupCashRegister, tenantGetPickupCashRegister, tenantSettlePickupCash, tenantClosePickupCashRegister } from './tenant-cash.js';
