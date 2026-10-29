@@ -52,3 +52,20 @@ Senha sintética: `EMULATOR_ONLY_Never_Use_in_Production_2026!` (não é segredo
 - [ ] PRODUCTION_READY e LIVE continuam false até evidência de staging/produção e aceite humano.
 
 STOP: projeto errado, credencial real em arquivo, acesso cruzado A/B, pedido com preço adulterado, falha de Rules, custos não aprovados ou tentativa de escrita real.
+
+## Checkout público sintético (somente emulador)
+
+As fixtures de Tenant A/B têm `orderingEnabled=true` **apenas no emulador**.
+Isso não habilita nenhum cliente real ou o tenant original Teiko.
+
+- [ ] Na loja `/loja/tenant-a`, adicionar o item de preço único ao carrinho.
+- [ ] Confirmar retirada com nome fictício e verificar navegação para `/loja/tenant-a/acompanhar/<id>`.
+- [ ] Verificar que `orderNumber`, itens e total aparecem na mesma sessão Auth.
+- [ ] Em `/loja/tenant-a/pedidos`, confirmar, preparar e marcar pronto.
+- [ ] Em `/loja/tenant-a/caixa`, abrir caixa e confirmar recebimento de dinheiro fictício.
+- [ ] Atualizar o recibo: `COMPLETED`, lançamentos financeiros únicos.
+- [ ] Confirmar que owner-a não vê nem recebe pedido do tenant-b.
+- [ ] Repetir com produto desativado/preço alterado; a Function deve negar preço antigo.
+- [ ] Desligar em fixture `orderingEnabled`; cardápio permanece visível, mas checkout some.
+
+A execução em navegador real ainda precisa de evidência. Não confundir fixtures sintéticas com clientes nem com homologação.

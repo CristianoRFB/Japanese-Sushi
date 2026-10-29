@@ -45,7 +45,7 @@ for (const entry of fixtures) {
   batch.set(tenantRef, {
     id: entry.tenantId, slug: entry.tenantId, status: 'ACTIVE',
     branding: { displayName: entry.name, primaryColor: '#9b2639' },
-    developmentSeed: true, updatedAt: FieldValue.serverTimestamp(),
+    developmentSeed: true, orderingEnabled: true, updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   batch.set(db.doc('tenantMemberships/' + entry.tenantId + '_' + owner.uid), {
     tenantId: entry.tenantId, userUid: owner.uid, role: 'tenant_owner', active: true,
