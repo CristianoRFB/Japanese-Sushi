@@ -81,6 +81,7 @@ export const tenantOpenPickupCashRegister = onCall(options, async request => {
     const data = {
       tenantId, sessionId: sessionRef.id, status: 'OPEN',
       openingFloatCents, cashSalesCents: 0, salesCount: 0,
+      cashRefundsCents: 0, refundCount: 0,
       expectedCashCents: openingFloatCents,
       openedBy: uid, openedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -111,6 +112,8 @@ export const tenantGetPickupCashRegister = onCall(options, async request => {
       expectedCashCents: data.expectedCashCents,
       cashSalesCents: data.cashSalesCents,
       salesCount: data.salesCount,
+      cashRefundsCents: data.cashRefundsCents ?? 0,
+      refundCount: data.refundCount ?? 0,
     };
 });
 
@@ -233,6 +236,8 @@ export const tenantClosePickupCashRegister = onCall(options, async request => {
     tx.update(registerRef, close);
     tx.update(sessionRef, {
       ...close, cashSalesCents: data.cashSalesCents, salesCount: data.salesCount,
+      cashRefundsCents: data.cashRefundsCents ?? 0,
+      refundCount: data.refundCount ?? 0,
       expectedCashCents: data.expectedCashCents,
     });
     tx.create(auditRef, {
