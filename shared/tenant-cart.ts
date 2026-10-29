@@ -1,4 +1,4 @@
-import { validTenantSlug } from './tenancy';
+import { validTenantSlug } from './tenancy.js';
 
 export type TenantCartItem = { productId: string; quantity: number };
 export type TenantCartProduct = {
