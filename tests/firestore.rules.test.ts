@@ -143,6 +143,181 @@ async function seedOrder(id: string, order: ReturnType<typeof orderData>) {
 }
 
 describe('Firestore Rules Spark Teiko', () => {
+
+  it('nega acesso cruzado a reservas novas, telefone privado e escritas diretas A×B', async () => {
+    const a = 'rule-res-a-' + testRunId;
+    const b = 'rule-res-b-' + testRunId;
+    const uidA = 'guest-a-' + testRunId;
+    const uidB = 'guest-b-' + testRunId;
+    const staffA = 'staff-res-a-' + testRunId;
+    await env.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'tenants', a), { slug: a, status: 'ACTIVE' });
+      await setDoc(doc(db, 'tenants', b), { slug: b, status: 'ACTIVE' });
+      await setDoc(doc(db, 'tenantMemberships', a + '_' + staffA), {
+        tenantId: a, userUid: staffA, role: 'staff', active: true,
+      });
+      await setDoc(doc(db, 'tenants', a, 'reservations', 'reservation-a'), {
+        tenantId: a, ownerUid: uidA, name: 'Pessoa A', phone: '17999999999',
+        date: '2026-11-10', time: '19:00', people: 2, status: 'REQUESTED',
+      });
+      await setDoc(doc(db, 'tenants', b, 'reservations', 'reservation-b'), {
+        tenantId: b, ownerUid: uidB, name: 'Pessoa B', phone: '17999999998',
+        date: '2026-11-10', time: '19:00', people: 2, status: 'REQUESTED',
+      });
+    });
+    const customerA = env.authenticatedContext(uidA).firestore();
+    const customerB = env.authenticatedContext(uidB).firestore();
+    const workerA = env.authenticatedContext(staffA).firestore();
+    const anonymous = env.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(customerA, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertFails(getDoc(doc(customerB, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertFails(getDoc(doc(customerA, 'tenants', b, 'reservations', 'reservation-b')));
+    await assertFails(getDoc(doc(anonymous, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertSucceeds(getDoc(doc(workerA, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertFails(getDoc(doc(workerA, 'tenants', b, 'reservations', 'reservation-b')));
+    await assertFails(setDoc(doc(customerA, 'tenants', a, 'reservations', 'forged'), {
+      tenantId: a, ownerUid: uidA, status: 'CONFIRMED',
+    }));
+    await assertFails(updateDoc(doc(workerA, 'tenants', a, 'reservations', 'reservation-a'), {
+      status: 'CONFIRMED',
+    }));
+    await assertFails(getDocs(collection(workerA, 'tenants', b, 'reservations')));
+    await env.withSecurityRulesDisabled(async context => {
+      await updateDoc(doc(context.firestore(), 'tenants', a), { status: 'SUSPENDED' });
+    });
+    await assertFails(getDoc(doc(workerA, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertFails(getDoc(doc(customerA, 'tenants', a, 'reservations', 'reservation-a')));
+  });
+
+
+  it('isola coleções novas por tenant, papel e status sem afetar Teiko legada', async () => {
+    const a = 'alpha-' + testRunId;
+    const b = 'beta-' + testRunId;
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'tenants', a), { slug: a, status: 'ACTIVE' });
+      await setDoc(doc(db, 'tenants', b), { slug: b, status: 'ACTIVE' });
+      for (const [tenantId, uid, role] of [
+        [a, 'staff-tenant-a', 'staff'], [b, 'staff-tenant-b', 'staff'],
+        [a, 'tenant-owner-a', 'tenant_owner'], [a, 'driver-a', 'driver'],
+      ]) {
+        await setDoc(doc(db, 'tenantMemberships', tenantId + '_' + uid), {
+          tenantId, userUid: uid, role, active: true,
+        });
+      }
+      await setDoc(doc(db, 'tenants', a, 'products', 'menu'), { tenantId: a, active: true, name: 'Menu A' });
+      await setDoc(doc(db, 'tenants', b, 'products', 'menu'), { tenantId: b, active: true, name: 'Menu B' });
+      await setDoc(doc(db, 'tenants', b, 'products', 'spoofed'), { tenantId: a, active: true, name: 'Spoof' });
+      await setDoc(doc(db, 'tenants', a, 'orders', 'order-a'), { tenantId: a, ownerUid: 'customer-a' });
+      await setDoc(doc(db, 'tenants', b, 'orders', 'order-b'), { tenantId: b, ownerUid: 'customer-b' });
+      await setDoc(doc(db, 'tenants', a, 'deliveries', 'delivery-a'), { tenantId: a, driverId: 'driver-a' });
+      await setDoc(doc(db, 'tenants', b, 'deliveries', 'delivery-b'), { tenantId: b, driverId: 'driver-b' });
+      await setDoc(doc(db, 'tenants', a, 'financeEntries', 'entry'), { tenantId: a, amountCents: 100 });
+    });
+    const staffA = env.authenticatedContext('staff-tenant-a').firestore();
+    const staffB = env.authenticatedContext('staff-tenant-b').firestore();
+    const ownerA = env.authenticatedContext('tenant-owner-a').firestore();
+    const driverA = env.authenticatedContext('driver-a').firestore();
+    const customerA = env.authenticatedContext('customer-a').firestore();
+    const anon = env.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(anon, 'tenants', a, 'products', 'menu')));
+    // Real storefront query: Rules must authorize the entire result set,
+    // not just a manually fetched document.
+    await assertSucceeds(getDocs(query(
+      collection(anon, 'tenants', a, 'products'),
+      where('tenantId', '==', a), where('active', '==', true),
+    )));
+    await assertFails(getDocs(query(collection(anon, 'tenants', a, 'products'), where('active', '==', true))));
+    await assertFails(getDoc(doc(anon, 'tenants', b, 'products', 'spoofed')));
+    await assertSucceeds(getDoc(doc(staffA, 'tenants', a, 'orders', 'order-a')));
+    await assertFails(getDoc(doc(staffA, 'tenants', b, 'orders', 'order-b')));
+    await assertSucceeds(getDoc(doc(staffB, 'tenants', b, 'orders', 'order-b')));
+    await assertFails(getDoc(doc(staffB, 'tenants', a, 'orders', 'order-a')));
+    await assertSucceeds(getDoc(doc(customerA, 'tenants', a, 'orders', 'order-a')));
+    await assertFails(getDoc(doc(customerA, 'tenants', b, 'orders', 'order-b')));
+    await assertSucceeds(getDoc(doc(driverA, 'tenants', a, 'deliveries', 'delivery-a')));
+    await assertFails(getDoc(doc(driverA, 'tenants', b, 'deliveries', 'delivery-b')));
+    await assertFails(getDoc(doc(staffA, 'tenants', a, 'financeEntries', 'entry')));
+    await assertSucceeds(getDoc(doc(ownerA, 'tenants', a, 'financeEntries', 'entry')));
+    await assertFails(setDoc(doc(ownerA, 'tenants', a, 'orders', 'forged'), { tenantId: a }));
+    await assertFails(setDoc(doc(ownerA, 'tenants', a, 'products', 'forged'), { tenantId: a, active: true }));
+    await assertFails(getDoc(doc(ownerA, 'tenants', a)));
+    await env.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'tenants', a), { status: 'SUSPENDED' });
+    });
+    await assertFails(getDoc(doc(staffA, 'tenants', a, 'orders', 'order-a')));
+    await assertFails(getDoc(doc(anon, 'tenants', a, 'products', 'menu')));
+    await assertFails(getDocs(query(
+      collection(anon, 'tenants', a, 'products'),
+      where('tenantId', '==', a), where('active', '==', true),
+    )));
+    await assertFails(getDoc(doc(ownerA, 'tenants', a, 'financeEntries', 'entry')));
+    // Legacy Teiko remains unaffected by new-namespace suspension.
+    await assertSucceeds(getDoc(doc(anon, 'products', 'active')));
+  }, 50_000);
+
+
+  it('nenhum cliente acessa tenants, memberships ou auditoria privilegiada, mesmo com claim', async () => {
+    const id = 'rules-' + testRunId;
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'tenants', id), { slug: id, status: 'ACTIVE' });
+      await setDoc(doc(db, 'tenantMemberships', id + '_member'), { tenantId: id, userUid: 'member', role: 'staff', active: true });
+      await setDoc(doc(db, 'platformAuditEvents', id), { tenantId: id, actorUid: 'owner', action: 'TENANT_CREATED' });
+    });
+    const surfaces = [
+      ['tenants', id],
+      ['tenantMemberships', id + '_member'],
+      ['platformAuditEvents', id],
+    ];
+    for (const db of [
+      env.unauthenticatedContext().firestore(),
+      env.authenticatedContext('admin-uid').firestore(),
+      env.authenticatedContext('member', { tenantId: id }).firestore(),
+      env.authenticatedContext('platform-owner', { platform_owner: true }).firestore(),
+    ]) {
+      for (const [collectionName, documentId] of surfaces) {
+        await assertFails(getDoc(doc(db, collectionName, documentId)));
+        await assertFails(setDoc(doc(db, collectionName, 'forged-' + id), { role: 'platform_owner', status: 'ACTIVE' }));
+        await assertFails(deleteDoc(doc(db, collectionName, documentId)));
+      }
+    }
+  });
+
+  it('nega criação direta de reserva em qualquer ano: apenas Function autorizada', async () => {
+    const customerDb = env.authenticatedContext('customer-uid').firestore();
+    await assertFails(setDoc(doc(customerDb, 'reservations', 'direct-2027-' + testRunId), {
+      ...reservationData('customer-uid'), date: '2027-12-10',
+    }));
+  });
+
+  it('bloqueia leitura e escrita de tokens FCM e registros de dispatch para todo cliente, inclusive admin', async () => {
+    const tokenId = 'push-private-' + testRunId;
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'driverPushTokens', tokenId), {
+        token: 'secret-registration-token', driverUid: 'driver-uid', tenantId: 'teiko',
+      });
+      await setDoc(doc(db, 'driverPushDispatches', tokenId), {
+        tenantId: 'teiko', driverUid: 'driver-uid', state: 'SENT',
+      });
+    });
+    for (const uid of ['admin-uid', 'staff-uid', 'customer-uid', 'driver-uid']) {
+      const db = env.authenticatedContext(uid).firestore();
+      for (const bucket of ['driverPushTokens', 'driverPushDispatches']) {
+        await assertFails(getDoc(doc(db, bucket, tokenId)));
+        await assertFails(setDoc(doc(db, bucket, 'forged-' + uid), { token: 'unauthorized', driverUid: uid }));
+        await assertFails(updateDoc(doc(db, bucket, tokenId), { state: 'HACKED' }));
+        await assertFails(deleteDoc(doc(db, bucket, tokenId)));
+      }
+    }
+    const db = env.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(db, 'driverPushTokens', tokenId)));
+    await assertFails(getDoc(doc(db, 'driverPushDispatches', tokenId)));
+  });
+
+
   it('permite catálogo público, mas nega pedidos alheios e promoção de cliente', async () => {
     const publicDb = env.unauthenticatedContext().firestore();
     await assertSucceeds(getDoc(doc(publicDb, 'products', 'active')));
@@ -338,12 +513,10 @@ describe('Firestore Rules Spark Teiko', () => {
 
   it('permite reserva própria e gestão administrativa', async () => {
     const customerDb = env.authenticatedContext('customer-uid').firestore();
-    await assertSucceeds(
-      setDoc(
-        doc(customerDb, 'reservations', `reservation-${testRunId}`),
-        reservationData('customer-uid'),
-      ),
-    );
+    await assertFails(setDoc(doc(customerDb, 'reservations', 'forged-' + testRunId), reservationData('customer-uid')));
+    await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'reservations', 'reservation-' + testRunId), reservationData('customer-uid'));
+    });
     await assertSucceeds(
       getDoc(doc(customerDb, 'reservations', `reservation-${testRunId}`)),
     );
@@ -376,20 +549,10 @@ describe('Firestore Rules Spark Teiko', () => {
     );
   });
 
-  it('bloqueia reserva fora de 2026 e datas impossíveis', async () => {
+  it('nega reservas gravadas pelo cliente sem Function, inclusive datas inválidas', async () => {
     const customerDb = env.authenticatedContext('reservation-invalid-uid').firestore();
-    await assertFails(
-      setDoc(
-        doc(customerDb, 'reservations', `reservation-2027-${testRunId}`),
-        { ...reservationData('reservation-invalid-uid'), date: '2027-02-11' },
-      ),
-    );
-    await assertFails(
-      setDoc(
-        doc(customerDb, 'reservations', `reservation-impossible-${testRunId}`),
-        { ...reservationData('reservation-invalid-uid'), date: '2026-02-31' },
-      ),
-    );
+    await assertFails(setDoc(doc(customerDb, 'reservations', 'forged-old-' + testRunId),
+      { ...reservationData('reservation-invalid-uid'), date: '2026-02-31' }));
   });
 
   it('bloqueia nome emoji, telefone inválido e texto excessivo mesmo com cliente modificado', async () => {

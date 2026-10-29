@@ -22,6 +22,17 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:sw
       - run: npm run test:functions
+      - run: npm --prefix functions run build
       - run: npm run test:rules
+      - run: npm run test:e2e
+      - run: npm run test:tenant:fixture
+      - run: npm run test:migration:emulator
       - run: npm run build
+      - name: Dependency audit (runtime, evidence only)
+        shell: bash
+        run: |
+          npm audit --omit=dev --json > "$RUNNER_TEMP/sushi-audit-root.json" || true
+          npm --prefix functions audit --omit=dev --json > "$RUNNER_TEMP/sushi-audit-functions.json" || true
+          node scripts/audit-summary.mjs "$RUNNER_TEMP/sushi-audit-root.json" "$RUNNER_TEMP/sushi-audit-functions.json"

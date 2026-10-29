@@ -21,6 +21,7 @@ import {
   RESERVATION_TRANSITIONS,
   normalizeReservationName,
   validateReservationDraft,
+  isReservationTimeWithinHours,
   type ReservationStatus,
 } from '../../shared/domain.js';
 
@@ -575,6 +576,8 @@ const reservationSchema = z.object({
 export const createReservation = onCall(
   { region, timeoutSeconds: 15, memory: '256MiB', enforceAppCheck },
   async (request) => {
+    if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Faça login para reservar.');
+    const ownerUid = request.auth.uid;
     const parsed = reservationSchema.safeParse(request.data);
     if (!parsed.success)
       throw new HttpsError(
@@ -600,6 +603,8 @@ export const createReservation = onCall(
       )
     )
       throw new HttpsError('failed-precondition', 'Unidade indisponível.');
+    if (config.enforceHours && !isReservationTimeWithinHours(input.date, input.time, config))
+      throw new HttpsError('failed-precondition', 'Horário fora do funcionamento da unidade.');
     let whatsapp: string;
     try {
       whatsapp = normalizePhone(input.whatsapp);
@@ -613,9 +618,13 @@ export const createReservation = onCall(
     const reservationRef = db.collection('reservations').doc();
     await db.runTransaction(async (transaction) => {
       const requestSnapshot = await transaction.get(requestRef);
-      if (requestSnapshot.exists) return;
+      if (requestSnapshot.exists) {
+        if (requestSnapshot.data()?.ownerUid !== ownerUid) throw new HttpsError('permission-denied', 'Reserva pertence a outra sessão.');
+        return;
+      }
       transaction.create(reservationRef, {
         brandId: TEIKO_BRAND_ID,
+        ownerUid,
         unitId: input.unitId,
         name: normalizeReservationName(input.name),
         whatsapp,
@@ -633,6 +642,7 @@ export const createReservation = onCall(
       });
       transaction.create(requestRef, {
         brandId: TEIKO_BRAND_ID,
+        ownerUid,
         reservationId: reservationRef.id,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -738,3 +748,23 @@ export const web = onRequest(
     res.send(Buffer.from(await response.arrayBuffer()));
   },
 );
+
+export { registerDriverPushToken, revokeDriverPushToken, notifyDriverOnAssignment } from './driver-push.js';
+
+export { resolvePublicTenant } from './resolve-tenant.js';
+
+export { platformCreateTenant, platformSetTenantStatus, platformSetMembership, getMyTenantAccess, platformListTenants } from './tenant-admin.js';
+
+export { tenantUpsertCategory, tenantUpsertSimpleProduct, tenantUpsertVariantProduct, tenantGetManageCatalog } from './tenant-catalog.js';
+
+export { createTenantPickupOrder, getMyTenantOrder, listMyTenantOrders, tenantListPickupOrders, tenantUpdatePickupStatus } from './tenant-orders.js';
+
+export { tenantOpenPickupCashRegister, tenantGetPickupCashRegister, tenantSettlePickupCash, tenantClosePickupCashRegister } from './tenant-cash.js';
+
+export { tenantCreateReservation, tenantGetMyReservation, tenantListReservations, tenantSetReservationStatus, tenantCancelMyReservation, tenantListMyReservations } from './tenant-reservations.js';
+
+export { tenantGetBrandingSettings, tenantUpdateBranding } from './tenant-branding.js';
+
+export { tenantRefundPickupCash } from './tenant-refunds.js';
+
+export { tenantGetRecentFinanceSummary } from './tenant-finance-report.js';
