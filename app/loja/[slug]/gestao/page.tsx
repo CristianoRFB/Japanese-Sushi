@@ -2,6 +2,7 @@
 
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -173,7 +174,10 @@ export default function TenantCatalogManagementPage() {
   return <main className="min-h-screen bg-[#f3f0e8] p-4 text-[#101612] sm:p-8">
     <div className="mx-auto max-w-5xl">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div><p className="text-xs font-bold uppercase tracking-wider text-[#b5232b]">Restaurante {tenantId}</p><h1 className="text-3xl font-black">Gerenciar cardápio</h1></div>
+        <div><p className="text-xs font-bold uppercase tracking-wider text-[#b5232b]">Restaurante {tenantId}</p><h1 className="text-3xl font-black">Gerenciar cardápio</h1>
+          <Link href={'/loja/' + tenantId + '/branding'} className="mt-2 inline-block text-sm underline">
+            Editar nome, cores e logo
+          </Link></div>
         {user && <Button variant="outline" onClick={() => void signOut(getFirebaseClient().auth)}>Sair</Button>}
       </header>
       {loading && <p role="status" className="mt-6 rounded-xl bg-white p-5">Verificando permissões…</p>}
