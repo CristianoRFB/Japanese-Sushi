@@ -709,3 +709,72 @@ describe('F4 reservations isolated in new tenants (emulator only)', () => {
     expect((await invoke('tenantCreateReservation', { ...draft, clientRequestId: crypto.randomUUID() })).response.ok).toBe(false);
   }, 120_000);
 });
+
+
+describe('F4 multi-size catalog checkout with authoritative variants', () => {
+  it('prevents forged size, cross-tenant catalogue, unapproved category and duplicate postings', async () => {
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const a = 'variant-a-' + suffix, b = 'variant-b-' + suffix;
+    const email = 'variant-' + suffix + '@example.test';
+    const login = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password: 'synthetic-emulator-only', returnSecureToken: true }),
+    });
+    expect(login.response.ok).toBe(true);
+    const uid = (login.body as { localId: string }).localId;
+    const token = (login.body as { idToken: string }).idToken;
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenantMemberships/' + a + '_' + uid).set({
+      tenantId: a, userUid: uid, role: 'tenant_owner', active: true,
+    });
+    await db.doc('tenants/' + a + '/categories/combo').set({
+      tenantId: a, name: 'Combos', active: true,
+    });
+    const invoke = (name: string, data: unknown, bearer = token) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + name, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + bearer },
+        body: JSON.stringify({ data }),
+      },
+    );
+    const variant = { tenantId: a, categoryId: 'combo', productId: 'temaki',
+      name: 'Temaki de teste', description: '', active: true,
+      sizes: [
+        { id: 'pequeno', label: 'Pequeno', priceCents: 1900, active: true },
+        { id: 'grande', label: 'Grande', priceCents: 2900, active: true },
+      ],
+    };
+    expect((await invoke('tenantUpsertVariantProduct', variant)).response.ok).toBe(true);
+    const duplicate = await invoke('tenantUpsertVariantProduct', variant);
+    expect(duplicate.response.ok).toBe(true);
+    expect((duplicate.body as { result: { updated: boolean } }).result.updated).toBe(false);
+    expect((await invoke('tenantUpsertVariantProduct', {
+      ...variant, sizes: [variant.sizes[0], variant.sizes[0]],
+    })).response.ok).toBe(false);
+    expect((await invoke('tenantUpsertVariantProduct', { ...variant, tenantId: b })).response.ok).toBe(false);
+    expect((await invoke('tenantUpsertSimpleProduct', {
+      tenantId: a, productId: 'temaki', categoryId: 'combo', name: 'Acidental',
+      priceCents: 100, active: true,
+    })).response.ok).toBe(false);
+    const requestData = { tenantId: a, clientRequestId: crypto.randomUUID(),
+      customerName: 'Cliente de teste',
+      items: [{ productId: 'temaki', sizeId: 'grande', quantity: 2 }],
+      clientPreviewTotalCents: 5800,
+    };
+    expect((await invoke('createTenantPickupOrder', { ...requestData, clientPreviewTotalCents: 2 }, idToken)).response.ok).toBe(false);
+    expect((await invoke('createTenantPickupOrder', {
+      ...requestData, items: [{ productId: 'temaki', quantity: 2 }],
+    }, idToken)).response.ok).toBe(false);
+    const result = await invoke('createTenantPickupOrder', requestData, idToken);
+    expect(result.response.ok).toBe(true);
+    const orderId = (result.body as { result: { orderId: string } }).result.orderId;
+    const stored = (await db.doc('tenants/' + a + '/orders/' + orderId).get()).data();
+    expect(stored?.pricing?.totalCents).toBe(5800);
+    expect(stored?.items?.[0]?.sizeLabel).toBe('Grande');
+    expect(stored?.items?.[0]?.unitPriceCents).toBe(2900);
+    expect((await db.collection('tenants/' + b + '/orders').get()).empty).toBe(true);
+    await db.doc('tenantMemberships/' + a + '_' + uid).update({ active: false });
+    expect((await invoke('tenantUpsertVariantProduct', variant)).response.ok).toBe(false);
+  }, 115_000);
+});
