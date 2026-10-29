@@ -34,6 +34,8 @@ export const resolvePublicTenant = onCall(
         slug,
         status,
         branding: status === 'ACTIVE' ? publicBranding(tenant.branding) : { displayName: 'Restaurante indisponível' },
+        orderingEnabled: status === 'ACTIVE' && slug !== 'teiko' && tenant.orderingEnabled === true
+          && tenant.migrationState !== 'EMULATOR_COPY_ONLY',
       };
     }
     // Backward-compatible Teiko resolution while tenant migration is pending.
