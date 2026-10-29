@@ -74,6 +74,7 @@ export default function TenantReservationReceipt() {
             <Button variant="outline" disabled={busy} onClick={() => void cancel()}>Cancelar solicitação</Button>}
         </div>
       </section>}
+      <Link href={'/loja/' + tenantId + '/reservas/historico'} className="mt-6 mr-4 inline-block text-sm font-semibold underline">Minhas solicitações</Link>
       <Link href={'/loja/' + tenantId} className="mt-6 inline-block text-sm font-semibold underline">Voltar ao restaurante</Link>
     </div>
   </main>;

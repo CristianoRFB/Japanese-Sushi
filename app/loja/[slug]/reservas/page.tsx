@@ -100,6 +100,7 @@ export default function TenantReservationPage() {
         </label>
         <Button className="sm:col-span-2" type="submit" disabled={busy}>{busy ? 'Enviando…' : 'Enviar solicitação'}</Button>
       </form>}
+      <Link href={'/loja/' + tenantId + '/reservas/historico'} className="mt-6 mr-4 inline-block text-sm font-semibold underline">Minhas solicitações</Link>
       <Link href={'/loja/' + tenantId} className="mt-6 inline-block text-sm font-semibold underline">Voltar ao restaurante</Link>
     </div>
   </main>;
