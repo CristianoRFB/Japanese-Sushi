@@ -185,12 +185,21 @@ describe('resolvePublicTenant — seleção pública sem dados privilegiados', (
     expect(result.id).toBe('beta-sushi');
     expect((result.branding as { displayName: string }).displayName).toBe('Beta de testes');
     expect((result.branding as { logoUrl?: string }).logoUrl).toBeUndefined();
+    expect(result.orderingEnabled).toBe(false);
+    await db.doc('tenants/beta-sushi').update({ orderingEnabled: true });
+    const enabled = await call('beta-sushi');
+    expect((enabled.body as { result: { orderingEnabled: boolean } }).result.orderingEnabled).toBe(true);
+    await db.doc('tenants/beta-sushi').update({ migrationState: 'EMULATOR_COPY_ONLY' });
+    const migrated = await call('beta-sushi');
+    expect((migrated.body as { result: { orderingEnabled: boolean } }).result.orderingEnabled).toBe(false);
+    await db.doc('tenants/beta-sushi').update({ migrationState: 'NONE' });
     expect(JSON.stringify(result)).not.toContain('INTERNAL_SECRET');
     const missing = await call('unknown-sushi');
     expect(missing.response.ok).toBe(false);
     await db.doc('tenants/beta-sushi').update({ status: 'SUSPENDED' });
     const suspended = await call('beta-sushi');
     expect((suspended.body as { result: { status: string } }).result.status).toBe('SUSPENDED');
+    expect((suspended.body as { result: { orderingEnabled: boolean } }).result.orderingEnabled).toBe(false);
   }, 40_000);
 });
 
