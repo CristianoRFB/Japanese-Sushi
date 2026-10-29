@@ -161,9 +161,12 @@ export const tenantSettlePickupCash = onCall(options, async request => {
     if (input.cashReceivedCents < amountCents)
       throw new HttpsError('invalid-argument', 'Valor recebido inferior ao total.');
     const cashChangeCents = input.cashReceivedCents - amountCents;
-    if (cashChangeCents > Number(register.data()?.expectedCashCents || 0)
-      + input.cashReceivedCents)
-      throw new HttpsError('failed-precondition', 'Troco indisponível.');
+    // The cash drawer must hold enough change before accepting the sale.
+    // Adding cashReceivedCents made this condition tautologically true for
+    // all nonnegative floats and previously permitted impossible change.
+    const drawerCash = register.data()?.expectedCashCents;
+    if (!Number.isSafeInteger(drawerCash) || drawerCash < cashChangeCents)
+      throw new HttpsError('failed-precondition', 'Troco indisponível no caixa.');
     const now = FieldValue.serverTimestamp();
     const movementData = {
       tenantId: input.tenantId, orderId: input.orderId,
