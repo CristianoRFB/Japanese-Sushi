@@ -30,11 +30,11 @@ export default function TenantRecentFinancePage() {
   const [finance, setFinance] = useState<Finance | null>(null);
   const [error, setError] = useState('');
 
-  async function fetchFinance() {
+  async function fetchFinance(): Promise<Finance> {
     const result = await httpsCallable(getFirebaseClient().functions, 'tenantGetRecentFinanceSummary')({
       tenantId,
     });
-    setFinance(result.data as Finance);
+    return result.data as Finance;
   }
   useEffect(() => {
     if (!ready) { setLoading(false); return; }
@@ -46,6 +46,7 @@ export default function TenantRecentFinancePage() {
       if (!authenticated) { setLoading(false); return; }
       setLoading(true); setError('');
       void fetchFinance()
+        .then(data => { if (current === generation) setFinance(data); })
         .catch(() => { if (current === generation) setError('Apenas o proprietário pode acessar este relatório.'); })
         .finally(() => { if (current === generation) setLoading(false); });
     });
@@ -64,8 +65,14 @@ export default function TenantRecentFinancePage() {
 
   async function refresh() {
     setBusy(true); setError('');
-    try { await fetchFinance(); }
-    catch { setError('Não foi possível atualizar o financeiro.'); }
+    const sessionUid = getFirebaseClient().auth.currentUser?.uid;
+    try {
+      const data = await fetchFinance();
+      if (getFirebaseClient().auth.currentUser?.uid === sessionUid && sessionUid) setFinance(data);
+    } catch {
+      if (getFirebaseClient().auth.currentUser?.uid === sessionUid)
+        setError('Não foi possível atualizar o financeiro.');
+    }
     finally { setBusy(false); }
   }
 
