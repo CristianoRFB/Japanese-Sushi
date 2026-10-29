@@ -144,6 +144,53 @@ async function seedOrder(id: string, order: ReturnType<typeof orderData>) {
 
 describe('Firestore Rules Spark Teiko', () => {
 
+  it('nega acesso cruzado a reservas novas, telefone privado e escritas diretas A×B', async () => {
+    const a = 'rule-res-a-' + testRunId;
+    const b = 'rule-res-b-' + testRunId;
+    const uidA = 'guest-a-' + testRunId;
+    const uidB = 'guest-b-' + testRunId;
+    const staffA = 'staff-res-a-' + testRunId;
+    await env.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'tenants', a), { slug: a, status: 'ACTIVE' });
+      await setDoc(doc(db, 'tenants', b), { slug: b, status: 'ACTIVE' });
+      await setDoc(doc(db, 'tenantMemberships', a + '_' + staffA), {
+        tenantId: a, userUid: staffA, role: 'staff', active: true,
+      });
+      await setDoc(doc(db, 'tenants', a, 'reservations', 'reservation-a'), {
+        tenantId: a, ownerUid: uidA, name: 'Pessoa A', phone: '17999999999',
+        date: '2026-11-10', time: '19:00', people: 2, status: 'REQUESTED',
+      });
+      await setDoc(doc(db, 'tenants', b, 'reservations', 'reservation-b'), {
+        tenantId: b, ownerUid: uidB, name: 'Pessoa B', phone: '17999999998',
+        date: '2026-11-10', time: '19:00', people: 2, status: 'REQUESTED',
+      });
+    });
+    const customerA = env.authenticatedContext(uidA).firestore();
+    const customerB = env.authenticatedContext(uidB).firestore();
+    const workerA = env.authenticatedContext(staffA).firestore();
+    const anonymous = env.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(customerA, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertFails(getDoc(doc(customerB, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertFails(getDoc(doc(customerA, 'tenants', b, 'reservations', 'reservation-b')));
+    await assertFails(getDoc(doc(anonymous, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertSucceeds(getDoc(doc(workerA, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertFails(getDoc(doc(workerA, 'tenants', b, 'reservations', 'reservation-b')));
+    await assertFails(setDoc(doc(customerA, 'tenants', a, 'reservations', 'forged'), {
+      tenantId: a, ownerUid: uidA, status: 'CONFIRMED',
+    }));
+    await assertFails(updateDoc(doc(workerA, 'tenants', a, 'reservations', 'reservation-a'), {
+      status: 'CONFIRMED',
+    }));
+    await assertFails(getDocs(collection(workerA, 'tenants', b, 'reservations')));
+    await env.withSecurityRulesDisabled(async context => {
+      await updateDoc(doc(context.firestore(), 'tenants', a), { status: 'SUSPENDED' });
+    });
+    await assertFails(getDoc(doc(workerA, 'tenants', a, 'reservations', 'reservation-a')));
+    await assertFails(getDoc(doc(customerA, 'tenants', a, 'reservations', 'reservation-a')));
+  });
+
+
   it('isola coleções novas por tenant, papel e status sem afetar Teiko legada', async () => {
     const a = 'alpha-' + testRunId;
     const b = 'beta-' + testRunId;
