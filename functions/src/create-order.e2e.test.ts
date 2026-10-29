@@ -830,3 +830,76 @@ describe('F4 white-label branding tenant isolation', () => {
     expect((await invoke('tenantUpdateBranding', update)).response.ok).toBe(false);
   }, 100_000);
 });
+
+
+describe('F4 cash refund reversal is owner-only, atomic and tenant isolated', () => {
+  it('posts a single negative cash and finance movement and never refunds electronically', async () => {
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const a = 'refund-a-' + suffix, b = 'refund-b-' + suffix;
+    const auth = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'refund-owner-' + suffix + '@example.test',
+        password: 'synthetic-emulator-password', returnSecureToken: true }),
+    });
+    expect(auth.response.ok).toBe(true);
+    const uid = (auth.body as { localId: string }).localId;
+    const token = (auth.body as { idToken: string }).idToken;
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenantMemberships/' + a + '_' + uid).set({
+      tenantId: a, userUid: uid, active: true, role: 'tenant_owner',
+    });
+    await db.doc('tenants/' + a + '/products/simple').set({
+      tenantId: a, name: 'Produto para estorno', active: true, productType: 'SIMPLE',
+      modifierGroupIds: [], sizes: [{ id: 'unico', active: true, basePriceCents: 2500 }],
+    });
+    const call = (name: string, data: unknown, bearer = token) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + name, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + bearer },
+        body: JSON.stringify({ data }),
+      },
+    );
+    const create = await call('createTenantPickupOrder', {
+      tenantId: a, clientRequestId: crypto.randomUUID(),
+      customerName: 'Cliente de teste', items: [{ productId: 'simple', quantity: 2 }],
+      clientPreviewTotalCents: 5000,
+    }, idToken);
+    expect(create.response.ok).toBe(true);
+    const orderId = (create.body as { result: { orderId: string } }).result.orderId;
+    for (const status of ['CONFIRMED', 'PREPARING', 'READY']) {
+      expect((await call('tenantUpdatePickupStatus', { tenantId: a, orderId, status })).response.ok).toBe(true);
+    }
+    expect((await call('tenantOpenPickupCashRegister', { tenantId: a, openingFloatCents: 3000 })).response.ok).toBe(true);
+    expect((await call('tenantSettlePickupCash', {
+      tenantId: a, orderId, cashReceivedCents: 5000, confirmCashReceived: true,
+    })).response.ok).toBe(true);
+    const refund = { tenantId: a, orderId, reason: 'Cliente recebeu dinheiro de volta',
+      confirmCashReturned: true };
+    expect((await call('tenantRefundPickupCash', refund, idToken)).response.ok).toBe(false);
+    expect((await call('tenantRefundPickupCash', { ...refund, tenantId: b })).response.ok).toBe(false);
+    expect((await call('tenantRefundPickupCash', { ...refund, confirmCashReturned: false })).response.ok).toBe(false);
+    expect((await call('tenantRefundPickupCash', refund)).response.ok).toBe(true);
+    const repeat = await call('tenantRefundPickupCash', refund);
+    expect(repeat.response.ok).toBe(true);
+    expect((repeat.body as { result: { idempotent: boolean } }).result.idempotent).toBe(true);
+    expect((await call('tenantRefundPickupCash', { ...refund, reason: 'Motivo diferente' })).response.ok).toBe(false);
+    const refs = ['orders/' + orderId, 'cashMovements/REFUND_' + orderId,
+      'financeEntries/REFUND_' + orderId, 'cashRegisters/current'];
+    const [order, cashMovement, ledger, register] = await Promise.all(
+      refs.map(path => db.doc('tenants/' + a + '/' + path).get()));
+    expect(order.data()?.status).toBe('REFUNDED');
+    expect(order.data()?.payment?.status).toBe('REFUNDED');
+    expect(cashMovement.data()?.amountCents).toBe(-5000);
+    expect(ledger.data()?.amountCents).toBe(-5000);
+    expect(register.data()?.expectedCashCents).toBe(3000);
+    expect(register.data()?.cashRefundsCents).toBe(5000);
+    expect(register.data()?.refundCount).toBe(1);
+    expect((await db.collection('tenants/' + b + '/financeEntries').get()).empty).toBe(true);
+    expect((await call('tenantSettlePickupCash', {
+      tenantId: a, orderId, cashReceivedCents: 5000, confirmCashReceived: true,
+    })).response.ok).toBe(false);
+    await db.doc('tenantMemberships/' + a + '_' + uid).update({ active: false });
+    expect((await call('tenantRefundPickupCash', refund)).response.ok).toBe(false);
+  }, 120_000);
+});
