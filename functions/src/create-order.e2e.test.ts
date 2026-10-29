@@ -778,3 +778,55 @@ describe('F4 multi-size catalog checkout with authoritative variants', () => {
     expect((await invoke('tenantUpsertVariantProduct', variant)).response.ok).toBe(false);
   }, 115_000);
 });
+
+
+describe('F4 white-label branding tenant isolation', () => {
+  it('updates only owner tenant branding; blocks role escalation, invalid URLs and Teiko write', async () => {
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const a = 'brand-a-' + suffix, b = 'brand-b-' + suffix;
+    const email = 'brand-owner-' + suffix + '@example.test';
+    const auth = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password: 'synthetic-emulator-only', returnSecureToken: true }),
+    });
+    expect(auth.response.ok).toBe(true);
+    const uid = (auth.body as { localId: string }).localId;
+    const token = (auth.body as { idToken: string }).idToken;
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', branding: { displayName: 'Marca A' } });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', branding: { displayName: 'Marca B' } });
+    await db.doc('tenantMemberships/' + a + '_' + uid).set({
+      tenantId: a, userUid: uid, role: 'tenant_owner', active: true,
+    });
+    const invoke = (fn: string, data: unknown, bearer = token) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + fn, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + bearer },
+        body: JSON.stringify({ data }),
+      },
+    );
+    const update = { tenantId: a, branding: {
+      displayName: 'Sushi de testes A', primaryColor: '#AA1133',
+      accentColor: '#117755', logoUrl: 'https://example.com/logo.png',
+    } };
+    expect((await invoke('tenantUpdateBranding', { ...update, planId: 'Premium' })).response.ok).toBe(false);
+    expect((await invoke('tenantUpdateBranding', {
+      ...update, branding: { ...update.branding, logoUrl: 'javascript:alert(1)' },
+    })).response.ok).toBe(false);
+    expect((await invoke('tenantUpdateBranding', { ...update, tenantId: b })).response.ok).toBe(false);
+    expect((await invoke('tenantUpdateBranding', { ...update, tenantId: 'teiko' })).response.ok).toBe(false);
+    const first = await invoke('tenantUpdateBranding', update);
+    expect(first.response.ok).toBe(true);
+    const repeat = await invoke('tenantUpdateBranding', update);
+    expect((repeat.body as { result: { updated: boolean } }).result.updated).toBe(false);
+    const read = await invoke('tenantGetBrandingSettings', { tenantId: a });
+    expect(read.response.ok).toBe(true);
+    expect((read.body as { result: { branding: { displayName: string } } }).result.branding.displayName).toBe('Sushi de testes A');
+    const publicBrand = await invoke('resolvePublicTenant', { slug: a });
+    expect((publicBrand.body as { result: { branding: { primaryColor: string } } }).result.branding.primaryColor).toBe('#AA1133');
+    expect((await db.doc('tenants/' + b).get()).data()?.branding?.displayName).toBe('Marca B');
+    await db.doc('tenantMemberships/' + a + '_' + uid).update({ role: 'staff' });
+    expect((await invoke('tenantUpdateBranding', update)).response.ok).toBe(false);
+    await db.doc('tenantMemberships/' + a + '_' + uid).update({ role: 'tenant_owner', active: false });
+    expect((await invoke('tenantUpdateBranding', update)).response.ok).toBe(false);
+  }, 100_000);
+});
