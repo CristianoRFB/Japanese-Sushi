@@ -579,6 +579,9 @@ describe('F4 pickup cash settlement and tenant financial isolation', () => {
     expect((await invoke('tenantOpenPickupCashRegister', { tenantId: a, openingFloatCents: 3000 })).response.ok).toBe(true);
     expect((await invoke('tenantOpenPickupCashRegister', { tenantId: a, openingFloatCents: 3000 })).response.ok).toBe(false);
     expect((await invoke('tenantSettlePickupCash', { ...settlement, cashReceivedCents: 4800 })).response.ok).toBe(false);
+    // Drawer float is 3000; making change for 10000 against a 4900 order
+    // would require 5100. Never accept this impossible transaction.
+    expect((await invoke('tenantSettlePickupCash', { ...settlement, cashReceivedCents: 10000 })).response.ok).toBe(false);
     expect((await invoke('tenantSettlePickupCash', { ...settlement, confirmCashReceived: false })).response.ok).toBe(false);
     expect((await invoke('tenantSettlePickupCash', { ...settlement, tenantId: b })).response.ok).toBe(false);
     const settled = await Promise.all([
