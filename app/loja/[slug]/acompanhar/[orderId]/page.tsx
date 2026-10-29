@@ -20,6 +20,7 @@ const labels: Record<string, string> = {
   NEW: 'Pedido recebido', CONFIRMED: 'Confirmado pela equipe',
   PREPARING: 'Em preparo', READY: 'Pronto para retirada',
   COMPLETED: 'Retirado e finalizado', CANCELLED: 'Cancelado',
+  REFUNDED: 'Pagamento devolvido pelo restaurante',
 };
 
 export default function TenantOrderReceiptPage() {
@@ -92,7 +93,9 @@ export default function TenantOrderReceiptPage() {
           {(order.pricing.totalCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
         </p>
         <p className="mt-2 text-sm text-gray-600">
-          Pagamento presencial em dinheiro, confirmado pela equipe no caixa. Nenhum pagamento eletrônico é processado aqui.
+          {order.status === 'REFUNDED'
+            ? 'O restaurante registrou um estorno integral em dinheiro. Confira o recebimento diretamente com a equipe.'
+            : 'Pagamento presencial em dinheiro, confirmado pela equipe no caixa. Nenhum pagamento eletrônico é processado aqui.'}
         </p>
         <Button variant="outline" disabled={busy} onClick={() => void refresh()} className="mt-5">Atualizar status</Button>
       </div>}
