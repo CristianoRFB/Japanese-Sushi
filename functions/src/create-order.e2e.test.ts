@@ -899,6 +899,17 @@ describe('F4 cash refund reversal is owner-only, atomic and tenant isolated', ()
     expect(register.data()?.cashRefundsCents).toBe(5000);
     expect(register.data()?.refundCount).toBe(1);
     expect((await db.collection('tenants/' + b + '/financeEntries').get()).empty).toBe(true);
+    const summary = await call('tenantGetRecentFinanceSummary', { tenantId: a });
+    expect(summary.response.ok).toBe(true);
+    const figures = (summary.body as { result: {
+      revenueCents: number; refundCents: number; netCents: number; movements: unknown[];
+    } }).result;
+    expect(figures.revenueCents).toBe(5000);
+    expect(figures.refundCents).toBe(5000);
+    expect(figures.netCents).toBe(0);
+    expect(figures.movements).toHaveLength(2);
+    expect((await call('tenantGetRecentFinanceSummary', { tenantId: b })).response.ok).toBe(false);
+    expect((await call('tenantGetRecentFinanceSummary', { tenantId: a }, idToken)).response.ok).toBe(false);
     expect((await call('tenantSettlePickupCash', {
       tenantId: a, orderId, cashReceivedCents: 5000, confirmCashReceived: true,
     })).response.ok).toBe(false);
