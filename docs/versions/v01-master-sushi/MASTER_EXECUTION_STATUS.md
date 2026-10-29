@@ -101,6 +101,16 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - Sem pagamentos eletrônicos, fiscalização, NF-e, estorno, billing de assinatura ou migração da Teiko. **F4 continua IN_PROGRESS, PRODUCTION_READY=false**.
 - Evidence de código validada: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40582899072 (SUCCESS, SHA `487c095e1d60db8515cba68343ada58109c63150`). Alterações posteriores devem ser validadas pelos Actions correspondentes.
 
+## Checkout público Multi-Tenant incremental — 29/10/2026
+
+- `app/loja/[slug]/page.tsx` agora inclui carrinho de produtos simples, quantidade, total estimado e checkout autenticado; nunca aceita preço calculado no browser como autoridade.
+- Recibo privado em `/loja/[slug]/acompanhar/[orderId]` e histórico privado em `/loja/[slug]/historico`; não há recuperação de pedidos por nome/telefone.
+- `shared/tenant-cart.ts` filtra cache adulterado, separa chaves por tenant e não persiste nome do cliente.
+- `resolvePublicTenant` só anuncia pedidos disponíveis quando `orderingEnabled=true` no tenant ACTIVE, nunca para Teiko/tenant de migração. Fixtures sintéticas têm flag apenas no Emulator.
+- A experiência de checkout é retirada simples com pagamento em dinheiro presencial; tamanhos/adicionais, PIX/cartão, delivery, reservas, PDV e billing SaaS permanecem fora deste incremento.
+- Estimativa heurística global: **~47% (±10 p.p.)**; NÃO é prontidão de produção nem percentual aferido automaticamente.
+- CI do último SHA ainda deve ser verificado antes de marcar esta entrega validada; testes em navegador real continuam pendentes.
+
 ## Preservar / adaptar
 
 | Módulo | Tratamento |

@@ -20,7 +20,7 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 | Console do proprietário da plataforma | CODE_PRESENT_PC_VALIDATION_PENDING | `app/plataforma/page.tsx`; compile/build |
 | Resolver público por slug sem expor configuração privada | CODE_COMPLETE | `functions/src/resolve-tenant.ts`; E2E |
 | Rules novas em `tenants/{id}/...`, sem acesso cruzado A×B | CODE_COMPLETE para namespace novo | `firestore.rules`; `tests/firestore.rules.test.ts` |
-| Storefront público tenant-scoped, somente leitura | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/page.tsx`; Rules + build |
+| Storefront tenant-scoped, carrinho e checkout de retirada CASH | CODE_PRESENT_CI_TESTED_PC_VALIDATION_PENDING | `app/loja/[slug]/page.tsx`; `shared/tenant-cart.ts`; preço autoritativo em `createTenantPickupOrder`; não habilitado para tenants reais |
 | Categoria/produto simples com centavos e transação de membership | CODE_COMPLETE para simples | `functions/src/tenant-catalog.ts`; E2E |
 | Gestão de catálogo da nova loja | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/gestao/page.tsx` |
 | Política de preço autoritativo de retirada por tenant | CODE_COMPLETE PARA PICKUP SIMPLES | `functions/src/tenant-order-policy.ts`; unitários e E2E |
@@ -30,6 +30,9 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 | Caixa por tenant: abertura, fechamento, diferença física e sessões | CODE_PRESENT_EMULATOR_TESTED | `functions/src/tenant-cash.ts`; Owner + logs; E2E em Auth/Firestore Emulator |
 | Recebimento manual CASH e ledger atômico por pedido READY | CODE_PRESENT_EMULATOR_TESTED | `tenantSettlePickupCash`; cashMovements + financeEntries + COMPLETED em uma transação, sem dupla contabilização |
 | Tela de caixa para recebimento presencial | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/caixa/page.tsx`; somente dinheiro; sem comprovante eletrônico |
+| Carrinho de nova loja isolado por chave de tenant e sem dados pessoais | CODE_PRESENT_CI_TESTED | `shared/tenant-cart.ts`, `tests/tenant-cart.test.ts`; sanitização e limite de quantidade; Teiko continua legado |
+| Checkout de retirada com recibo, status e retry idempotente | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/page.tsx`, `app/loja/[slug]/acompanhar/[orderId]`; E2E de preço no servidor |
+| Histórico privado dos pedidos da mesma sessão Auth/tenant | CODE_PRESENT_CI_PENDING | `listMyTenantOrders`, `/loja/[slug]/historico`; E2E de owner A×B |
 | Cache de carrinho preparado para tenant | PARTIAL | `components/providers.tsx`; ainda fixo em Teiko |
 | Duas fixtures Auth/Firestore e verificadores automatizados | CODE_COMPLETE | `functions/scripts/seed-tenant-emulator.mjs`, `verify-tenant-emulator.mjs`; CI |
 | Cópia idempotente Teiko somente em emulador | CODE_COMPLETE para ensaio | `functions/scripts/migrate-teiko-emulator.mjs`; CI |
@@ -47,7 +50,7 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 
 ## Próximos bloqueios implementáveis (não exigem PC)
 
-1. Completar carrinho e checkout público do novo tenant, delivery, PIX/cartão, estornos, conciliação, relatórios/PDV, KDS e reservas tenant-aware; preservar invariantes legados.
+1. Ampliar o checkout de retirada simples já conectado: tamanhos/adicionais, delivery, PIX/cartão, estornos, conciliação, relatórios/PDV, KDS completo e reservas tenant-aware; preservar invariantes legados.
 2. Conversão da Teiko legada sem quebra de Auth, IDs ou links, com migrador production-safe separado e proteção de rollback (sem executar).
 3. Domain resolver e branding completos para todos os tenants; regras de cache/storage.
 4. Após F4 passar: PlanCatalog/EntitlementService/Sushi approved matrix, backend gating, DemoMode.
@@ -59,3 +62,26 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 - Nenhum percentual de produção, staging ou UAT é inferido a partir de CI.
 
 Retomada no PC: [PC_FINAL_TEST_SESSION.md](PC_FINAL_TEST_SESSION.md).
+
+## Estimativa global de avanço — 29/10/2026
+
+**Estimativa heurística: ~47% do escopo total do GOAL MASTER, com incerteza alta (aprox. ±10 pontos percentuais).**
+Não é métrica automatizada, percentual de linhas de código nem declaração de produção pronta.
+
+| Fase | Peso estimado | Avanço estimado |
+|---|---:|---:|
+| F1 Preservação Teiko | 10% | 95% |
+| F2 Operação e PWA/push | 12% | 65% |
+| F3 Segurança e dependências | 13% | 70% |
+| F4 Core Multi-Tenant | 28% | 60% |
+| F5 Global Standard v01 | 14% | 0% |
+| F6 Firebase/Cloudflare/staging | 10% | 25% |
+| F7 Dados oficiais/UAT Teiko | 7% | 5% |
+| F8 Go-live/docs/observabilidade | 6% | 15% |
+
+Resultado ponderado = ~47%. Critérios: somente o código entregue e o CI têm evidência; trabalho externo/credenciais/dados reais/UAT permanecem pendentes.
+
+- Neste checkpoint, carrinho de retirada em novo tenant, recibo e histórico privado foram adicionados.
+- Novos tenants só aceitam pedidos quando explicitamente habilitados; fixtures A/B habilitadas só no Emulator.
+- O código da Teiko legada NÃO foi convertido para o novo namespace. Billing SaaS não foi implementado.
+- Excluir manualmente riscos de pagamento ou reserva do cálculo seria incorreto; fases incompletas contam como tal.
