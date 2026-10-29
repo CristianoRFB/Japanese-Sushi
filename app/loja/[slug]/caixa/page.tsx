@@ -167,7 +167,7 @@ export default function TenantCashPage() {
           </Link></div>
         {user && <Button variant="outline" onClick={() => void signOut(getFirebaseClient().auth)}>Sair</Button>}
       </header>
-      <p className="mt-3 text-sm text-gray-600">Apenas dinheiro recebido fisicamente. Não confirma PIX, cartão, reembolsos ou delivery. Nenhum pagamento é processado automaticamente.</p>
+      <p className="mt-3 text-sm text-gray-600">Apenas dinheiro físico. Não confirma PIX, cartão ou delivery. Estornos integrais exigem devolução física e autorização do proprietário; nenhum pagamento é processado automaticamente.</p>
       {error && <p role="alert" className="mt-5 rounded-xl bg-red-100 p-4 text-red-900">{error}</p>}
       {notice && <p role="status" className="mt-5 rounded-xl bg-green-100 p-4 text-green-900">{notice}</p>}
       {loading && <p role="status" className="mt-5 rounded-xl bg-white p-4">Verificando acesso ao caixa…</p>}
