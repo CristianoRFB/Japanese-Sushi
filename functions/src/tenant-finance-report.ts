@@ -25,8 +25,9 @@ export const tenantGetRecentFinanceSummary = onCall(options, async request => {
     throw new HttpsError('permission-denied', 'Conta desativada.');
   const db = getFirestore();
   const snapshot = await db.collection('tenants/' + tenantId + '/financeEntries')
-    .orderBy('createdAt', 'desc').limit(100).get();
-  const movements = snapshot.docs.map(doc => {
+    .orderBy('createdAt', 'desc').limit(101).get();
+  const hasMore = snapshot.size > 100;
+  const movements = snapshot.docs.slice(0, 100).map(doc => {
     const data = doc.data();
     if (data.tenantId !== tenantId ||
       !['REVENUE', 'REFUND'].includes(data.type) ||
@@ -50,7 +51,7 @@ export const tenantGetRecentFinanceSummary = onCall(options, async request => {
     throw new HttpsError('data-loss', 'Totais financeiros inválidos.');
   return {
     tenantId, scope: 'RECENT_100_ENTRIES', limit: 100,
-    hasMore: snapshot.size === 100,
+    hasMore,
     revenueCents, refundCents, netCents: revenueCents - refundCents,
     movements,
   };
