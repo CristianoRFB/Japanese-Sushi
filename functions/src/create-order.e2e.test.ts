@@ -882,7 +882,18 @@ describe('F4 cash refund reversal is owner-only, atomic and tenant isolated', ()
     expect((await call('tenantRefundPickupCash', refund, idToken)).response.ok).toBe(false);
     expect((await call('tenantRefundPickupCash', { ...refund, tenantId: b })).response.ok).toBe(false);
     expect((await call('tenantRefundPickupCash', { ...refund, confirmCashReturned: false })).response.ok).toBe(false);
-    expect((await call('tenantRefundPickupCash', refund)).response.ok).toBe(true);
+    // Refunds cannot create a negative drawer even when the sale was valid.
+    await db.doc('tenants/' + a + '/cashRegisters/current').update({ expectedCashCents: 4999 });
+    expect((await call('tenantRefundPickupCash', refund)).response.ok).toBe(false);
+    await db.doc('tenants/' + a + '/cashRegisters/current').update({ expectedCashCents: 8000 });
+    const concurrent = await Promise.all([
+      call('tenantRefundPickupCash', refund),
+      call('tenantRefundPickupCash', refund),
+    ]);
+    expect(concurrent.every(result => result.response.ok)).toBe(true);
+    expect(concurrent.map(result =>
+      (result.body as { result: { idempotent: boolean } }).result.idempotent).sort())
+      .toEqual([false, true]);
     const repeat = await call('tenantRefundPickupCash', refund);
     expect(repeat.response.ok).toBe(true);
     expect((repeat.body as { result: { idempotent: boolean } }).result.idempotent).toBe(true);
