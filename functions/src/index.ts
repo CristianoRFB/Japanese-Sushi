@@ -762,3 +762,5 @@ export { createTenantPickupOrder, getMyTenantOrder, listMyTenantOrders, tenantLi
 export { tenantOpenPickupCashRegister, tenantGetPickupCashRegister, tenantSettlePickupCash, tenantClosePickupCashRegister } from './tenant-cash.js';
 
 export { tenantCreateReservation, tenantGetMyReservation, tenantListReservations, tenantSetReservationStatus, tenantCancelMyReservation, tenantListMyReservations } from './tenant-reservations.js';
+
+export { tenantGetBrandingSettings, tenantUpdateBranding } from './tenant-branding.js';

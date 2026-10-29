@@ -13,7 +13,10 @@ function publicBranding(value: unknown) {
   const logo = typeof data.logoUrl === 'string'
     && (data.logoUrl.startsWith('/brand/') || /^https:\/\//i.test(data.logoUrl))
     ? data.logoUrl.slice(0, 500) : undefined;
-  return { displayName: displayName || 'Restaurante', ...(color && { primaryColor: color }), ...(logo && { logoUrl: logo }) };
+  const accent = typeof data.accentColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(data.accentColor)
+    ? data.accentColor : undefined;
+  return { displayName: displayName || 'Restaurante', ...(color && { primaryColor: color }),
+    ...(accent && { accentColor: accent }), ...(logo && { logoUrl: logo }) };
 }
 
 export const resolvePublicTenant = onCall(
