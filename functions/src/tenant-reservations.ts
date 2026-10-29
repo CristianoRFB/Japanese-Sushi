@@ -39,11 +39,11 @@ function validateDate(date: string): void {
   const parsed = new Date(date + 'T00:00:00.000Z');
   if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date)
     throw new HttpsError('invalid-argument', 'Data inválida.');
+  // Preserve Teiko's existing reservation calendar bounds; do not introduce
+  // a new commercial horizon without an approved decision.
   const today = todayInBrazil();
-  const max = new Date(today + 'T00:00:00.000Z');
-  max.setUTCDate(max.getUTCDate() + 365);
-  if (date < today || date > max.toISOString().slice(0, 10))
-    throw new HttpsError('invalid-argument', 'Data fora da janela de reservas.');
+  if (date < today || date > '2099-12-31')
+    throw new HttpsError('invalid-argument', 'Data fora do calendário permitido.');
 }
 
 // Reserved for NEXT: Pro/Premium EntitlementService and feature gating.
