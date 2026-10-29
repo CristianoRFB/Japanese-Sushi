@@ -24,3 +24,25 @@ describe('carrinho público isolado por tenant', () => {
     expect(quoteTenantCart('tenant-a', [{ productId: 'sushi', quantity: 1 }], [{ ...product, modifierGroupIds: ['extra'] }]).invalid).toBe(true);
   });
 });
+
+describe('tamanhos do carrinho isolados por variante', () => {
+  const variants = { id: 'combo', tenantId: 'tenant-a', name: 'Combo de teste',
+    active: true, productType: 'VARIANT', modifierGroupIds: [],
+    sizes: [{ id: 'pequeno', label: 'Pequeno', active: true, basePriceCents: 1200 },
+      { id: 'grande', label: 'Grande', active: true, basePriceCents: 2400 }] };
+  it('precifica cada variante, sem mesclar linhas do mesmo produto', () => {
+    const first = changeTenantCart([], 'combo', 1, 'pequeno');
+    const second = changeTenantCart(first, 'combo', 1, 'grande');
+    expect(second).toHaveLength(2);
+    expect(quoteTenantCart('tenant-a', second, [variants]).totalCents).toBe(3600);
+    expect(changeTenantCart(second, 'combo', -1, 'pequeno')).toHaveLength(1);
+  });
+  it('nega tamanho omitido, inativo ou de outro tenant', () => {
+    expect(quoteTenantCart('tenant-a', [{ productId: 'combo', quantity: 1 }], [variants]).invalid).toBe(true);
+    expect(quoteTenantCart('tenant-a', [{ productId: 'combo', sizeId: 'outro', quantity: 1 }], [variants]).invalid).toBe(true);
+    expect(quoteTenantCart('tenant-b', [{ productId: 'combo', sizeId: 'grande', quantity: 1 }], [variants]).invalid).toBe(true);
+    expect(quoteTenantCart('tenant-a', [{ productId: 'combo', sizeId: 'grande', quantity: 1 }],
+      [{ ...variants, sizes: variants.sizes.map(s => ({ ...s, active: false })) }]).invalid).toBe(true);
+    expect(sanitizeTenantCart([{ productId: 'combo', sizeId: '../other', quantity: 1 }])).toEqual([]);
+  });
+});

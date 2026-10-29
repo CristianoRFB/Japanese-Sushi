@@ -39,3 +39,32 @@ describe('tenant pickup policy', () => {
     expect(tenantPickupSchema.safeParse({ ...draft, items: [{ productId: 'sushi', quantity: 0 }] }).success).toBe(false);
   });
 });
+
+describe('canonical variant pricing cannot be forged', () => {
+  const product = { tenantId: 'tenant-a', active: true, name: 'Combo de teste',
+    productType: 'VARIANT', modifierGroupIds: [], sizes: [
+      { id: 'pequeno', label: 'Pequeno', active: true, basePriceCents: 1200 },
+      { id: 'grande', label: 'Grande', active: true, basePriceCents: 2400 },
+    ] };
+  it('uses only server-catalog size prices', () => {
+    const result = priceTenantPickup('tenant-a', [
+      { productId: 'combo', sizeId: 'grande', quantity: 2 },
+    ], new Map([['combo', product]]));
+    expect(result.totalCents).toBe(4800);
+    expect(result.items[0].sizeLabel).toBe('Grande');
+  });
+  it('rejects missing, unknown or inactive size and cross-tenant catalog', () => {
+    for (const requested of [
+      { productId: 'combo', quantity: 1 },
+      { productId: 'combo', sizeId: 'fake', quantity: 1 },
+    ]) {
+      expect(() => priceTenantPickup('tenant-a', [requested], new Map([['combo', product]]))).toThrow();
+    }
+    expect(() => priceTenantPickup('tenant-b', [{ productId: 'combo', sizeId: 'grande', quantity: 1 }],
+      new Map([['combo', product]]))).toThrow();
+    expect(tenantPickupSchema.safeParse({
+      tenantId: 'tenant-a', clientRequestId: crypto.randomUUID(), customerName: 'Teste',
+      items: [{ productId: 'combo', sizeId: '../other', quantity: 1 }], clientPreviewTotalCents: 2400,
+    }).success).toBe(false);
+  });
+});
