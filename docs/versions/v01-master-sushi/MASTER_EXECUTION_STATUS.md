@@ -16,7 +16,7 @@ Atualizado em 2026-10-27. Estado deste arquivo separado em código local, testes
 | Ambiente local | Node 22.23.3, npm 11.6.4, Java 21.0.12 |
 | Firebase de produção configurado | `sushi-cbfd2`; nenhum acesso/escrita de produção usado nesta execução |
 | Último checkpoint concluído | F2/F3 e preparação F4 — evidências verificadas em CI, nenhuma prova de produção |
-| Último SHA concluído | `5b9ab2f45cf69e6e49d46d53de0f6e3e58b55418` (testes completos no CI; documentação posterior pode avançar) |
+| Último SHA concluído | `01ba386a0c8de9d7ead92e5e7b9d7db1201a699c` (código e testes; documentação posterior pode avançar) |
 
 ## Estado das fases
 
@@ -119,6 +119,13 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - **Feature de reservas no namespace novo somente disponível em Firebase Emulator.** E2E Auth/Functions/Firestore + negativas de Rules A×B.
 - Feature original Teiko fica intocada; nenhuma migração de clientes e nenhuma cobrança automática.
 - Estimativa de avanço técnico geral: ~49% (±10 pontos percentuais); não inferir PRODUCTION_READY.
+
+## Checkpoint de variantes + white-label — 29/10/2026
+
+- Vários tamanhos e preços por produto estão implementados com validação na Callable e testes E2E A×B. Frontend separa cada tamanho no carrinho.
+- Proprietário edita nome público, cores, logo HTTPS mediante membership ativa e validação transacional; Teiko continua bloqueada à edição pelo Core novo.
+- Última evidência técnica do código: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40954806219 (SUCCESS; SHA `01ba386a0`).
+- GOAL MASTER ~52% (estimativa heurística ±10 p.p.). F4 segue IN_PROGRESS e F5 NOT_STARTED. Não houve migração, deploy ou homologação de dispositivos.
 
 ## Preservar / adaptar
 

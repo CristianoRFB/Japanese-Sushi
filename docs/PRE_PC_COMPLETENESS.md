@@ -1,8 +1,8 @@
 # PRE-PC COMPLETENESS — Japanese-Sushi
 
-Último SHA de código avaliado: `5b9ab2f45cf69e6e49d46d53de0f6e3e58b55418`.
+Último SHA de código validado: `01ba386a0c8de9d7ead92e5e7b9d7db1201a699c`.
 
-Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40550619553), **SUCCESS** em lint, typecheck, unitários, Functions, Rules, E2E, fixtures A×B, migração somente em emulator e build.
+Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40954806219), **SUCCESS** em lint, typecheck, unitários, Functions, Rules, E2E, fixtures A×B, migração somente em emulator e build.
 
 ## Fonte de verdade
 
@@ -23,6 +23,9 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 | Storefront tenant-scoped, carrinho e checkout de retirada CASH | CODE_PRESENT_CI_TESTED_PC_VALIDATION_PENDING | `app/loja/[slug]/page.tsx`; `shared/tenant-cart.ts`; preço autoritativo em `createTenantPickupOrder`; não habilitado para tenants reais |
 | Categoria/produto simples com centavos e transação de membership | CODE_COMPLETE para simples | `functions/src/tenant-catalog.ts`; E2E |
 | Gestão de catálogo da nova loja | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/gestao/page.tsx` |
+| Produtos de tamanhos variados com preço individual | CODE_PRESENT_CI_TESTED | `functions/src/tenant-catalog.ts`, `tenant-order-policy.ts`; variant sizes, E2E com price tampering e cross-tenant |
+| Carrinho/checkout com seleção de tamanhos | CODE_PRESENT_PC_VALIDATION_PENDING | `shared/tenant-cart.ts`, `app/loja/[slug]/page.tsx`; tamanhos diferentes no mesmo carrinho |
+| White-label editável por tenant owner | CODE_PRESENT_CI_TESTED_PC_VALIDATION_PENDING | `functions/src/tenant-branding.ts`, `app/loja/[slug]/branding/page.tsx`; URL HTTPS, cores e nome público; Teiko legada protegida |
 | Política de preço autoritativo de retirada por tenant | CODE_COMPLETE PARA PICKUP SIMPLES | `functions/src/tenant-order-policy.ts`; unitários e E2E |
 | Pedido de retirada tenant-scoped com concorrência/idempotência e leitura somente do dono | CODE_COMPLETE PARA PICKUP SIMPLES | `functions/src/tenant-orders.ts`; E2E Auth/Firestore/Functions, tenant A×B |
 | Listagem e transições KDS por tenant com RBAC | CODE_COMPLETE PARA STATUS PREPARATÓRIOS | `functions/src/tenant-orders.ts`; E2E de staff A×B e transição inválida |
@@ -43,7 +46,7 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 | Resolver e autenticação integrados em TODAS as rotas legadas | MISSING | Teiko ainda depende de `brandId=teiko` |
 | Delivery, cartão/PIX, reembolso, relatórios financeiros completos e checkout completo A×B | MISSING | Caixa com dinheiro presencial existe no novo namespace, mas não equivale a PDV ou financeiro integral |
 | Migração real autorizável, backup/rollback, cutover | MISSING + EXTERNAL_GATE | Nenhuma escrita real autorizada |
-| White-label completo, domínio, SEO, mídia e Storage | PARTIAL | Branding público limitado, sem custom domain |
+| White-label completo, domínio, SEO, mídia e Storage | PARTIAL | Editor seguro de nome/cores/logo por tenant implementado; ainda sem domínio personalizado automático, mídia gerenciada e SEO por tenant |
 | Web Push real em device fechado | CODE_PRESENT_EXTERNAL_GATE | FCM/opt-in e testes emulator; VAPID/HTTPS/device real faltam |
 | Global Standard v01: planos/entitlements/limites/demo | NOT_STARTED | CORE_FIRST continua obrigatório |
 | Docs globais diagramas SVG/screen real/visuais/leads | MISSING/PARTIAL | Não apresentar concepts como screenshots |
@@ -53,7 +56,7 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 
 ## Próximos bloqueios implementáveis (não exigem PC)
 
-1. Ampliar o checkout de retirada simples já conectado: tamanhos/adicionais, delivery, PIX/cartão, estornos, conciliação, relatórios/PDV, KDS completo e reservas tenant-aware; preservar invariantes legados.
+1. Continuar com adicionais/modificadores e entrega tenant-aware; manter o pricing autoritativo e preservar os fluxos legados Teiko. Tamanhos e reservas isoladas já existem no Core, mas reservas permanecem bloqueadas fora do emulador até F5.
 2. Conversão da Teiko legada sem quebra de Auth, IDs ou links, com migrador production-safe separado e proteção de rollback (sem executar).
 3. Domain resolver e branding completos para todos os tenants; regras de cache/storage.
 4. Após F4 passar: PlanCatalog/EntitlementService/Sushi approved matrix, backend gating, DemoMode.
@@ -68,7 +71,7 @@ Retomada no PC: [PC_FINAL_TEST_SESSION.md](PC_FINAL_TEST_SESSION.md).
 
 ## Estimativa global de avanço — 29/10/2026
 
-**Estimativa heurística: ~49% do escopo total do GOAL MASTER, com incerteza alta (aprox. ±10 pontos percentuais).**
+**Estimativa heurística: ~52% do escopo total do GOAL MASTER, com incerteza alta (aprox. ±10 pontos percentuais).**
 Não é métrica automatizada, percentual de linhas de código nem declaração de produção pronta.
 
 | Fase | Peso estimado | Avanço estimado |
@@ -76,13 +79,13 @@ Não é métrica automatizada, percentual de linhas de código nem declaração 
 | F1 Preservação Teiko | 10% | 95% |
 | F2 Operação e PWA/push | 12% | 65% |
 | F3 Segurança e dependências | 13% | 70% |
-| F4 Core Multi-Tenant | 28% | 67% |
+| F4 Core Multi-Tenant | 28% | 78% |
 | F5 Global Standard v01 | 14% | 0% |
 | F6 Firebase/Cloudflare/staging | 10% | 25% |
 | F7 Dados oficiais/UAT Teiko | 7% | 5% |
 | F8 Go-live/docs/observabilidade | 6% | 15% |
 
-Resultado ponderado = ~49%. Critérios: somente o código entregue e o CI têm evidência; trabalho externo/credenciais/dados reais/UAT permanecem pendentes.
+Resultado ponderado = ~52%. Critérios: somente o código entregue e o CI têm evidência; trabalho externo/credenciais/dados reais/UAT permanecem pendentes.
 
 - Neste checkpoint, carrinho de retirada em novo tenant, recibo e histórico privado foram adicionados.
 - Novos tenants só aceitam pedidos quando explicitamente habilitados; fixtures A/B habilitadas só no Emulator.
@@ -100,3 +103,14 @@ Resultado ponderado = ~49%. Critérios: somente o código entregue e o CI têm e
 - Teiko original (`reservations` root) continua preservada e sem migração real.
 
 Estimativa de progresso global após este incremento: ~49% (incerteza ±10 p.p.), ponderada pelas fases do GOAL MASTER. Não corresponde a release readiness.
+
+## Catálogo com tamanhos e white-label — 29/10/2026
+
+- `tenantUpsertVariantProduct`: criação/edição de tamanhos por owner, validação de preços/IDs e transação com membership; bloqueia conversão destrutiva de produto simples para variante.
+- `tenant-order-policy.ts` e `shared/tenant-cart.ts`: preço calculado a partir de variante ativa no catálogo do próprio tenant, total limitado tecnicamente, resistência a tampering e distinção de tamanhos no mesmo carrinho.
+- `app/loja/[slug]/gestao` oferece editor de variantes com vários tamanhos; `app/loja/[slug]` permite selecionar e incluir cada tamanho.
+- `tenantUpdateBranding`: owner-only, validação de logo HTTPS, cores e nome, com auditoria. `resolvePublicTenant` expõe apenas o branding público. UI em `/loja/[slug]/branding`.
+- E2E: variação de tamanho, preço adulterado, tentativas A×B, papel revogado e spoof de `planId`.
+- **CI aprovado:** https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40954806219 (SHA `01ba386a0`).
+- **Não pronto para produção:** ainda faltam adicionais/modificadores, migração original da Teiko, delivery completo, billing manual/entitlements F5, staging e aceites humanos.
+- Estimativa ponderada do GOAL MASTER: **~52% (±10 p.p.)**, sem valor de certificação.

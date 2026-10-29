@@ -12,3 +12,5 @@ FEATURE_COMPLETE=false; STAGING_READY=false; PRODUCTION_READY=false; LIVE=false.
 
 - [Progresso de implementação pré-PC](PRE_PC_COMPLETENESS.md)
 - [Sessão de testes no PC](PC_FINAL_TEST_SESSION.md)
+
+- [Tamanhos e white-label por tenant](versions/v01-master-sushi/F4_VARIANTS_BRANDING.md)
