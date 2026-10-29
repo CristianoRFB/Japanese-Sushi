@@ -10,7 +10,14 @@ import { brlToCents } from '@/shared/money';
 import { validTenantSlug } from '@/shared/tenancy';
 
 type Category = { id: string; name: string; active: boolean };
-type Product = { id: string; name: string; description: string; categoryId: string; priceCents: number; active: boolean };
+type CatalogSize = { id: string; label: string; active: boolean; basePriceCents: number };
+type VariantRow = { id: string; label: string; price: string; active: boolean };
+type Product = { id: string; name: string; description: string; categoryId: string; priceCents: number;
+  active: boolean; productType?: 'SIMPLE' | 'VARIANT'; sizes?: CatalogSize[] };
+const emptyVariants = (): VariantRow[] => [
+  { id: 'pequeno', label: '', price: '', active: true },
+  { id: 'grande', label: '', price: '', active: true },
+];
 
 export default function TenantCatalogManagementPage() {
   const params = useParams();
@@ -24,6 +31,9 @@ export default function TenantCatalogManagementPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [variantEditing, setVariantEditing] = useState<Product | null>(null);
+  const [variantRows, setVariantRows] = useState<VariantRow[]>(emptyVariants);
+
   const ready = validTenantSlug(tenantId) && tenantId !== 'teiko' && hasFirebaseConfig;
 
   async function fetchCatalog() {
@@ -100,12 +110,61 @@ export default function TenantCatalogManagementPage() {
       form.reset();
     }, 'Produto salvo. Seu catálogo público foi atualizado.');
   }
+  function resetVariant() {
+    setVariantEditing(null);
+    setVariantRows(emptyVariants());
+  }
+  async function saveVariantProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const fields = new FormData(form);
+    const sizes = variantRows.map(row => ({
+      id: row.id.trim().toLowerCase(), label: row.label.trim(),
+      priceCents: brlToCents(row.price), active: row.active,
+    }));
+    if (sizes.length < 2 || sizes.length > 20 ||
+      new Set(sizes.map(row => row.id)).size !== sizes.length ||
+      sizes.some(row => row.priceCents === null || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row.id)
+        || row.label.length < 1)) {
+      setError('Tamanhos inválidos. Informe identificadores únicos, descrições e preços válidos.');
+      return;
+    }
+    await mutate(async () => {
+      await httpsCallable(getFirebaseClient().functions, 'tenantUpsertVariantProduct')({
+        tenantId, productId: String(fields.get('id') ?? '').trim().toLowerCase(),
+        categoryId: String(fields.get('categoryId') ?? ''),
+        name: String(fields.get('name') ?? '').trim(),
+        description: String(fields.get('description') ?? '').trim(),
+        active: fields.get('active') === 'on',
+        sizes,
+      });
+      resetVariant(); form.reset();
+    }, 'Produto com tamanhos atualizado no cardápio.');
+  }
+  function editVariant(product: Product) {
+    if (product.productType !== 'VARIANT') return;
+    setEditing(null);
+    setVariantEditing(product);
+    setVariantRows(product.sizes?.map(row => ({
+      id: row.id, label: row.label,
+      price: (row.basePriceCents / 100).toFixed(2).replace('.', ','),
+      active: row.active,
+    })) ?? emptyVariants());
+  }
   async function toggleProduct(product: Product) {
-    await mutate(() => httpsCallable(getFirebaseClient().functions, 'tenantUpsertSimpleProduct')({
-      tenantId, productId: product.id, categoryId: product.categoryId,
-      name: product.name, description: product.description, priceCents: product.priceCents,
-      active: !product.active,
-    }), product.active ? 'Produto desativado.' : 'Produto reativado.');
+    await mutate(() => product.productType === 'VARIANT'
+      ? httpsCallable(getFirebaseClient().functions, 'tenantUpsertVariantProduct')({
+          tenantId, productId: product.id, categoryId: product.categoryId,
+          name: product.name, description: product.description, active: !product.active,
+          sizes: (product.sizes ?? []).map(row => ({
+            id: row.id, label: row.label, priceCents: row.basePriceCents, active: row.active,
+          })),
+        })
+      : httpsCallable(getFirebaseClient().functions, 'tenantUpsertSimpleProduct')({
+          tenantId, productId: product.id, categoryId: product.categoryId,
+          name: product.name, description: product.description, priceCents: product.priceCents,
+          active: !product.active,
+        }), product.active ? 'Produto desativado.' : 'Produto reativado.');
   }
 
   if (!ready) return <main className="min-h-screen p-8" role="alert">
@@ -139,7 +198,7 @@ export default function TenantCatalogManagementPage() {
         </section>
         <section className="rounded-2xl bg-white p-5">
           <h2 className="text-xl font-bold">Produtos simples</h2>
-          <p className="mt-2 text-sm text-gray-600">Itens de preço único. Tamanhos e adicionais ainda não estão disponíveis neste painel multi-tenant; não use para simular essas funcionalidades.</p>
+          <p className="mt-2 text-sm text-gray-600">Itens de preço único. O cadastro com múltiplos tamanhos está logo abaixo; adicionais ainda não estão disponíveis.</p>
           <form onSubmit={saveProduct} key={editing?.id ?? 'new'} className="mt-4 grid gap-3 sm:grid-cols-2">
             <label>Identificador<input name="id" required minLength={3} maxLength={64} pattern="[a-z0-9]+(-[a-z0-9]+)*" readOnly={!!editing} defaultValue={editing?.id ?? ''} className="mt-1 w-full rounded-lg border p-3" /></label>
             <label>Categoria<select name="categoryId" required defaultValue={editing?.categoryId ?? ''} className="mt-1 w-full rounded-lg border p-3">
@@ -154,12 +213,89 @@ export default function TenantCatalogManagementPage() {
           </form>
         </section>
         <section className="rounded-2xl bg-white p-5">
+          <h2 className="text-xl font-bold">Produtos com tamanhos</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Cada tamanho tem seu próprio preço. O servidor recalcula o valor no pedido; nenhum adicional é cobrado neste formulário.
+          </p>
+          <form onSubmit={saveVariantProduct} key={variantEditing?.id ?? 'variant-new'} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label>Identificador do produto
+              <input name="id" required minLength={3} maxLength={64}
+                pattern="[a-z0-9]+(-[a-z0-9]+)*" readOnly={!!variantEditing}
+                defaultValue={variantEditing?.id ?? ''} className="mt-1 w-full rounded-lg border p-3" />
+            </label>
+            <label>Categoria
+              <select name="categoryId" required defaultValue={variantEditing?.categoryId ?? ''}
+                className="mt-1 w-full rounded-lg border p-3">
+                <option value="">Selecione</option>
+                {categories.filter(c => c.active).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </label>
+            <label>Nome
+              <input name="name" required minLength={2} maxLength={120} defaultValue={variantEditing?.name ?? ''}
+                className="mt-1 w-full rounded-lg border p-3" />
+            </label>
+            <label className="flex items-center gap-2">
+              <input name="active" type="checkbox" defaultChecked={variantEditing?.active ?? true} /> Produto ativo
+            </label>
+            <label className="sm:col-span-2">Descrição
+              <textarea name="description" maxLength={600} defaultValue={variantEditing?.description ?? ''}
+                className="mt-1 w-full rounded-lg border p-3" />
+            </label>
+            <div className="sm:col-span-2">
+              <h3 className="font-bold">Tamanhos e preços</h3>
+              {variantRows.map((row, index) => <div key={index}
+                className="mt-3 grid items-end gap-2 rounded-xl border p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                <label className="text-sm">Código
+                  <input required value={row.id} maxLength={64} pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                    onChange={event => setVariantRows(rows => rows.map((s,i) => i===index ? {...s,id:event.target.value.toLowerCase()} : s))}
+                    className="mt-1 w-full rounded-lg border p-2" />
+                </label>
+                <label className="text-sm">Tamanho
+                  <input required value={row.label} maxLength={60}
+                    onChange={event => setVariantRows(rows => rows.map((s,i) => i===index ? {...s,label:event.target.value} : s))}
+                    className="mt-1 w-full rounded-lg border p-2" />
+                </label>
+                <label className="text-sm">Preço R$
+                  <input required inputMode="decimal" value={row.price}
+                    onChange={event => setVariantRows(rows => rows.map((s,i) => i===index ? {...s,price:event.target.value} : s))}
+                    className="mt-1 w-full rounded-lg border p-2" />
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1 text-sm">
+                    <input type="checkbox" checked={row.active}
+                      onChange={event => setVariantRows(rows => rows.map((s,i) => i===index ? {...s,active:event.target.checked} : s))} />
+                    Ativo
+                  </label>
+                  <button type="button" disabled={busy || variantRows.length <= 2}
+                    className="text-sm text-red-700 underline"
+                    onClick={() => setVariantRows(rows => rows.filter((_,i) => i !== index))}>Excluir</button>
+                </div>
+              </div>)}
+              <Button variant="outline" type="button" disabled={busy || variantRows.length >= 20}
+                onClick={() => setVariantRows(rows => [...rows, { id: '', label: '', price: '', active: true }])}
+                className="mt-3">Adicionar tamanho</Button>
+            </div>
+            <Button type="submit" disabled={busy || categories.length === 0}>
+              {variantEditing ? 'Salvar tamanhos' : 'Cadastrar produto com tamanhos'}
+            </Button>
+            {variantEditing && <Button type="button" variant="outline" disabled={busy}
+              onClick={resetVariant}>Cancelar edição</Button>}
+          </form>
+        </section>
+        <section className="rounded-2xl bg-white p-5">
           <h2 className="text-xl font-bold">Catálogo cadastrado</h2>
           {products.length === 0 && <p className="mt-3 text-sm">Nenhum produto cadastrado.</p>}
           <div className="mt-3 grid gap-2">{products.map(p => <article key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
-            <div><strong>{p.name}</strong><p className="text-xs text-gray-600">{p.id} · {(p.priceCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} · {p.active ? 'Ativo' : 'Inativo'}</p></div>
+            <div><strong>{p.name}</strong><p className="text-xs text-gray-600">
+              {p.id} · {p.productType === 'VARIANT' ? (p.sizes?.length ?? 0) + ' tamanhos' :
+                (p.priceCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              {' · '}{p.active ? 'Ativo' : 'Inativo'}
+            </p></div>
             <div className="flex gap-2">
-              <Button variant="outline" disabled={busy} onClick={() => { setEditing(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Editar</Button>
+              <Button variant="outline" disabled={busy} onClick={() => {
+                if (p.productType === 'VARIANT') editVariant(p);
+                else { resetVariant(); setEditing(p); }
+              }}>Editar</Button>
               <Button variant="outline" disabled={busy} onClick={() => void toggleProduct(p)}>{p.active ? 'Desativar' : 'Reativar'}</Button>
             </div>
           </article>)}</div>
