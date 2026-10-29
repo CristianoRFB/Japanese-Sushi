@@ -80,3 +80,6 @@ A execução em navegador real ainda precisa de evidência. Não confundir fixtu
 - [ ] Confirmar atualização de status e testar cancelamento pelo cliente.
 - [ ] Repetir como owner-b ou cliente de outra sessão: acesso negado.
 - [ ] Em produção, feature permanece desativada até PlanCatalog/EntitlementService Pro+ e capacidade de mesas homologados.
+
+- [ ] Visitar `/loja/tenant-a/reservas/historico` na mesma sessão; conferir somente as próprias solicitações.
+- [ ] Fazer login em outra sessão: o histórico não pode revelar reservas da primeira.

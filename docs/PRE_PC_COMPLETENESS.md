@@ -34,7 +34,7 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 | Checkout de retirada com recibo, status e retry idempotente | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/page.tsx`, `app/loja/[slug]/acompanhar/[orderId]`; E2E de preço no servidor |
 | Histórico privado dos pedidos da mesma sessão Auth/tenant | CODE_PRESENT_CI_PENDING | `listMyTenantOrders`, `/loja/[slug]/historico`; E2E de owner A×B |
 | Reserva request-only por tenant, idempotência e isolamento de PII | CODE_COMPLETE_EMULATOR | `functions/src/tenant-reservations.ts`; E2E A×B e Rules dedicadas |
-| Reservas: console staff e acompanhamento privado pelo dono | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/reservas`; `reservas/gestao`; `reservas/[reservationId]` |
+| Reservas: console staff, histórico e acompanhamento privado pelo dono | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/reservas`; `reservas/gestao`; `reservas/[reservationId]`; `reservas/historico` |
 | Proteção de entitlement Pro+ para reservas em produção | BLOCKED_BY_F5 | Feature fechada fora dos emuladores; exige PlanCatalog + backend gate e controle real de capacidade |
 | Cache de carrinho preparado para tenant | PARTIAL | `components/providers.tsx`; ainda fixo em Teiko |
 | Duas fixtures Auth/Firestore e verificadores automatizados | CODE_COMPLETE | `functions/scripts/seed-tenant-emulator.mjs`, `verify-tenant-emulator.mjs`; CI |
