@@ -111,6 +111,15 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - Estimativa heurística global: **~47% (±10 p.p.)**; NÃO é prontidão de produção nem percentual aferido automaticamente.
 - CI do último SHA ainda deve ser verificado antes de marcar esta entrega validada; testes em navegador real continuam pendentes.
 
+## F4 Reservas Multi-Tenant — 29/10/2026
+
+- `functions/src/tenant-reservations.ts`: criação de solicitações, idempotência, leitura pelo dono, listagem staff, transições e cancelamento. Telefone não é retornado ao cliente via lista pública.
+- Em `app/loja/[slug]/reservas` (formulário, acompanhamento, console staff), não há garantia automática de mesa disponível.
+- A funcionalidade comercial Pro+ não pode ser habilitada em produção até o Global Standard v01 (Entitlements) e capacidade de mesas.
+- **Feature de reservas no namespace novo somente disponível em Firebase Emulator.** E2E Auth/Functions/Firestore + negativas de Rules A×B.
+- Feature original Teiko fica intocada; nenhuma migração de clientes e nenhuma cobrança automática.
+- Estimativa de avanço técnico geral: ~49% (±10 pontos percentuais); não inferir PRODUCTION_READY.
+
 ## Preservar / adaptar
 
 | Módulo | Tratamento |

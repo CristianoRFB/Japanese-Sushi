@@ -33,6 +33,9 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 | Carrinho de nova loja isolado por chave de tenant e sem dados pessoais | CODE_PRESENT_CI_TESTED | `shared/tenant-cart.ts`, `tests/tenant-cart.test.ts`; sanitização e limite de quantidade; Teiko continua legado |
 | Checkout de retirada com recibo, status e retry idempotente | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/page.tsx`, `app/loja/[slug]/acompanhar/[orderId]`; E2E de preço no servidor |
 | Histórico privado dos pedidos da mesma sessão Auth/tenant | CODE_PRESENT_CI_PENDING | `listMyTenantOrders`, `/loja/[slug]/historico`; E2E de owner A×B |
+| Reserva request-only por tenant, idempotência e isolamento de PII | CODE_COMPLETE_EMULATOR | `functions/src/tenant-reservations.ts`; E2E A×B e Rules dedicadas |
+| Reservas: console staff e acompanhamento privado pelo dono | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/reservas`; `reservas/gestao`; `reservas/[reservationId]` |
+| Proteção de entitlement Pro+ para reservas em produção | BLOCKED_BY_F5 | Feature fechada fora dos emuladores; exige PlanCatalog + backend gate e controle real de capacidade |
 | Cache de carrinho preparado para tenant | PARTIAL | `components/providers.tsx`; ainda fixo em Teiko |
 | Duas fixtures Auth/Firestore e verificadores automatizados | CODE_COMPLETE | `functions/scripts/seed-tenant-emulator.mjs`, `verify-tenant-emulator.mjs`; CI |
 | Cópia idempotente Teiko somente em emulador | CODE_COMPLETE para ensaio | `functions/scripts/migrate-teiko-emulator.mjs`; CI |
@@ -65,7 +68,7 @@ Retomada no PC: [PC_FINAL_TEST_SESSION.md](PC_FINAL_TEST_SESSION.md).
 
 ## Estimativa global de avanço — 29/10/2026
 
-**Estimativa heurística: ~47% do escopo total do GOAL MASTER, com incerteza alta (aprox. ±10 pontos percentuais).**
+**Estimativa heurística: ~49% do escopo total do GOAL MASTER, com incerteza alta (aprox. ±10 pontos percentuais).**
 Não é métrica automatizada, percentual de linhas de código nem declaração de produção pronta.
 
 | Fase | Peso estimado | Avanço estimado |
@@ -73,15 +76,27 @@ Não é métrica automatizada, percentual de linhas de código nem declaração 
 | F1 Preservação Teiko | 10% | 95% |
 | F2 Operação e PWA/push | 12% | 65% |
 | F3 Segurança e dependências | 13% | 70% |
-| F4 Core Multi-Tenant | 28% | 60% |
+| F4 Core Multi-Tenant | 28% | 67% |
 | F5 Global Standard v01 | 14% | 0% |
 | F6 Firebase/Cloudflare/staging | 10% | 25% |
 | F7 Dados oficiais/UAT Teiko | 7% | 5% |
 | F8 Go-live/docs/observabilidade | 6% | 15% |
 
-Resultado ponderado = ~47%. Critérios: somente o código entregue e o CI têm evidência; trabalho externo/credenciais/dados reais/UAT permanecem pendentes.
+Resultado ponderado = ~49%. Critérios: somente o código entregue e o CI têm evidência; trabalho externo/credenciais/dados reais/UAT permanecem pendentes.
 
 - Neste checkpoint, carrinho de retirada em novo tenant, recibo e histórico privado foram adicionados.
 - Novos tenants só aceitam pedidos quando explicitamente habilitados; fixtures A/B habilitadas só no Emulator.
 - O código da Teiko legada NÃO foi convertido para o novo namespace. Billing SaaS não foi implementado.
 - Excluir manualmente riscos de pagamento ou reserva do cálculo seria incorreto; fases incompletas contam como tal.
+
+## Reservas Multi-Tenant — checkpoint incremental
+
+- Backend isolado: `tenantCreateReservation`, `tenantGetMyReservation`, `tenantListReservations`, `tenantSetReservationStatus`, `tenantCancelMyReservation`.
+- Solicitações idempotentes por `reservationRequests/{clientRequestId}` em `tenants/{tenantId}`; Auth UID e request hash conferidos.
+- Permissionamento: leitura privada ao dono ou staff com membership, alterações somente Functions; Rule negative tests para A×B, PII, suspensão.
+- Formulário público e acompanhamento do dono apenas em staging/emulador; interface de gestão staff com confirmação manual.
+- **Nunca declarar reserva confirmada automaticamente:** não foi implementado inventário real de mesas/capacidade nem duração de ocupação.
+- Reservas são Pro+ na matriz aprovada. **F5 ainda NÃO está pronto**, portanto reserva por tenant é ativa somente em Firebase Emulator e fechada em ambientes reais.
+- Teiko original (`reservations` root) continua preservada e sem migração real.
+
+Estimativa de progresso global após este incremento: ~49% (incerteza ±10 p.p.), ponderada pelas fases do GOAL MASTER. Não corresponde a release readiness.
