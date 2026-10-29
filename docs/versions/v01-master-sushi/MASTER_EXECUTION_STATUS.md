@@ -127,6 +127,15 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 - Última evidência técnica do código: https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40954806219 (SUCCESS; SHA `01ba386a0`).
 - GOAL MASTER ~52% (estimativa heurística ±10 p.p.). F4 segue IN_PROGRESS e F5 NOT_STARTED. Não houve migração, deploy ou homologação de dispositivos.
 
+## Checkpoint financeiro incremental — 29/10/2026
+
+- `functions/src/tenant-refunds.ts` realiza estorno integral de CASH somente com declaração de devolução física por tenant owner, lançamento financeiro negativo idempotente, atualização atômica do caixa e do pedido. Não movimenta banco/gateway.
+- `functions/src/tenant-finance-report.ts` fornece somente ledger recente e limitado, com proteção RBAC; `app/loja/[slug]/financeiro` mostra os valores rotulados como amostra.
+- Verificação de troco real corrigida no recebimento; teste E2E de insuficiência de caixa.
+- `REFUNDED` exibido no acompanhamento privado do pedido, mantendo histórico sem acesso cruzado.
+- Readiness da F4 continua PARCIAL: falta delivery/motoboy tenantizado, modificadores completos, Teiko migrável, isolamento das rotas legadas, matriz de planos e homologação.
+- Estimativa ponderada ~54% ±10 p.p.; **não representa produção**.
+
 ## Preservar / adaptar
 
 | Módulo | Tratamento |

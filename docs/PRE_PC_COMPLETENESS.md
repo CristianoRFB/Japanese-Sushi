@@ -32,6 +32,9 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 | Tela de fila KDS por tenant | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/pedidos/page.tsx`; build, sem QA visual real |
 | Caixa por tenant: abertura, fechamento, diferença física e sessões | CODE_PRESENT_EMULATOR_TESTED | `functions/src/tenant-cash.ts`; Owner + logs; E2E em Auth/Firestore Emulator |
 | Recebimento manual CASH e ledger atômico por pedido READY | CODE_PRESENT_EMULATOR_TESTED | `tenantSettlePickupCash`; cashMovements + financeEntries + COMPLETED em uma transação, sem dupla contabilização |
+| Devolução manual integral em dinheiro por owner, com contrapartida financeira | CODE_PRESENT_CI_PENDING | `functions/src/tenant-refunds.ts`; ledger + cashMovements negativos, saldo e auditoria transacionais, E2E A×B |
+| Consulta financeira recente restrita ao owner | CODE_PRESENT_CI_PENDING | `functions/src/tenant-finance-report.ts`, `/loja/[slug]/financeiro`; exatamente últimas 100 entradas, sem PII |
+| Teste de troco com liquidez real no caixa | CODE_PRESENT_CI_PENDING | `functions/src/tenant-cash.ts`, E2E novo; rejeita troco maior que fundo disponível |
 | Tela de caixa para recebimento presencial | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/caixa/page.tsx`; somente dinheiro; sem comprovante eletrônico |
 | Carrinho de nova loja isolado por chave de tenant e sem dados pessoais | CODE_PRESENT_CI_TESTED | `shared/tenant-cart.ts`, `tests/tenant-cart.test.ts`; sanitização e limite de quantidade; Teiko continua legado |
 | Checkout de retirada com recibo, status e retry idempotente | CODE_PRESENT_PC_VALIDATION_PENDING | `app/loja/[slug]/page.tsx`, `app/loja/[slug]/acompanhar/[orderId]`; E2E de preço no servidor |
@@ -44,7 +47,7 @@ Evidência reproduzível: [GitHub Actions](https://github.com/CristianoRFB/Japan
 | Cópia idempotente Teiko somente em emulador | CODE_COMPLETE para ensaio | `functions/scripts/migrate-teiko-emulator.mjs`; CI |
 | Teiko original: pedidos, caixa, delivery, PDV, KDS, reservas | PRESERVED_LEGACY_CODE | Ver `README.md`, testes legados e CI; NÃO tenantizados |
 | Resolver e autenticação integrados em TODAS as rotas legadas | MISSING | Teiko ainda depende de `brandId=teiko` |
-| Delivery, cartão/PIX, reembolso, relatórios financeiros completos e checkout completo A×B | MISSING | Caixa com dinheiro presencial existe no novo namespace, mas não equivale a PDV ou financeiro integral |
+| Delivery, cartão/PIX, relatórios completos/paginados e checkout completo A×B | MISSING | Caixa com dinheiro presencial existe no novo namespace, mas não equivale a PDV ou financeiro integral |
 | Migração real autorizável, backup/rollback, cutover | MISSING + EXTERNAL_GATE | Nenhuma escrita real autorizada |
 | White-label completo, domínio, SEO, mídia e Storage | PARTIAL | Editor seguro de nome/cores/logo por tenant implementado; ainda sem domínio personalizado automático, mídia gerenciada e SEO por tenant |
 | Web Push real em device fechado | CODE_PRESENT_EXTERNAL_GATE | FCM/opt-in e testes emulator; VAPID/HTTPS/device real faltam |
@@ -71,21 +74,21 @@ Retomada no PC: [PC_FINAL_TEST_SESSION.md](PC_FINAL_TEST_SESSION.md).
 
 ## Estimativa global de avanço — 29/10/2026
 
-**Estimativa heurística: ~52% do escopo total do GOAL MASTER, com incerteza alta (aprox. ±10 pontos percentuais).**
+**Estimativa heurística: ~54% do escopo total do GOAL MASTER, com incerteza alta (aprox. ±10 pontos percentuais).**
 Não é métrica automatizada, percentual de linhas de código nem declaração de produção pronta.
 
 | Fase | Peso estimado | Avanço estimado |
 |---|---:|---:|
 | F1 Preservação Teiko | 10% | 95% |
 | F2 Operação e PWA/push | 12% | 65% |
-| F3 Segurança e dependências | 13% | 70% |
-| F4 Core Multi-Tenant | 28% | 78% |
+| F3 Segurança e dependências | 13% | 72% |
+| F4 Core Multi-Tenant | 28% | 83% |
 | F5 Global Standard v01 | 14% | 0% |
 | F6 Firebase/Cloudflare/staging | 10% | 25% |
 | F7 Dados oficiais/UAT Teiko | 7% | 5% |
 | F8 Go-live/docs/observabilidade | 6% | 15% |
 
-Resultado ponderado = ~52%. Critérios: somente o código entregue e o CI têm evidência; trabalho externo/credenciais/dados reais/UAT permanecem pendentes.
+Resultado ponderado = ~54%. Critérios: somente o código entregue e o CI têm evidência; trabalho externo/credenciais/dados reais/UAT permanecem pendentes.
 
 - Neste checkpoint, carrinho de retirada em novo tenant, recibo e histórico privado foram adicionados.
 - Novos tenants só aceitam pedidos quando explicitamente habilitados; fixtures A/B habilitadas só no Emulator.
@@ -114,3 +117,13 @@ Estimativa de progresso global após este incremento: ~49% (incerteza ±10 p.p.)
 - **CI aprovado:** https://github.com/CristianoRFB/Japanese-Sushi/actions/runs/40954806219 (SHA `01ba386a0`).
 - **Não pronto para produção:** ainda faltam adicionais/modificadores, migração original da Teiko, delivery completo, billing manual/entitlements F5, staging e aceites humanos.
 - Estimativa ponderada do GOAL MASTER: **~52% (±10 p.p.)**, sem valor de certificação.
+
+## Financeiro Multi-Tenant: estorno manual e visão recente — 29/10/2026
+
+- `tenantRefundPickupCash`: somente proprietário com membership ativo, senha/sessão Auth válida e tenant ACTIVE; recebe confirmação explícita de dinheiro efetivamente devolvido.
+- Estorno **integral** com documento idempotente `cashMovements/REFUND_{orderId}` e contrapartida `financeEntries/REFUND_{orderId}`, valor negativo, ajuste de saldo no caixa e status `REFUNDED` na mesma transação.
+- **Nenhuma movimentação bancária ou reembolso de PIX/cartão é executada.** Estorno manual só depois de pagamento presencial CASH comprovado por `SALE_{orderId}`. Não altera dados da Teiko legada.
+- Liquidez do caixa agora bloqueia troco cujo valor exceda o saldo disponível (defeito na condição anterior corrigido).
+- `tenantGetRecentFinanceSummary`: owner-only; últimas 100 entradas do ledger, vendas, estornos e líquido. **Amostra recente, não balanço completo nem extrato fiscal**.
+- Interfaces em `/loja/[slug]/caixa`, `/loja/[slug]/financeiro` e recibo privado atualizados. Tests E2E contemplam duplicate refund, tenant A×B, acesso indevido e troco insuficiente.
+- Estado de CI deste incremento deve ser atualizado após conclusão dos Actions do último SHA; navegador real/UAT pendentes. Estimativa geral revisada: ~54% ±10 p.p.; F4 ainda incompleta.
