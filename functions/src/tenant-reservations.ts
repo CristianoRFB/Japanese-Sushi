@@ -210,3 +210,21 @@ export const tenantCancelMyReservation = onCall(options, async request => {
     return { status: 'CANCELLED', idempotent: false };
   });
 });
+
+
+// Customer-only history in this tenant; never search by phone number.
+export const tenantListMyReservations = onCall(options, async request => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sessão necessária.');
+  const input = parse(z.object({ tenantId }).strict(), request.data);
+  if ((await getAuth().getUser(uid)).disabled)
+    throw new HttpsError('permission-denied', 'Conta desativada.');
+  const snapshot = await getFirestore().collection('tenants/' + input.tenantId + '/reservations')
+    .where('ownerUid', '==', uid).limit(20).get();
+  return { reservations: snapshot.docs.filter(doc => doc.data().tenantId === input.tenantId)
+    .map(doc => ({
+      id: doc.id, status: doc.data().status,
+      date: doc.data().date, time: doc.data().time, people: doc.data().people,
+      createdAt: doc.data().createdAt?.toDate?.().toISOString() ?? null,
+    })).sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')) };
+});

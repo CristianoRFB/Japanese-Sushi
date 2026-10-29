@@ -650,11 +650,23 @@ describe('F4 reservations isolated in new tenants (emulator only)', () => {
     expect(first.reservationId).toBe(second.reservationId);
     expect((await db.collection('tenants/' + a + '/reservations').get()).size).toBe(1);
     expect((await db.collection('tenants/' + b + '/reservations').get()).size).toBe(0);
+    const listMine = await invoke('tenantListMyReservations', { tenantId: a });
+    expect(listMine.response.ok).toBe(true);
+    expect((listMine.body as { result: { reservations: Array<{ id: string }> } }).result.reservations.some(
+      row => row.id === first.reservationId,
+    )).toBe(true);
+    const listOtherTenant = await invoke('tenantListMyReservations', { tenantId: b });
+    expect(listOtherTenant.response.ok).toBe(true);
+    expect((listOtherTenant.body as { result: { reservations: unknown[] } }).result.reservations).toEqual([]);
     const foreign = await fetchJson(authEndpoint, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ returnSecureToken: true }),
     });
     const otherToken = (foreign.body as { idToken: string }).idToken;
+    const otherHistory = await invoke('tenantListMyReservations', { tenantId: a }, otherToken);
+    expect(otherHistory.response.ok).toBe(true);
+    expect((otherHistory.body as { result: { reservations: unknown[] } }).result.reservations).toEqual([]);
+
     expect((await invoke('tenantGetMyReservation', {
       tenantId: a, reservationId: first.reservationId,
     }, otherToken)).response.ok).toBe(false);
