@@ -208,6 +208,7 @@ export default function TenantStorefrontPage() {
         </aside>}
       </div>
       <footer className="mt-8 text-sm text-gray-600">
+        <Link href={'/loja/' + slug + '/historico'} className="mr-5 underline">Meus pedidos neste restaurante</Link>
         <Link href="/" className="underline">Voltar à Teiko</Link>
       </footer>
     </div>

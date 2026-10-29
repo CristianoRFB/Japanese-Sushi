@@ -97,7 +97,8 @@ export default function TenantOrderReceiptPage() {
         <Button variant="outline" disabled={busy} onClick={() => void refresh()} className="mt-5">Atualizar status</Button>
       </div>}
       <div className="mt-6">
-        <Link className="text-sm font-semibold underline" href={'/loja/' + slug}>Voltar ao cardápio</Link>
+        <Link className="mr-4 text-sm font-semibold underline" href={'/loja/' + slug}>Voltar ao cardápio</Link>
+        <Link className="text-sm font-semibold underline" href={'/loja/' + slug + '/historico'}>Meus pedidos</Link>
       </div>
     </div>
   </main>;

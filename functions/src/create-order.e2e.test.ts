@@ -455,6 +455,11 @@ describe('F4 tenant pickup order transaction and owner isolation', () => {
     expect((await db.collection('tenants/' + b + '/orders').get()).size).toBe(0);
     expect((await invoke('createTenantPickupOrder', { ...input, items: [{ productId: 'simple', quantity: 1 }] })).response.ok).toBe(false);
     expect((await invoke('createTenantPickupOrder', { ...input, tenantId: b, clientRequestId: crypto.randomUUID() })).response.ok).toBe(false);
+    const history = await invoke('listMyTenantOrders', { tenantId: a });
+    expect(history.response.ok).toBe(true);
+    expect((history.body as { result: { orders: Array<{ id: string }> } }).result.orders.some(x => x.id === first.orderId)).toBe(true);
+    expect((await invoke('listMyTenantOrders', { tenantId: b })).response.ok).toBe(true);
+    expect((await invoke('listMyTenantOrders', { tenantId: b })).body).not.toEqual(history.body);
     const mine = await invoke('getMyTenantOrder', { tenantId: a, orderId: first.orderId });
     expect(mine.response.ok).toBe(true);
     expect((mine.body as { result: { pricing: { totalCents: number } } }).result.pricing.totalCents).toBe(3600);
@@ -465,6 +470,9 @@ describe('F4 tenant pickup order transaction and owner isolation', () => {
     });
     const otherToken = (other.body as { idToken: string }).idToken;
     expect((await invoke('getMyTenantOrder', { tenantId: a, orderId: first.orderId }, otherToken)).response.ok).toBe(false);
+    const otherHistory = await invoke('listMyTenantOrders', { tenantId: a }, otherToken);
+    expect(otherHistory.response.ok).toBe(true);
+    expect((otherHistory.body as { result: { orders: unknown[] } }).result.orders).toEqual([]);
     await db.doc('tenants/' + a).update({ status: 'SUSPENDED' });
     expect((await invoke('createTenantPickupOrder', { ...input, clientRequestId: crypto.randomUUID() })).response.ok).toBe(false);
     // The customer does not lose access to historical data after suspension.
