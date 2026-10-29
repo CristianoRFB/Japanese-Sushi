@@ -167,12 +167,24 @@ export default function TenantStorefrontPage() {
           })}
         </section>
         {tenant?.orderingEnabled && <aside className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Carrinho e checkout">
-          <h2 className="text-xl font-black">Seu pedido</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xl font-black">Seu pedido</h2>
+            <Button type="button" variant="outline" disabled={submitting || cartItems.length === 0}
+              onClick={() => { pendingId.current = null; setCheckoutErrorText(''); setCart({ slug, items: [] }); }}>
+              Esvaziar
+            </Button>
+          </div>
           {cartItems.length === 0 && <p className="mt-3 text-sm text-gray-600">Adicione produtos para retirada.</p>}
           <ul className="mt-4 space-y-2 text-sm">{cartItems.map(item => {
             const product = products.find(p => p.id === item.productId);
             return <li key={item.productId} className="flex justify-between gap-3">
-              <span>{item.quantity}× {product?.name ?? 'Produto indisponível'}</span>
+              <div className="min-w-0">
+                <span>{item.quantity}× {product?.name ?? 'Produto indisponível'}</span>
+                <button type="button" disabled={submitting} className="ml-2 text-xs text-red-700 underline"
+                  onClick={() => { pendingId.current = null; adjustCart(item.productId, -1); }}>
+                  Remover 1
+                </button>
+              </div>
               <span>{product?.sizes?.[0] ? brl(item.quantity * product.sizes[0].basePriceCents) : '—'}</span>
             </li>;
           })}</ul>
