@@ -616,3 +616,84 @@ describe('F4 pickup cash settlement and tenant financial isolation', () => {
     expect((await invoke('tenantGetPickupCashRegister', { tenantId: b })).response.ok).toBe(false);
   }, 115_000);
 });
+
+
+describe('F4 reservations isolated in new tenants (emulator only)', () => {
+  it('enforces disabled default, idempotency, scoped status and customer privacy', async () => {
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const a = 'reserv-a-' + suffix, b = 'reserv-b-' + suffix;
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', reservationsEnabled: false });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', reservationsEnabled: true });
+    const date = new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10);
+    const draft = {
+      tenantId: a, clientRequestId: crypto.randomUUID(),
+      name: 'Reserva Fictícia', phone: '17999999999', date, time: '19:00', people: 4,
+      notes: 'Teste isolado',
+    };
+    const invoke = (name: string, data: unknown, bearer = idToken) => fetchJson(
+      functionsBaseUrl + '/sushi-cbfd2/southamerica-east1/' + name, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + bearer },
+        body: JSON.stringify({ data }),
+      },
+    );
+    expect((await invoke('tenantCreateReservation', draft)).response.ok).toBe(false);
+    await db.doc('tenants/' + a).update({ reservationsEnabled: true });
+    expect((await invoke('tenantCreateReservation', { ...draft, date: '2026-02-30' })).response.ok).toBe(false);
+    const [one, two] = await Promise.all([
+      invoke('tenantCreateReservation', draft), invoke('tenantCreateReservation', draft),
+    ]);
+    expect(one.response.ok).toBe(true);
+    expect(two.response.ok).toBe(true);
+    const first = (one.body as { result: { reservationId: string } }).result;
+    const second = (two.body as { result: { reservationId: string } }).result;
+    expect(first.reservationId).toBe(second.reservationId);
+    expect((await db.collection('tenants/' + a + '/reservations').get()).size).toBe(1);
+    expect((await db.collection('tenants/' + b + '/reservations').get()).size).toBe(0);
+    const foreign = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ returnSecureToken: true }),
+    });
+    const otherToken = (foreign.body as { idToken: string }).idToken;
+    expect((await invoke('tenantGetMyReservation', {
+      tenantId: a, reservationId: first.reservationId,
+    }, otherToken)).response.ok).toBe(false);
+    expect((await invoke('tenantGetMyReservation', {
+      tenantId: b, reservationId: first.reservationId,
+    })).response.ok).toBe(false);
+    expect((await invoke('tenantCreateReservation', { ...draft, people: 3 })).response.ok).toBe(false);
+
+    const ownerAuth = await fetchJson(authEndpoint, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'reserv-owner-' + suffix + '@example.test',
+        password: 'synthetic-emulator-password', returnSecureToken: true }),
+    });
+    expect(ownerAuth.response.ok).toBe(true);
+    const ownerUid = (ownerAuth.body as { localId: string }).localId;
+    const ownerToken = (ownerAuth.body as { idToken: string }).idToken;
+    await db.doc('tenantMemberships/' + a + '_' + ownerUid).set({
+      tenantId: a, userUid: ownerUid, role: 'tenant_owner', active: true,
+    });
+    expect((await invoke('tenantListReservations', { tenantId: b }, ownerToken)).response.ok).toBe(false);
+    const listing = await invoke('tenantListReservations', { tenantId: a }, ownerToken);
+    expect(listing.response.ok).toBe(true);
+    expect((listing.body as { result: { reservations: Array<{ id: string }> } }).result.reservations.some(
+      r => r.id === first.reservationId,
+    )).toBe(true);
+    const update = (tenantId: string, status: string) => invoke('tenantSetReservationStatus', {
+      tenantId, reservationId: first.reservationId, status,
+    }, ownerToken);
+    expect((await update(b, 'CONFIRMED')).response.ok).toBe(false);
+    expect((await update(a, 'COMPLETED')).response.ok).toBe(false);
+    expect((await update(a, 'CONFIRMED')).response.ok).toBe(true);
+    expect((await update(a, 'CONFIRMED')).response.ok).toBe(true);
+    expect((await invoke('tenantCancelMyReservation', {
+      tenantId: a, reservationId: first.reservationId,
+    })).response.ok).toBe(true);
+    expect((await update(a, 'COMPLETED')).response.ok).toBe(false);
+    await db.doc('tenantMemberships/' + a + '_' + ownerUid).update({ active: false });
+    expect((await invoke('tenantListReservations', { tenantId: a }, ownerToken)).response.ok).toBe(false);
+    await db.doc('tenants/' + a).update({ status: 'SUSPENDED' });
+    expect((await invoke('tenantCreateReservation', { ...draft, clientRequestId: crypto.randomUUID() })).response.ok).toBe(false);
+  }, 120_000);
+});
