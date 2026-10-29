@@ -49,7 +49,7 @@ export function priceTenantPickup(
     const price = selected?.basePriceCents;
     if (!selected || selected.active !== true || !Number.isSafeInteger(price) ||
       price < 1 || price > 10_000_000 || typeof selected.id !== 'string' ||
-      typeof selected.label !== 'string' ||
+      (selected.label !== undefined && typeof selected.label !== 'string') ||
       (product.productType === 'SIMPLE' && sizes.length !== 1)) {
       throw new Error('Tamanho inválido, indisponível ou preço incorreto.');
     }
@@ -61,7 +61,7 @@ export function priceTenantPickup(
       productId: item.productId,
       name: product.name,
       sizeId: String(selected.id),
-      sizeLabel: selected.label,
+      sizeLabel: selected.label || 'Padrão',
       quantity: item.quantity,
       unitPriceCents: price,
       totalPriceCents: lineTotal,
