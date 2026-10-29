@@ -2,6 +2,7 @@
 
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -160,7 +161,10 @@ export default function TenantCashPage() {
     <div className="mx-auto max-w-4xl">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div><p className="text-xs font-bold uppercase tracking-widest text-[#b5232b]">Caixa · {tenantId}</p>
-          <h1 className="mt-1 text-3xl font-black">Recebimento presencial</h1></div>
+          <h1 className="mt-1 text-3xl font-black">Recebimento presencial</h1>
+          <Link href={'/loja/' + tenantId + '/financeiro'} className="mt-2 inline-block text-sm underline">
+            Ver lançamentos financeiros recentes
+          </Link></div>
         {user && <Button variant="outline" onClick={() => void signOut(getFirebaseClient().auth)}>Sair</Button>}
       </header>
       <p className="mt-3 text-sm text-gray-600">Apenas dinheiro recebido fisicamente. Não confirma PIX, cartão, reembolsos ou delivery. Nenhum pagamento é processado automaticamente.</p>
