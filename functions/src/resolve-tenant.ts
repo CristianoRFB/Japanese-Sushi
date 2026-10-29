@@ -36,6 +36,10 @@ export const resolvePublicTenant = onCall(
         branding: status === 'ACTIVE' ? publicBranding(tenant.branding) : { displayName: 'Restaurante indisponível' },
         orderingEnabled: status === 'ACTIVE' && slug !== 'teiko' && tenant.orderingEnabled === true
           && tenant.migrationState !== 'EMULATOR_COPY_ONLY',
+        // Pro+ reservation entitlement enforcement is not yet in production.
+        reservationsEnabled: !!process.env.FIRESTORE_EMULATOR_HOST && !!process.env.FIREBASE_AUTH_EMULATOR_HOST
+          && status === 'ACTIVE' && slug !== 'teiko' && tenant.reservationsEnabled === true
+          && tenant.migrationState !== 'EMULATOR_COPY_ONLY',
       };
     }
     // Backward-compatible Teiko resolution while tenant migration is pending.

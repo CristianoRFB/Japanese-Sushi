@@ -13,7 +13,7 @@ import { changeTenantCart, isSimpleTenantProduct, quoteTenantCart, sanitizeTenan
 import { tenantCacheKey, validTenantSlug } from '@/shared/tenancy';
 
 type PublicTenant = {
-  id: string; slug: string; status: 'ACTIVE' | 'SUSPENDED'; orderingEnabled?: boolean;
+  id: string; slug: string; status: 'ACTIVE' | 'SUSPENDED'; orderingEnabled?: boolean; reservationsEnabled?: boolean;
   branding: { displayName: string; primaryColor?: string; logoUrl?: string };
   legacyFallback?: boolean;
 };
@@ -208,6 +208,7 @@ export default function TenantStorefrontPage() {
         </aside>}
       </div>
       <footer className="mt-8 text-sm text-gray-600">
+        {tenant?.reservationsEnabled && <Link href={'/loja/' + slug + '/reservas'} className="mr-5 underline">Solicitar reserva</Link>}
         <Link href={'/loja/' + slug + '/historico'} className="mr-5 underline">Meus pedidos neste restaurante</Link>
         <Link href="/" className="underline">Voltar à Teiko</Link>
       </footer>
