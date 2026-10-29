@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { ensureAnonymousUser, getFirebaseClient, hasFirebaseConfig } from '@/lib/firebase/client';
-import { changeTenantCart, isSimpleTenantProduct, quoteTenantCart, sanitizeTenantCart,
+import { changeTenantCart, orderableTenantSizes, quoteTenantCart, sanitizeTenantCart,
   type TenantCartItem, type TenantCartProduct } from '@/shared/tenant-cart';
 import { tenantCacheKey, validTenantSlug } from '@/shared/tenancy';
 
@@ -43,6 +43,7 @@ export default function TenantStorefrontPage() {
   const [checkoutErrorText, setCheckoutErrorText] = useState('');
   const [cart, setCart] = useState<CartState>({ slug: '', items: [] });
   const [customerName, setCustomerName] = useState('');
+  const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const pendingId = useRef<{ signature: string; id: string } | null>(null);
   const cartItems = cart.slug === slug ? cart.items : [];
@@ -96,10 +97,10 @@ export default function TenantStorefrontPage() {
     return () => { active = false; stopProducts?.(); };
   }, [slug]);
 
-  function adjustCart(productId: string, delta: number) {
+  function adjustCart(productId: string, delta: number, sizeId?: string) {
     pendingId.current = null;
     setCheckoutErrorText('');
-    setCart(current => ({ slug, items: changeTenantCart(current.slug === slug ? current.items : [], productId, delta) }));
+    setCart(current => ({ slug, items: changeTenantCart(current.slug === slug ? current.items : [], productId, delta, sizeId) }));
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -149,18 +150,32 @@ export default function TenantStorefrontPage() {
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <section aria-label="Produtos disponíveis" className="grid gap-3">
           {products.map((product) => {
-            const simple = isSimpleTenantProduct(slug, product);
-            const qty = cartItems.find(x => x.productId === product.id)?.quantity ?? 0;
+            const sizes = orderableTenantSizes(slug, product);
+            const selectedSizeId = selectedSizes[product.id] && sizes.some(s => s.id === selectedSizes[product.id])
+              ? selectedSizes[product.id] : sizes[0]?.id;
+            const selectedSize = sizes.find(s => s.id === selectedSizeId);
+            const sizeId = product.productType === 'VARIANT' ? selectedSizeId : undefined;
+            const qty = cartItems.find(x => x.productId === product.id &&
+              (x.sizeId ?? '') === (sizeId ?? ''))?.quantity ?? 0;
             return <article key={product.id} className="rounded-2xl bg-white p-5 shadow-sm">
               <h2 className="text-lg font-bold">{product.name}</h2>
               {product.description && <p className="mt-1 text-sm text-gray-600">{product.description}</p>}
-              {product.sizes?.[0] && Number.isSafeInteger(product.sizes[0].basePriceCents) &&
-                <p className="mt-3 font-bold">{brl(product.sizes[0].basePriceCents)}</p>}
-              {simple && tenant?.orderingEnabled
+              {selectedSize && <p className="mt-3 font-bold">{brl(selectedSize.basePriceCents)}</p>}
+              {sizes.length > 1 && <label className="mt-3 block text-sm font-medium">
+                Tamanho
+                <select value={selectedSizeId ?? ''} disabled={submitting}
+                  onChange={event => setSelectedSizes(current => ({ ...current, [product.id]: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border p-2">
+                  {sizes.map(size => <option key={size.id} value={size.id}>{size.label} · {brl(size.basePriceCents)}</option>)}
+                </select>
+              </label>}
+              {sizes.length > 0 && tenant?.orderingEnabled
                 ? <div className="mt-4 flex items-center gap-3">
-                    <Button variant="outline" disabled={submitting || qty === 0} onClick={() => adjustCart(product.id, -1)} aria-label={'Remover ' + product.name}>−</Button>
+                    <Button variant="outline" disabled={submitting || qty === 0}
+                      onClick={() => adjustCart(product.id, -1, sizeId)} aria-label={'Remover ' + product.name}>−</Button>
                     <span className="min-w-6 text-center font-semibold" aria-live="polite">{qty}</span>
-                    <Button variant="outline" disabled={submitting || qty >= 20} onClick={() => adjustCart(product.id, 1)} aria-label={'Adicionar ' + product.name}>+</Button>
+                    <Button variant="outline" disabled={submitting || qty >= 20}
+                      onClick={() => adjustCart(product.id, 1, sizeId)} aria-label={'Adicionar ' + product.name}>+</Button>
                   </div>
                 : <p className="mt-3 text-xs text-gray-500">Disponível apenas para consulta neste momento.</p>}
             </article>;
@@ -177,15 +192,18 @@ export default function TenantStorefrontPage() {
           {cartItems.length === 0 && <p className="mt-3 text-sm text-gray-600">Adicione produtos para retirada.</p>}
           <ul className="mt-4 space-y-2 text-sm">{cartItems.map(item => {
             const product = products.find(p => p.id === item.productId);
-            return <li key={item.productId} className="flex justify-between gap-3">
+            const options = product ? orderableTenantSizes(slug, product) : [];
+            const size = item.sizeId ? options.find(x => x.id === item.sizeId) :
+              options.length === 1 ? options[0] : undefined;
+            return <li key={item.productId + ':' + (item.sizeId ?? '')} className="flex justify-between gap-3">
               <div className="min-w-0">
-                <span>{item.quantity}× {product?.name ?? 'Produto indisponível'}</span>
+                <span>{item.quantity}× {product?.name ?? 'Produto indisponível'}{size && options.length > 1 ? ' · ' + size.label : ''}</span>
                 <button type="button" disabled={submitting} className="ml-2 text-xs text-red-700 underline"
-                  onClick={() => { pendingId.current = null; adjustCart(item.productId, -1); }}>
+                  onClick={() => adjustCart(item.productId, -1, item.sizeId)}>
                   Remover 1
                 </button>
               </div>
-              <span>{product?.sizes?.[0] ? brl(item.quantity * product.sizes[0].basePriceCents) : '—'}</span>
+              <span>{size ? brl(item.quantity * size.basePriceCents) : '—'}</span>
             </li>;
           })}</ul>
           {quote.invalid && <p role="alert" className="mt-3 text-sm text-red-700">
