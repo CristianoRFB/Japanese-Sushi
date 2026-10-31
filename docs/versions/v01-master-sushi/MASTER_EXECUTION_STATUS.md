@@ -160,3 +160,11 @@ Uma tentativa inicial de `npm ci` raiz no Node 24 falhou ao tentar remover `ligh
 ## Ações do proprietário
 
 Lista operacional em [NEEDS_USER_ACTION.md](NEEDS_USER_ACTION.md). A execução local continua sem esses itens.
+
+## F5 incremental — catálogo e entitlements (31/10/2026)
+
+- `shared/sushi-plans.ts`: PlanCatalog local aprovado (Essencial R$ 89,90; Pro R$ 149,90; Premium R$ 219,90) e resolver centralizado para as **features já implementadas**: retirada e reservas Pro+. Nenhum limite comercial, pagamento de assinatura ou recurso Premium exclusivo foi inventado.
+- `platformSetTenantCommercialState`: atribuição manual autorizada somente por Platform Owner com Auth vivo, tenant existente, trilha de auditoria e bloqueio de migração Teiko. Console de plataforma recebe formulário de plano/status. Novos tenants começam com assinatura suspensa e pedem ativação explícita.
+- `createTenantPickupOrder`, `resolvePublicTenant` e reservas: verificação server-side do entitlement **e** da configuração operacional. Assinaturas suspensas, atrasadas, canceladas e trial vencido bloqueiam novos pedidos/reservas, preservando leituras históricas. Demo somente opera com dois emuladores locais; reserva permanece bloqueada fora do Emulator mesmo com plano Pro+ até homologação de capacidade.
+- Fixtures de A×B recebem dados comerciais sintéticos e unitários de matriz/override/status foram incluídos. **Executar CI antes de considerar o checkpoint validado.**
+- Estado F5: IN_PROGRESS. Não existe billing, limites específicos Sushi aprovados, UAT, staging ou release real; F4 continua incompleto e Teiko legada não sofre alterações.

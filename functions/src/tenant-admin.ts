@@ -3,6 +3,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 import { membershipDocumentId, validTenantSlug, type TenantRole } from '../../shared/tenancy.js';
+import { SUSHI_PLANS } from '../../shared/sushi-plans.js';
 
 const region = 'southamerica-east1';
 const enforceAppCheck = process.env.ENFORCE_APP_CHECK === 'true';
@@ -50,6 +51,7 @@ export const platformCreateTenant = onCall(options, async (request) => {
       throw new HttpsError('already-exists', 'Este identificador já está em uso.');
     tx.create(ref, {
       id: input.slug, slug: input.slug, status: 'ACTIVE',
+      planId: 'essencial', subscriptionStatus: 'suspended',
       branding: { displayName: input.displayName, ...(input.primaryColor && { primaryColor: input.primaryColor }) },
       createdBy: actorUid, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
     });
@@ -152,6 +154,62 @@ export const getMyTenantAccess = onCall(options, async (request) => {
 // No callable to grant a platform_owner claim. That credential must be
 // provisioned out-of-band by the verified Firebase project administrator.
 
+
+/**
+ * Manual commercial provisioning only. No billing, automatic checkout,
+ * claim minting or production migration. Mutations are fully audited.
+ */
+const commercialSchema = z.object({
+  tenantId: slugSchema,
+  planId: z.enum(['essencial', 'pro', 'premium']),
+  subscriptionStatus: z.enum(['trial', 'active', 'past_due', 'suspended', 'cancelled', 'demo']),
+  trialUntil: z.iso.datetime({ offset: true }).nullable().optional(),
+  entitlementOverrides: z.object({
+    pickup_orders: z.boolean().optional(), reservations: z.boolean().optional(),
+  }).strict().optional(),
+}).strict();
+
+export const platformSetTenantCommercialState = onCall(options, async request => {
+  const actorUid = await requirePlatformOwner(request);
+  const input = parse(commercialSchema, request.data);
+  if (input.tenantId === 'teiko')
+    throw new HttpsError('failed-precondition', 'Teiko requer migração autorizada.');
+  const db = getFirestore(), tenantRef = db.doc('tenants/' + input.tenantId);
+  const auditRef = db.collection('platformAuditEvents').doc();
+  let updated = false;
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(tenantRef);
+    if (!snap.exists) throw new HttpsError('not-found', 'Tenant inexistente.');
+    const before = snap.data()!;
+    if (before.migrationState === 'EMULATOR_COPY_ONLY')
+      throw new HttpsError('failed-precondition', 'Tenant em migração não pode receber plano.');
+    const next = {
+      planId: input.planId, subscriptionStatus: input.subscriptionStatus,
+      trialUntil: input.trialUntil ?? null,
+      entitlementOverrides: input.entitlementOverrides ?? {},
+    };
+    if (before.planId === next.planId && before.subscriptionStatus === next.subscriptionStatus &&
+      (before.trialUntil ?? null) === next.trialUntil &&
+      JSON.stringify(before.entitlementOverrides ?? {}) === JSON.stringify(next.entitlementOverrides))
+      return;
+    tx.update(tenantRef, { ...next, updatedAt: FieldValue.serverTimestamp() });
+    tx.create(auditRef, {
+      action: 'TENANT_COMMERCIAL_STATE_CHANGED', actorUid, tenantId: input.tenantId,
+      previousPlanId: before.planId ?? null, nextPlanId: input.planId,
+      previousSubscriptionStatus: before.subscriptionStatus ?? null,
+      nextSubscriptionStatus: input.subscriptionStatus,
+      previousTrialUntil: typeof before.trialUntil === 'string' ? before.trialUntil : null,
+      nextTrialUntil: next.trialUntil,
+      previousEntitlementOverrides: before.entitlementOverrides ?? {},
+      nextEntitlementOverrides: next.entitlementOverrides,
+      occurredAt: FieldValue.serverTimestamp(),
+    });
+    updated = true;
+  });
+  return { updated, planId: input.planId, subscriptionStatus: input.subscriptionStatus,
+    monthlyPriceCents: SUSHI_PLANS[input.planId].monthlyPriceCents };
+});
+
 export const platformListTenants = onCall(options, async (request) => {
   await requirePlatformOwner(request);
   // Bounded listing; no private config, client data, plan or entitlement overrides.
@@ -160,6 +218,8 @@ export const platformListTenants = onCall(options, async (request) => {
     id: doc.id,
     slug: doc.data().slug,
     status: doc.data().status,
+    planId: doc.data().planId ?? null,
+    subscriptionStatus: doc.data().subscriptionStatus ?? null,
     displayName: typeof doc.data().branding?.displayName === 'string'
       ? doc.data().branding.displayName : 'Restaurante',
   })) };

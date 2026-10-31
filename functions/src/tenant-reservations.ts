@@ -4,6 +4,7 @@ import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 import { validTenantSlug, membershipDocumentId } from '../../shared/tenancy.js';
+import { canUseSushiFeature } from '../../shared/sushi-plans.js';
 import { requireTenantMembership } from './tenant-admin.js';
 
 const options = {
@@ -52,7 +53,8 @@ function validateDate(date: string): void {
 function canAcceptReservation(tenant: FirebaseFirestore.DocumentData | undefined) {
   const local = !!process.env.FIRESTORE_EMULATOR_HOST && !!process.env.FIREBASE_AUTH_EMULATOR_HOST;
   return local && tenant?.status === 'ACTIVE' && tenant?.reservationsEnabled === true
-    && tenant?.migrationState !== 'EMULATOR_COPY_ONLY';
+    && tenant?.migrationState !== 'EMULATOR_COPY_ONLY'
+    && canUseSushiFeature(tenant, 'reservations', new Date(), local);
 }
 function requestHash(input: z.infer<typeof schema>): string {
   return createHash('sha256').update(JSON.stringify(input)).digest('hex');

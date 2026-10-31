@@ -753,7 +753,7 @@ export { registerDriverPushToken, revokeDriverPushToken, notifyDriverOnAssignmen
 
 export { resolvePublicTenant } from './resolve-tenant.js';
 
-export { platformCreateTenant, platformSetTenantStatus, platformSetMembership, getMyTenantAccess, platformListTenants } from './tenant-admin.js';
+export { platformCreateTenant, platformSetTenantStatus, platformSetMembership, platformSetTenantCommercialState, getMyTenantAccess, platformListTenants } from './tenant-admin.js';
 
 export { tenantUpsertCategory, tenantUpsertSimpleProduct, tenantUpsertVariantProduct, tenantGetManageCatalog } from './tenant-catalog.js';
 

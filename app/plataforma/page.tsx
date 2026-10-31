@@ -7,7 +7,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { getFirebaseClient, hasFirebaseConfig } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 
-type TenantRow = { id: string; slug: string; status: 'ACTIVE' | 'SUSPENDED'; displayName: string };
+type TenantRow = { id: string; slug: string; status: 'ACTIVE' | 'SUSPENDED'; displayName: string;
+  planId?: string | null; subscriptionStatus?: string | null };
 type TenantRole = 'tenant_owner' | 'staff' | 'driver';
 
 function friendlyError(error: unknown): string {
@@ -31,6 +32,8 @@ export default function PlatformPage() {
   const [memberUid, setMemberUid] = useState('');
   const [memberRole, setMemberRole] = useState<TenantRole>('staff');
   const [memberActive, setMemberActive] = useState(true);
+  const [planId, setPlanId] = useState('essencial');
+  const [subscriptionStatus, setSubscriptionStatus] = useState('suspended');
 
   async function refresh() {
     const { functions } = getFirebaseClient();
@@ -105,6 +108,12 @@ export default function PlatformPage() {
       });
     }, memberActive ? 'Membership atualizada.' : 'Acesso revogado.');
   }
+  async function saveCommercialState(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await perform(() => httpsCallable(getFirebaseClient().functions, 'platformSetTenantCommercialState')({
+      tenantId, planId, subscriptionStatus,
+    }), 'Plano e assinatura salvos com trilha de auditoria.');
+  }
   if (!hasFirebaseConfig) return <main className="p-8">Firebase não configurado; plataforma indisponível.</main>;
   return <main className="min-h-screen bg-[#f3f0e8] p-4 text-[#111613] sm:p-8">
     <div className="mx-auto max-w-5xl">
@@ -126,7 +135,7 @@ export default function PlatformPage() {
           <h2 className="text-xl font-bold">Tenants cadastrados</h2>
           <p className="mt-1 text-sm text-gray-600">Até 50 registros; a Teiko legada precisa de migração autorizada.</p>
           {tenants.length === 0 ? <p className="mt-4 text-sm">Nenhum tenant cadastrado no Core novo.</p> : <div className="mt-4 grid gap-2">{tenants.map((tenant) => <article key={tenant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
-            <div><strong>{tenant.displayName}</strong><p className="text-xs text-gray-600">{tenant.slug} · {tenant.status}</p></div>
+            <div><strong>{tenant.displayName}</strong><p className="text-xs text-gray-600">{tenant.slug} · {tenant.status} · {tenant.planId ?? 'sem plano'} / {tenant.subscriptionStatus ?? 'sem assinatura'}</p></div>
             <Button variant="outline" disabled={busy} onClick={() => void perform(
               () => httpsCallable(getFirebaseClient().functions, 'platformSetTenantStatus')({ tenantId: tenant.id, status: tenant.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' }),
               tenant.status === 'ACTIVE' ? 'Tenant suspenso.' : 'Tenant reativado.',
@@ -139,6 +148,26 @@ export default function PlatformPage() {
             <label>Identificador<input required name="slug" minLength={3} maxLength={64} pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="restaurante-beta" className="mt-1 w-full rounded-lg border p-3" /></label>
             <label>Nome público<input required name="displayName" minLength={2} maxLength={90} className="mt-1 w-full rounded-lg border p-3" /></label>
             <Button type="submit" disabled={busy} className="sm:col-span-2">Criar tenant</Button>
+          </form>
+        </section>
+        <section className="rounded-2xl bg-white p-5">
+          <h2 className="text-xl font-bold">Plano e assinatura (manual)</h2>
+          <p className="mt-1 text-sm text-gray-600">Sem cobrança automática. O plano define direitos; as flags e a homologação ainda controlam a operação. Demonstrações não executam operações reais fora do emulador.</p>
+          <form onSubmit={saveCommercialState} className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label>Restaurante<select required value={tenantId} onChange={event => setTenantId(event.target.value)} className="mt-1 w-full rounded-lg border p-3">
+              <option value="">Selecione</option>{tenants.map(t => <option key={t.id} value={t.id}>{t.displayName}</option>)}
+            </select></label>
+            <label>Plano<select value={planId} onChange={event => setPlanId(event.target.value)} className="mt-1 w-full rounded-lg border p-3">
+              <option value="essencial">Essencial · R$ 89,90/mês</option>
+              <option value="pro">Pro · R$ 149,90/mês</option>
+              <option value="premium">Premium · R$ 219,90/mês</option>
+            </select></label>
+            <label>Status<select value={subscriptionStatus} onChange={event => setSubscriptionStatus(event.target.value)} className="mt-1 w-full rounded-lg border p-3">
+              <option value="suspended">Suspensa</option><option value="active">Ativa</option>
+              <option value="trial">Teste (sem expiração definida)</option><option value="past_due">Em atraso</option>
+              <option value="cancelled">Cancelada</option><option value="demo">Demonstração</option>
+            </select></label>
+            <Button type="submit" disabled={busy || !tenantId} className="sm:col-span-2">Salvar plano e status</Button>
           </form>
         </section>
         <section className="rounded-2xl bg-white p-5">

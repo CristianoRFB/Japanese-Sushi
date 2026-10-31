@@ -4,6 +4,7 @@ import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 import { validTenantSlug } from '../../shared/tenancy.js';
+import { canUseSushiFeature } from '../../shared/sushi-plans.js';
 import { priceTenantPickup, tenantPickupSchema } from './tenant-order-policy.js';
 
 const options = {
@@ -50,7 +51,9 @@ export const createTenantPickupOrder = onCall(options, async request => {
     // A newly created tenant must not begin taking orders without explicit
     // activation; migrated Teiko remains isolated and suspended.
     if (tenant?.status !== 'ACTIVE' || tenant.orderingEnabled !== true
-      || tenant.migrationState === 'EMULATOR_COPY_ONLY')
+      || tenant.migrationState === 'EMULATOR_COPY_ONLY' ||
+      !canUseSushiFeature(tenant, 'pickup_orders', new Date(),
+        !!process.env.FIRESTORE_EMULATOR_HOST && !!process.env.FIREBASE_AUTH_EMULATOR_HOST))
       throw new HttpsError('failed-precondition', 'Pedidos indisponíveis para este restaurante.');
     const products = new Map(productSnaps.map(doc =>
       [doc.id, (doc.data() || {}) as Record<string, unknown>]));

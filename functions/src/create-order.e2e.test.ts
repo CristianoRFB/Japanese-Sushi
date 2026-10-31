@@ -186,7 +186,7 @@ describe('resolvePublicTenant — seleção pública sem dados privilegiados', (
     expect((result.branding as { displayName: string }).displayName).toBe('Beta de testes');
     expect((result.branding as { logoUrl?: string }).logoUrl).toBeUndefined();
     expect(result.orderingEnabled).toBe(false);
-    await db.doc('tenants/beta-sushi').update({ orderingEnabled: true });
+    await db.doc('tenants/beta-sushi').update({ orderingEnabled: true, planId: 'essencial', subscriptionStatus: 'active' });
     const enabled = await call('beta-sushi');
     expect((enabled.body as { result: { orderingEnabled: boolean } }).result.orderingEnabled).toBe(true);
     await db.doc('tenants/beta-sushi').update({ migrationState: 'EMULATOR_COPY_ONLY' });
@@ -420,8 +420,8 @@ describe('F4 tenant pickup order transaction and owner isolation', () => {
     const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
     const a = 'order-a-' + suffix;
     const b = 'order-b-' + suffix;
-    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: false });
-    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: false });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: true });
     for (const [tenantId, price] of [[a, 1800], [b, 900]] as const) {
       await db.doc('tenants/' + tenantId + '/products/simple').set({
         tenantId, name: 'Sushi de teste', active: true, productType: 'SIMPLE',
@@ -486,8 +486,8 @@ describe('F4 pickup KDS tenant A/B security', () => {
     const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
     const a = 'kds-a-' + suffix;
     const b = 'kds-b-' + suffix;
-    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: true });
-    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: true });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: true });
     await db.doc('tenants/' + a + '/products/simple').set({
       tenantId: a, name: 'Sushi de teste', active: true, productType: 'SIMPLE',
       modifierGroupIds: [], sizes: [{ id: 'unico', active: true, basePriceCents: 1700 }],
@@ -547,8 +547,8 @@ describe('F4 pickup cash settlement and tenant financial isolation', () => {
     expect(auth.response.ok).toBe(true);
     const uid = (auth.body as { localId: string }).localId;
     const ownerToken = (auth.body as { idToken: string }).idToken;
-    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: true });
-    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: true });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: true });
     await db.doc('tenantMemberships/' + a + '_' + uid).set({
       tenantId: a, userUid: uid, role: 'tenant_owner', active: true,
     });
@@ -625,8 +625,8 @@ describe('F4 reservations isolated in new tenants (emulator only)', () => {
   it('enforces disabled default, idempotency, scoped status and customer privacy', async () => {
     const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
     const a = 'reserv-a-' + suffix, b = 'reserv-b-' + suffix;
-    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', reservationsEnabled: false });
-    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', reservationsEnabled: true });
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', planId: 'pro', subscriptionStatus: 'active', reservationsEnabled: false });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', planId: 'pro', subscriptionStatus: 'active', reservationsEnabled: true });
     const date = new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10);
     const draft = {
       tenantId: a, clientRequestId: crypto.randomUUID(),
@@ -726,8 +726,8 @@ describe('F4 multi-size catalog checkout with authoritative variants', () => {
     expect(login.response.ok).toBe(true);
     const uid = (login.body as { localId: string }).localId;
     const token = (login.body as { idToken: string }).idToken;
-    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: true });
-    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: true });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: true });
     await db.doc('tenantMemberships/' + a + '_' + uid).set({
       tenantId: a, userUid: uid, role: 'tenant_owner', active: true,
     });
@@ -847,8 +847,8 @@ describe('F4 cash refund reversal is owner-only, atomic and tenant isolated', ()
     expect(auth.response.ok).toBe(true);
     const uid = (auth.body as { localId: string }).localId;
     const token = (auth.body as { idToken: string }).idToken;
-    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', orderingEnabled: true });
-    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', orderingEnabled: true });
+    await db.doc('tenants/' + a).set({ slug: a, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: true });
+    await db.doc('tenants/' + b).set({ slug: b, status: 'ACTIVE', planId: 'essencial', subscriptionStatus: 'active', orderingEnabled: true });
     await db.doc('tenantMemberships/' + a + '_' + uid).set({
       tenantId: a, userUid: uid, active: true, role: 'tenant_owner',
     });

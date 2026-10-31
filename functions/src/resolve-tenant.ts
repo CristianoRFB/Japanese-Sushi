@@ -1,6 +1,7 @@
 import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { validTenantSlug } from '../../shared/tenancy.js';
+import { canUseSushiFeature } from '../../shared/sushi-plans.js';
 
 const region = 'southamerica-east1';
 const enforceAppCheck = process.env.ENFORCE_APP_CHECK === 'true';
@@ -32,17 +33,19 @@ export const resolvePublicTenant = onCall(
       const tenant = snap.data()!;
       if (tenant.slug !== slug) throw new HttpsError('not-found', 'Restaurante não encontrado.');
       const status = tenant.status === 'ACTIVE' ? 'ACTIVE' : 'SUSPENDED';
+      const emulator = !!process.env.FIRESTORE_EMULATOR_HOST && !!process.env.FIREBASE_AUTH_EMULATOR_HOST;
       return {
         id: slug,
         slug,
         status,
         branding: status === 'ACTIVE' ? publicBranding(tenant.branding) : { displayName: 'Restaurante indisponível' },
         orderingEnabled: status === 'ACTIVE' && slug !== 'teiko' && tenant.orderingEnabled === true
-          && tenant.migrationState !== 'EMULATOR_COPY_ONLY',
+          && tenant.migrationState !== 'EMULATOR_COPY_ONLY'
+          && canUseSushiFeature(tenant, 'pickup_orders', new Date(), emulator),
         // Pro+ reservation entitlement enforcement is not yet in production.
-        reservationsEnabled: !!process.env.FIRESTORE_EMULATOR_HOST && !!process.env.FIREBASE_AUTH_EMULATOR_HOST
-          && status === 'ACTIVE' && slug !== 'teiko' && tenant.reservationsEnabled === true
-          && tenant.migrationState !== 'EMULATOR_COPY_ONLY',
+        reservationsEnabled: emulator && status === 'ACTIVE' && slug !== 'teiko' && tenant.reservationsEnabled === true
+          && tenant.migrationState !== 'EMULATOR_COPY_ONLY'
+          && canUseSushiFeature(tenant, 'reservations', new Date(), emulator),
       };
     }
     // Backward-compatible Teiko resolution while tenant migration is pending.
