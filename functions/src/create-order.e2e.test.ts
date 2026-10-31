@@ -467,7 +467,9 @@ describe('F4 tenant pickup order transaction and owner isolation', () => {
       },
     );
     expect((await invoke('createTenantPickupOrder', input)).response.ok).toBe(false);
-    await db.doc('tenants/' + a).update({ orderingEnabled: true });
+    await db.doc('tenants/' + a).update({ orderingEnabled: true, subscriptionStatus: 'past_due' });
+    expect((await invoke('createTenantPickupOrder', input)).response.ok).toBe(false);
+    await db.doc('tenants/' + a).update({ subscriptionStatus: 'active' });
     expect((await invoke('createTenantPickupOrder', { ...input, clientPreviewTotalCents: 1 })).response.ok).toBe(false);
     const results = await Promise.all([
       invoke('createTenantPickupOrder', input), invoke('createTenantPickupOrder', input),
@@ -667,7 +669,11 @@ describe('F4 reservations isolated in new tenants (emulator only)', () => {
       },
     );
     expect((await invoke('tenantCreateReservation', draft)).response.ok).toBe(false);
-    await db.doc('tenants/' + a).update({ reservationsEnabled: true });
+    await db.doc('tenants/' + a).update({ reservationsEnabled: true, planId: 'essencial' });
+    expect((await invoke('tenantCreateReservation', draft)).response.ok).toBe(false);
+    await db.doc('tenants/' + a).update({ planId: 'pro', subscriptionStatus: 'suspended' });
+    expect((await invoke('tenantCreateReservation', draft)).response.ok).toBe(false);
+    await db.doc('tenants/' + a).update({ subscriptionStatus: 'active' });
     expect((await invoke('tenantCreateReservation', { ...draft, date: '2026-02-30' })).response.ok).toBe(false);
     const [one, two] = await Promise.all([
       invoke('tenantCreateReservation', draft), invoke('tenantCreateReservation', draft),
