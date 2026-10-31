@@ -186,7 +186,8 @@ export const platformSetTenantCommercialState = onCall(options, async request =>
     const next = {
       planId: input.planId, subscriptionStatus: input.subscriptionStatus,
       trialUntil: input.trialUntil ?? null,
-      entitlementOverrides: input.entitlementOverrides ?? {},
+      // Omitting overrides must not silently revoke a negotiated commercial exception.
+      entitlementOverrides: input.entitlementOverrides ?? before.entitlementOverrides ?? {},
     };
     if (before.planId === next.planId && before.subscriptionStatus === next.subscriptionStatus &&
       (before.trialUntil ?? null) === next.trialUntil &&
