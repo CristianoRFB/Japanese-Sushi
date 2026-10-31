@@ -25,7 +25,8 @@ export function canUseSushiFeature(
   tenant: CommercialTenant | null | undefined, feature: SushiFeature,
   now = new Date(), emulator = false,
 ): boolean {
-  if (!tenant || !Object.prototype.hasOwnProperty.call(SUSHI_PLANS, tenant.planId)) return false;
+  if (!tenant || typeof tenant.planId !== 'string' ||
+    !Object.prototype.hasOwnProperty.call(SUSHI_PLANS, tenant.planId)) return false;
   const status = tenant.subscriptionStatus;
   if (status === 'trial' && tenant.trialUntil != null) {
     const until = typeof tenant.trialUntil === 'string' ? Date.parse(tenant.trialUntil)
