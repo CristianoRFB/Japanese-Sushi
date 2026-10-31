@@ -187,6 +187,10 @@ describe('resolvePublicTenant — seleção pública sem dados privilegiados', (
     expect((result.branding as { logoUrl?: string }).logoUrl).toBeUndefined();
     expect(result.orderingEnabled).toBe(false);
     await db.doc('tenants/beta-sushi').update({ orderingEnabled: true, planId: 'essencial', subscriptionStatus: 'active' });
+    await db.doc('tenants/beta-sushi').update({ subscriptionStatus: 'demo' });
+    const demo = await call('beta-sushi');
+    expect((demo.body as { result: { demoMode: boolean } }).result.demoMode).toBe(true);
+    await db.doc('tenants/beta-sushi').update({ subscriptionStatus: 'active' });
     const enabled = await call('beta-sushi');
     expect((enabled.body as { result: { orderingEnabled: boolean } }).result.orderingEnabled).toBe(true);
     await db.doc('tenants/beta-sushi').update({ migrationState: 'EMULATOR_COPY_ONLY' });

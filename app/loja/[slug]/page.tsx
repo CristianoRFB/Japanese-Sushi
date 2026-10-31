@@ -15,7 +15,7 @@ import { tenantCacheKey, validTenantSlug } from '@/shared/tenancy';
 type PublicTenant = {
   id: string; slug: string; status: 'ACTIVE' | 'SUSPENDED'; orderingEnabled?: boolean; reservationsEnabled?: boolean;
   branding: { displayName: string; primaryColor?: string; logoUrl?: string };
-  legacyFallback?: boolean;
+  legacyFallback?: boolean; demoMode?: boolean;
 };
 type CatalogProduct = TenantCartProduct & { description?: string };
 type CartState = { slug: string; items: TenantCartItem[] };
@@ -141,6 +141,9 @@ export default function TenantStorefrontPage() {
         <h1 className="mt-2 text-3xl font-black">{tenant?.branding.displayName ?? 'Restaurante'}</h1>
         <p className="mt-3 text-sm text-gray-600">Pedidos simples para retirada, pagos presencialmente em dinheiro quando a unidade estiver habilitada.</p>
       </header>
+      {tenant?.demoMode && <p role="status" className="mt-4 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 font-semibold text-amber-950">
+        Ambiente de demonstração: dados fictícios. Não faça pedidos reais nem registre pagamentos nesta loja.
+      </p>}
       {loading && <p role="status" className="mt-6 rounded-xl bg-white p-4">Carregando o cardápio…</p>}
       {error && <p role="alert" className="mt-6 rounded-xl bg-red-100 p-4 text-red-900">{error}</p>}
       {tenant && !tenant.orderingEnabled && <p role="status" className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">

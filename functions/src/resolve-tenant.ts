@@ -38,6 +38,7 @@ export const resolvePublicTenant = onCall(
         id: slug,
         slug,
         status,
+        demoMode: tenant.subscriptionStatus === 'demo',
         branding: status === 'ACTIVE' ? publicBranding(tenant.branding) : { displayName: 'Restaurante indisponível' },
         orderingEnabled: status === 'ACTIVE' && slug !== 'teiko' && tenant.orderingEnabled === true
           && tenant.migrationState !== 'EMULATOR_COPY_ONLY'
