@@ -21,7 +21,6 @@ import { useAuth } from '@/components/providers';
 import { getFirebaseClient } from '@/lib/firebase/client';
 import {
   isValidReservationDate,
-  RESERVATION_YEAR,
   TEIKO_BRAND_ID,
   type ReservationStatus,
   type DiningTable,
@@ -212,7 +211,7 @@ export default function ReservationsPage() {
         </p>
         <h1 className="mt-2 text-3xl font-black">Reservas</h1>
         <p className="mt-2 text-sm text-[#7b887d]">
-          Solicitações de {RESERVATION_YEAR} aguardando confirmação da equipe.
+          Solicitações de reservas aguardando confirmação da equipe.
         </p>
       </div>
       <section aria-label="Resumo da agenda" className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-[#070a08]/10 bg-[#070a08]/10 sm:grid-cols-3">

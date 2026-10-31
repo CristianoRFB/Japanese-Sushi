@@ -66,7 +66,7 @@ describe('catálogo adulterado', () => {
   });
 });
 
-describe('validação de reservas 2026', () => {
+describe('validação de reservas sem trava anual', () => {
   const validReservation = {
     name: 'Aline Teiko',
     whatsapp: '17999999999',
@@ -76,15 +76,17 @@ describe('validação de reservas 2026', () => {
     notes: 'Mesa tranquila',
   };
 
-  it('aceita data real de 2026 e mantém observação segura', () => {
+  it('aceita calendário válido futuro e mantém observação segura', () => {
     expect(isValidReservationDate(validReservation.date)).toBe(true);
     expect(validateReservationDraft(validReservation)).toEqual({});
   });
 
-  it('rejeita ano fora do limite, dia impossível, nome inválido e telefone ruim', () => {
-    expect(isValidReservationDate('2027-02-11')).toBe(false);
+  it('rejeita dia impossível, nome inválido e telefone ruim', () => {
+    expect(isValidReservationDate('2027-02-11')).toBe(true);
+    expect(isValidReservationDate('2028-02-29')).toBe(true);
+    expect(isValidReservationDate('2027-02-29')).toBe(false);
     expect(isValidReservationDate('2026-02-31')).toBe(false);
-    expect(validateReservationDraft({ ...validReservation, date: '2027-02-11', name: '!!!', whatsapp: 'abc' })).toMatchObject({
+    expect(validateReservationDraft({ ...validReservation, date: '2027-02-31', name: '!!!', whatsapp: 'abc' })).toMatchObject({
       name: expect.any(String),
       whatsapp: expect.any(String),
       date: expect.any(String),

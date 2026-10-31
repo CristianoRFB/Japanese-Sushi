@@ -275,14 +275,19 @@ interface CartState {
   clear: () => void;
 }
 const CartContext = createContext<CartState | null>(null);
-const CART_KEY = 'teiko-sushi-cart-v1';
+const LEGACY_CART_KEY = 'teiko-sushi-cart-v1';
+import { tenantCacheKey } from '@/shared/tenancy';
+const CART_KEY = tenantCacheKey(TEIKO_BRAND_ID, 'cart');
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItemDraft[]>([]);
   const itemsRef = useRef<CartItemDraft[]>([]);
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(CART_KEY);
+      const current = localStorage.getItem(CART_KEY);
+      const old = current === null ? localStorage.getItem(LEGACY_CART_KEY) : null;
+      const saved = current ?? old;
+      if (old !== null) { localStorage.setItem(CART_KEY, old); localStorage.removeItem(LEGACY_CART_KEY); }
       const loaded = saved ? (JSON.parse(saved) as CartItemDraft[]) : [];
       itemsRef.current = Array.isArray(loaded) ? loaded : [];
       setItems(itemsRef.current);
@@ -401,6 +406,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       setState({ user, role: null, loading: true });
+      // Platform Owner uses Firebase Auth custom claims, never a forged users/{uid} role.
+      // Preserve existing Teiko team/driver auth flow without requiring a store account.
+      void user.getIdTokenResult().then((token) => {
+        if (currentGeneration !== generation) return;
+        if (token.claims.platform_owner === true) {
+          setState({ user, role: null, loading: false });
+          return;
+        }
       stopUserDoc = onSnapshot(
         doc(db, 'users', user.uid),
         (roleDoc) => {
@@ -436,6 +449,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         () => setState({ user, role: null, loading: false }),
       );
+      }).catch(() => {
+        if (currentGeneration === generation) setState({ user: null, role: null, loading: false });
+      });
     });
     return () => {
       generation += 1;

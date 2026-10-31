@@ -193,9 +193,20 @@ export const RESERVATION_TRANSITIONS: Record<ReservationStatus, ReservationStatu
   COMPLETED: [],
 };
 
-export const RESERVATION_YEAR = 2026;
-export const RESERVATION_MIN_DATE = `${RESERVATION_YEAR}-01-01`;
-export const RESERVATION_MAX_DATE = `${RESERVATION_YEAR}-12-31`;
+// Calendar boundary is independent of a release year.
+export const RESERVATION_MAX_DATE = '2099-12-31';
+
+export function reservationMinDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  return [get('year'), get('month'), get('day')].join('-');
+}
+
+// Keep legacy export for older consumers; forms should call reservationMinDate().
+export const RESERVATION_MIN_DATE = reservationMinDate();
 export interface ReservationDraft {
   name: string;
   whatsapp: string;
@@ -215,7 +226,7 @@ export function isValidReservationDate(value: string): boolean {
   const [year, month, day] = value.split('-').map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));
   return (
-    year === RESERVATION_YEAR &&
+    year >= 2000 && year <= 2099 &&
     parsed.getUTCFullYear() === year &&
     parsed.getUTCMonth() === month - 1 &&
     parsed.getUTCDate() === day
@@ -240,8 +251,8 @@ export function validateReservationDraft(
     errors.whatsapp = 'Informe um WhatsApp válido com DDD.';
   }
 
-  if (!isValidReservationDate(draft.date)) {
-    errors.date = `Escolha uma data válida entre 01/01 e 31/12 de ${RESERVATION_YEAR}.`;
+  if (!isValidReservationDate(draft.date) || draft.date < reservationMinDate()) {
+    errors.date = 'Escolha uma data válida a partir de hoje.';
   }
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.time)) {
     errors.time = 'Informe um horário válido, por exemplo 19:30.';

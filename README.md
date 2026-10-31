@@ -86,3 +86,21 @@ npm run preflight:production
 As Functions em `functions/` fazem parte do fluxo de pedidos. O `npm run test:e2e` escolhe portas livres em cada execução, inicia uma configuração temporária e encerra os emuladores ao final; o teste cobre persistência, idempotência e rejeição de preço adulterado. Antes do go-live, publique o bundle compilado e repita o teste contra o projeto oficial.
 
 O deploy do frontend é separado do Firebase: use a conta Cloudflare da unidade, confira o nome do Worker gerado (`teiko-sushi`) e configure as variáveis públicas Firebase no ambiente de build. O dry-run local deve ser executado antes da publicação.
+
+## SaaS Multi-Tenant em desenvolvimento (branch F4)
+
+Na branch `feat/sushi-master-multitenant` existem Functions e Rules para tenancy
+escopada em `tenants/{tenantId}/...`, Platform Owner com claim real no Firebase Auth,
+memberships por tenant, suspensão, auditoria, console `/plataforma`, loja pública
+`/loja/[slug]` e gestão inicial de categorias/produtos simples.
+
+**Estado:** F4 parcial. A Teiko continua operando com coleções legadas de escopo
+único e **não** foi migrada em produção; checkout e operações KDS/PDV/finanças/delivery
+não estão habilitados para tenants novos. Não use como SaaS comercial multi-tenant ainda.
+
+Web Push/FCM para motoboy já possui implementação e testes em emulador, mas entrega
+real com aplicativo fechado depende de HTTPS, VAPID, deploy autorizado e testes
+em dispositivos; não está homologada.
+
+Testes adicionais: `npm run test:tenant:fixture` e `npm run test:migration:emulator`.
+Detalhes: [docs/CURRENT.md](docs/CURRENT.md), [progresso pré-PC](docs/PRE_PC_COMPLETENESS.md).
