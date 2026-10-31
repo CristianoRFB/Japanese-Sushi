@@ -338,6 +338,32 @@ describe('F4 tenant admin — claims, membership, suspensão e A×B', () => {
     expect((await callTenant('platformCreateTenant', ownerToken, { slug: b, displayName: 'Restaurante B' })).response.ok).toBe(true);
     expect((await callTenant('platformCreateTenant', ownerToken, { slug: a, displayName: 'Duplicado' })).response.ok).toBe(false);
 
+    // F5: only the live Platform Owner may assign a plan.
+    const commercial = { tenantId: a, planId: 'pro', subscriptionStatus: 'active' };
+    expect((await callTenant('platformSetTenantCommercialState', tokenBefore, commercial)).response.ok).toBe(false);
+    expect((await callTenant('platformSetTenantCommercialState', ownerToken, {
+      ...commercial, planId: 'invented',
+    })).response.ok).toBe(false);
+    expect((await callTenant('platformSetTenantCommercialState', ownerToken, {
+      ...commercial, tenantId: 'teiko',
+    })).response.ok).toBe(false);
+    const assignment = await callTenant('platformSetTenantCommercialState', ownerToken, commercial);
+    expect(assignment.response.ok).toBe(true);
+    expect((assignment.body as { result: { updated: boolean; monthlyPriceCents: number } }).result)
+      .toMatchObject({ updated: true, monthlyPriceCents: 14990 });
+    const retry = await callTenant('platformSetTenantCommercialState', ownerToken, commercial);
+    expect((retry.body as { result: { updated: boolean } }).result.updated).toBe(false);
+    expect((await db.doc('tenants/' + a).get()).data()).toMatchObject({
+      planId: 'pro', subscriptionStatus: 'active',
+    });
+    expect((await db.doc('tenants/' + b).get()).data()?.subscriptionStatus).toBe('suspended');
+    expect((await callTenant('platformSetTenantCommercialState', ownerToken, {
+      ...commercial, entitlementOverrides: { reservations: true, pickup_orders: false },
+    })).response.ok).toBe(true);
+    expect((await callTenant('platformSetTenantCommercialState', ownerToken, {
+      ...commercial, entitlementOverrides: { tenant_security: false },
+    })).response.ok).toBe(false);
+
     const member = await fetchJson(authEndpoint, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ returnSecureToken: true }),
