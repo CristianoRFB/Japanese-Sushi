@@ -128,7 +128,7 @@ export const tenantListPickupOrders = onCall(options, async request => {
   const { requireTenantMembership } = await import('./tenant-admin.js');
   await requireTenantMembership(request.auth.uid, data.data.tenantId, ['tenant_owner', 'staff']);
   const snapshot = await getFirestore().collection('tenants/' + data.data.tenantId + '/orders')
-    .where('tenantId', '==', data.data.tenantId).limit(50).get();
+    .where('tenantId', '==', data.data.tenantId).orderBy('createdAt', 'desc').limit(50).get();
   return { orders: snapshot.docs.map(doc => {
     const order = doc.data();
     return {

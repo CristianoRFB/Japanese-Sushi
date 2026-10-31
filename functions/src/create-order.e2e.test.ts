@@ -550,6 +550,26 @@ describe('F4 pickup KDS tenant A/B security', () => {
     expect(list.response.ok).toBe(true);
     expect((list.body as { result: { orders: Array<{ id: string }> } }).result.orders.some(x => x.id === orderId)).toBe(true);
     expect((await invoke('tenantListPickupOrders', { tenantId: b }, staffToken)).response.ok).toBe(false);
+    // Regression: the limit must be applied AFTER ordering by createdAt,
+    // otherwise random document IDs can conceal recent paid/ready orders.
+    const batch = db.batch();
+    const { Timestamp } = await import('firebase-admin/firestore');
+    const futureBase = Date.now() + 60_000;
+    for (let n = 0; n < 55; n++) {
+      batch.set(db.doc('tenants/' + a + '/orders/recent-' + String(n).padStart(2, '0')), {
+        tenantId: a, orderNumber: '#F' + n, status: 'NEW',
+        customer: { name: 'Synthetic' }, items: [],
+        pricing: { totalCents: 100 }, createdAt: Timestamp.fromMillis(futureBase + n * 60_000),
+      });
+    }
+    await batch.commit();
+    const latest = await invoke('tenantListPickupOrders', { tenantId: a }, staffToken);
+    expect(latest.response.ok).toBe(true);
+    const recent = (latest.body as { result: { orders: Array<{ id: string }> } }).result.orders;
+    expect(recent).toHaveLength(50);
+    expect(recent[0].id).toBe('recent-54');
+    expect(recent[49].id).toBe('recent-05');
+
     const update = (tenantId: string, status: string) => invoke('tenantUpdatePickupStatus', {
       tenantId, orderId, status,
     }, staffToken);
